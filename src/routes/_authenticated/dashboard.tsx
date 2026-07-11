@@ -18,12 +18,14 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function DashboardPage() {
   const fetchRuns = useServerFn(listMyRuns);
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
     queryKey: ["workflow_runs", "recent"],
     queryFn: () => fetchRuns(),
   });
 
   return (
+
     <div className="space-y-8">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4">
         <div className="min-w-0">
