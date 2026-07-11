@@ -1,9 +1,10 @@
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { startWorkflow } from "@/lib/workflows.functions";
 import { getMyProfile } from "@/lib/profile.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 // Composer: paste research, optionally steer with a goal, and compose.
 // Voice is NOT an input here — it comes from the signed-in user's profile
@@ -28,6 +29,9 @@ function NewPiecePage() {
   const [goal, setGoal] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // requestId is the idempotency seed: stable for this form instance, so a
   // double-click or a retried request cannot dispatch two runs.
@@ -39,7 +43,33 @@ function NewPiecePage() {
   });
   const hasStyle = (profileData?.profile?.style_text ?? "").trim() !== "";
 
-  const canSubmit = !submitting && !profileLoading && hasStyle && research.trim() !== "";
+  const canSubmit =
+    !submitting && !profileLoading && hasStyle && (research.trim() !== "" || files.length > 0);
+
+  const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB per file
+  const MAX_TOTAL_FILES = 10;
+
+  function addFiles(picked: FileList | null) {
+    if (!picked) return;
+    const next: File[] = [...files];
+    for (const f of Array.from(picked)) {
+      if (f.size > MAX_FILE_BYTES) {
+        setError(`${f.name} is larger than 20 MB.`);
+        continue;
+      }
+      if (next.length >= MAX_TOTAL_FILES) {
+        setError(`Up to ${MAX_TOTAL_FILES} files per piece.`);
+        break;
+      }
+      if (!next.find((x) => x.name === f.name && x.size === f.size)) next.push(f);
+    }
+    setFiles(next);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function removeFile(idx: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -47,12 +77,43 @@ function NewPiecePage() {
     setSubmitting(true);
     setError(null);
     try {
+      // 1. Upload attachments (if any) to the private research-attachments
+      //    bucket, scoped under the caller's own folder so RLS matches.
+      const attachments: {
+        path: string;
+        name: string;
+        contentType?: string;
+        size?: number;
+      }[] = [];
+      if (files.length > 0) {
+        const { data: userData, error: userErr } = await supabase.auth.getUser();
+        if (userErr || !userData.user) throw new Error("Not signed in");
+        const userId = userData.user.id;
+        for (let i = 0; i < files.length; i++) {
+          const f = files[i];
+          setUploadProgress(`Uploading ${i + 1} of ${files.length}: ${f.name}`);
+          const safeName = f.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
+          const path = `${userId}/${requestId}/${Date.now()}-${i}-${safeName}`;
+          const { error: upErr } = await supabase.storage
+            .from("research-attachments")
+            .upload(path, f, {
+              cacheControl: "3600",
+              upsert: false,
+              contentType: f.type || undefined,
+            });
+          if (upErr) throw new Error(`Upload failed for ${f.name}: ${upErr.message}`);
+          attachments.push({ path, name: f.name, contentType: f.type, size: f.size });
+        }
+        setUploadProgress(null);
+      }
+
       const { runId } = await start({
-        data: { research, goal: goal.trim(), requestId },
+        data: { research, goal: goal.trim(), requestId, attachments },
       });
       router.navigate({ to: "/runs/$runId", params: { runId } });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start");
+      setUploadProgress(null);
       setSubmitting(false);
     }
   }
@@ -98,6 +159,52 @@ function NewPiecePage() {
           />
         </label>
 
+        <div className="space-y-2">
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Attachments <span className="normal-case tracking-normal text-muted-foreground/70">— optional, up to {MAX_TOTAL_FILES} · 20 MB each</span>
+          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={(e) => addFiles(e.target.files)}
+              className="hidden"
+              id="attachments-input"
+            />
+            <label
+              htmlFor="attachments-input"
+              className="cursor-pointer rounded-md border border-input bg-background/60 px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            >
+              + Add files
+            </label>
+            <p className="text-xs text-muted-foreground">
+              Text (.txt/.md/.csv/.json/.html) is inlined into the research; other files are passed as signed URLs the agent can fetch.
+            </p>
+          </div>
+          {files.length > 0 && (
+            <ul className="mt-2 divide-y divide-border rounded-md border border-border bg-background/40 text-sm">
+              {files.map((f, i) => (
+                <li key={`${f.name}-${i}`} className="flex items-center justify-between px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate font-mono text-xs">{f.name}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {(f.size / 1024).toFixed(1)} KB{f.type ? ` · ${f.type}` : ""}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(i)}
+                    className="ml-3 shrink-0 text-xs text-muted-foreground hover:text-destructive"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         <label className="block space-y-2">
           <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Goal <span className="normal-case tracking-normal text-muted-foreground/70">— optional</span>
@@ -109,6 +216,12 @@ function NewPiecePage() {
             className="w-full rounded-md border border-input bg-background/60 px-3.5 py-2.5 text-sm outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
           />
         </label>
+
+        {uploadProgress && (
+          <p className="rounded-md border border-border bg-background/60 px-3 py-2 text-xs text-muted-foreground">
+            {uploadProgress}
+          </p>
+        )}
 
         {error && (
           <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -125,7 +238,7 @@ function NewPiecePage() {
             disabled={!canSubmit}
             className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
-            {submitting ? "Creating…" : "Create piece →"}
+            {submitting ? (uploadProgress ? "Uploading…" : "Creating…") : "Create piece →"}
           </button>
         </div>
       </form>
