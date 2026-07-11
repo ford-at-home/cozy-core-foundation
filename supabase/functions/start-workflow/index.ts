@@ -21,6 +21,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildComposePrompt, slugify } from "../_shared/prompt.ts";
 import { dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
+import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -191,6 +192,18 @@ function isTextLike(contentType: string | undefined, name: string): boolean {
   ].includes(ext);
 }
 
+function isPdf(contentType: string | undefined, name: string): boolean {
+  const ct = (contentType ?? "").toLowerCase();
+  if (ct === "application/pdf" || ct === "application/x-pdf") return true;
+  return name.toLowerCase().endsWith(".pdf");
+}
+
+async function extractPdfText(buf: Uint8Array): Promise<string> {
+  const pdf = await getDocumentProxy(buf);
+  const { text } = await extractText(pdf, { mergePages: true });
+  return Array.isArray(text) ? text.join("\n\n") : String(text ?? "");
+}
+
 async function resolveAttachments(
   admin: any,
   userId: string,
@@ -232,6 +245,36 @@ async function resolveAttachments(
           const text = new TextDecoder("utf-8", { fatal: false }).decode(slice);
           inlinedTotal += slice.length;
           out.push({ name, contentType, size, text, truncated });
+          continue;
+        }
+      } catch {
+        // fall through to signed URL
+      }
+    }
+
+    if (isPdf(contentType, name) && inlinedTotal < INLINE_TOTAL_MAX_BYTES) {
+      try {
+        const { data: blob, error: dlErr } = await admin.storage
+          .from("research-attachments")
+          .download(path);
+        if (!dlErr && blob) {
+          const buf = new Uint8Array(await blob.arrayBuffer());
+          const full = await extractPdfText(buf);
+          const remaining = INLINE_TOTAL_MAX_BYTES - inlinedTotal;
+          const cap = Math.min(INLINE_TEXT_MAX_BYTES, remaining);
+          const encoded = new TextEncoder().encode(full);
+          const truncated = encoded.length > cap;
+          const text = truncated
+            ? new TextDecoder("utf-8", { fatal: false }).decode(encoded.slice(0, cap))
+            : full;
+          inlinedTotal += truncated ? cap : encoded.length;
+          out.push({
+            name,
+            contentType: contentType ?? "application/pdf",
+            size,
+            text,
+            truncated,
+          });
           continue;
         }
       } catch {
