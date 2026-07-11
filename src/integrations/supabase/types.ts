@@ -14,26 +14,43 @@ export type Database = {
   }
   public: {
     Tables: {
-      profiles: {
+      agent_run_events: {
         Row: {
-          created_at: string
-          style_text: string
-          updated_at: string
-          user_id: string
+          event_type: string | null
+          external_event_id: string | null
+          id: string
+          payload: Json | null
+          received_at: string
+          run_id: string
+          source: string
         }
         Insert: {
-          created_at?: string
-          style_text?: string
-          updated_at?: string
-          user_id: string
+          event_type?: string | null
+          external_event_id?: string | null
+          id?: string
+          payload?: Json | null
+          received_at?: string
+          run_id: string
+          source: string
         }
         Update: {
-          created_at?: string
-          style_text?: string
-          updated_at?: string
-          user_id?: string
+          event_type?: string | null
+          external_event_id?: string | null
+          id?: string
+          payload?: Json | null
+          received_at?: string
+          run_id?: string
+          source?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "agent_run_events_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       agent_runs: {
         Row: {
@@ -96,37 +113,15 @@ export type Database = {
           status?: string
           user_id?: string
         }
-        Relationships: []
-      }
-      agent_run_events: {
-        Row: {
-          event_type: string | null
-          external_event_id: string | null
-          id: string
-          payload: Json | null
-          received_at: string
-          run_id: string
-          source: string
-        }
-        Insert: {
-          event_type?: string | null
-          external_event_id?: string | null
-          id?: string
-          payload?: Json | null
-          received_at?: string
-          run_id: string
-          source: string
-        }
-        Update: {
-          event_type?: string | null
-          external_event_id?: string | null
-          id?: string
-          payload?: Json | null
-          received_at?: string
-          run_id?: string
-          source?: string
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "agent_runs_piece_id_fkey"
+            columns: ["piece_id"]
+            isOneToOne: false
+            referencedRelation: "pieces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pieces: {
         Row: {
@@ -162,6 +157,27 @@ export type Database = {
           slug?: string
           stage?: string
           title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          style_text: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          style_text?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          style_text?: string
           updated_at?: string
           user_id?: string
         }
