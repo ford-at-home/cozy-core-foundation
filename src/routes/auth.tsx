@@ -26,8 +26,11 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const ensureAdmin = useServerFn(ensureAdminUser);
+  const busy = loading || googleLoading || adminLoading;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -63,21 +66,26 @@ function AuthPage() {
   }
 
   async function handleGoogle() {
+    if (busy) return;
     setError(null);
+    setGoogleLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin,
       });
       if (result.error) throw new Error(result.error.message ?? "Google sign-in failed");
-      if (result.redirected) return;
+      if (result.redirected) return; // browser is navigating away; keep the button in loading state
       navigate({ to: "/dashboard" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Google sign-in failed");
+    } finally {
+      setGoogleLoading(false);
     }
   }
 
   async function handleAdmin() {
-    setLoading(true);
+    if (busy) return;
+    setAdminLoading(true);
     setError(null);
     try {
       await ensureAdmin();
@@ -90,7 +98,7 @@ function AuthPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Admin sign-in failed");
     } finally {
-      setLoading(false);
+      setAdminLoading(false);
     }
   }
 
@@ -139,7 +147,7 @@ function AuthPage() {
           {error && <p className="text-sm text-destructive">{error}</p>}
           <button
             type="submit"
-            disabled={loading}
+            disabled={busy}
             className="w-full rounded-md bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
           >
             {loading
@@ -163,30 +171,38 @@ function AuthPage() {
           <button
             type="button"
             onClick={handleGoogle}
-            disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-md border border-input bg-background/60 px-3 py-2.5 text-sm font-medium transition-colors hover:bg-accent disabled:opacity-60"
+            disabled={busy}
+            aria-busy={googleLoading}
+            className="flex w-full items-center justify-center gap-2 rounded-md border border-input bg-background/60 px-3 py-2.5 text-sm font-medium transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
-              <path fill="#4285F4" d="M23 12.2c0-.8-.1-1.6-.2-2.4H12v4.5h6.2c-.3 1.4-1.1 2.6-2.4 3.4v2.8h3.9c2.3-2.1 3.6-5.2 3.6-8.3z"/>
-              <path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-4.9H1.3v3.1C3.3 21.4 7.3 24 12 24z"/>
-              <path fill="#FBBC05" d="M5.3 14.4c-.2-.7-.4-1.4-.4-2.1s.1-1.4.4-2.1V7.1H1.3C.5 8.6 0 10.2 0 12s.5 3.4 1.3 4.9l4-2.5z"/>
-              <path fill="#EA4335" d="M12 4.8c1.7 0 3.3.6 4.5 1.8l3.4-3.4C17.9 1.2 15.2 0 12 0 7.3 0 3.3 2.6 1.3 6.5l4 3.1C6.2 6.9 8.9 4.8 12 4.8z"/>
-            </svg>
-            Continue with Google
+            {googleLoading ? (
+              <Spinner />
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
+                <path fill="#4285F4" d="M23 12.2c0-.8-.1-1.6-.2-2.4H12v4.5h6.2c-.3 1.4-1.1 2.6-2.4 3.4v2.8h3.9c2.3-2.1 3.6-5.2 3.6-8.3z"/>
+                <path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-4.9H1.3v3.1C3.3 21.4 7.3 24 12 24z"/>
+                <path fill="#FBBC05" d="M5.3 14.4c-.2-.7-.4-1.4-.4-2.1s.1-1.4.4-2.1V7.1H1.3C.5 8.6 0 10.2 0 12s.5 3.4 1.3 4.9l4-2.5z"/>
+                <path fill="#EA4335" d="M12 4.8c1.7 0 3.3.6 4.5 1.8l3.4-3.4C17.9 1.2 15.2 0 12 0 7.3 0 3.3 2.6 1.3 6.5l4 3.1C6.2 6.9 8.9 4.8 12 4.8z"/>
+              </svg>
+            )}
+            {googleLoading ? "Opening Google…" : "Continue with Google"}
           </button>
           <button
             type="button"
             onClick={handleAdmin}
-            disabled={loading}
-            className="w-full rounded-md border border-dashed border-input bg-transparent px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-60"
+            disabled={busy}
+            aria-busy={adminLoading}
+            className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-input bg-transparent px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Sign in as demo admin
+            {adminLoading && <Spinner />}
+            {adminLoading ? "Signing in as admin…" : "Sign in as demo admin"}
           </button>
         </div>
         <button
           type="button"
           onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-          className="block w-full text-center text-sm text-muted-foreground transition-colors hover:text-foreground"
+          disabled={busy}
+          className="block w-full text-center text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-60"
         >
           {mode === "signin"
             ? "Need an account? Sign up"
@@ -194,5 +210,24 @@ function AuthPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg
+      className="h-3.5 w-3.5 animate-spin text-current"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+      <path
+        d="M22 12a10 10 0 0 1-10 10"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
