@@ -21,6 +21,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildComposePrompt, slugify } from "../_shared/prompt.ts";
 import { dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
+import { buildImageCreds } from "../_shared/image-token.ts";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 
 const corsHeaders = {

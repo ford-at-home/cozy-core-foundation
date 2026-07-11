@@ -20,6 +20,7 @@ import {
   buildResynthPrompt,
   buildRevisionPrompt,
 } from "../_shared/prompt.ts";
+import { buildImageCreds } from "../_shared/image-token.ts";
 import { dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
 
 const corsHeaders = {
@@ -109,10 +110,11 @@ Deno.serve(async (req) => {
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("style_text")
+    .select("style_text, image_style")
     .eq("user_id", userId)
     .maybeSingle();
   const styleText = (profile?.style_text ?? "").trim();
+  const imageStyle = (profile?.image_style ?? "").trim();
   if (!styleText) {
     return json({ error: "Your voice profile is empty. Describe your style at /profile first." }, 422);
   }
