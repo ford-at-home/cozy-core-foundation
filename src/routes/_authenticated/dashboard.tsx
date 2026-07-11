@@ -1,7 +1,8 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listMyRuns } from "@/lib/workflows.functions";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -17,12 +18,14 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function DashboardPage() {
   const fetchRuns = useServerFn(listMyRuns);
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
     queryKey: ["workflow_runs", "recent"],
     queryFn: () => fetchRuns(),
   });
 
   return (
+
     <div className="space-y-8">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4">
         <div className="min-w-0">
@@ -45,13 +48,33 @@ function DashboardPage() {
 
       <div className="overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm">
         {isLoading && (
-          <div className="p-8 text-sm text-muted-foreground">Loading…</div>
-        )}
-        {error && (
-          <div className="p-8 text-sm text-destructive">
-            Could not load runs.
+          <div className="flex items-center gap-3 p-8 text-sm text-muted-foreground">
+            <Spinner />
+            Loading your workflow runs…
           </div>
         )}
+        {error && (
+          <div className="flex flex-col gap-3 p-8">
+            <div className="flex items-start gap-3 text-sm text-destructive">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <path d="M12 9v4"/><path d="M12 17h.01"/>
+              </svg>
+              <div>
+                <p className="font-medium">Could not load your runs</p>
+                <p className="text-destructive/80">{error.message}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => queryClient.invalidateQueries({ queryKey: ["workflow_runs", "recent"] })}
+              className="self-start rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
         {!isLoading && !error && (data?.runs.length ?? 0) === 0 && (
           <div className="flex flex-col items-center gap-4 p-12 text-center">
             <div className="grid h-12 w-12 place-items-center rounded-full border border-border bg-background text-primary">
@@ -122,5 +145,24 @@ function StatusPill({ status }: { status: string }) {
       <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
       {status}
     </span>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg
+      className="h-4 w-4 animate-spin text-current"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+      <path
+        d="M22 12a10 10 0 0 1-10 10"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
