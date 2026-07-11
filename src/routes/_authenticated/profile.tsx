@@ -28,6 +28,7 @@ function ProfilePage() {
   });
 
   const [styleText, setStyleText] = useState("");
+  const [imageStyle, setImageStyle] = useState("");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -280,14 +281,17 @@ function ProfilePage() {
 
   // Seed the editor once the profile loads; don't clobber in-progress edits.
   useEffect(() => {
-    if (!dirty && data?.profile) setStyleText(data.profile.style_text);
+    if (!dirty && data?.profile) {
+      setStyleText(data.profile.style_text);
+      setImageStyle(data.profile.image_style ?? "");
+    }
   }, [data, dirty]);
 
   async function handleSave() {
     setSaving(true);
     setSaveError(null);
     try {
-      const { profile } = await save({ data: { styleText } });
+      const { profile } = await save({ data: { styleText, imageStyle } });
       queryClient.setQueryData(["profile", "me"], { profile });
       setDirty(false);
       setSavedAt(profile.updated_at);
