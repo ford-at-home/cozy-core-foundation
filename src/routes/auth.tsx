@@ -33,10 +33,24 @@ function AuthPage() {
   const busy = loading || googleLoading || adminLoading;
 
   useEffect(() => {
+    // If the user is already signed in, go straight to the dashboard.
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) navigate({ to: "/dashboard" });
     });
+
+    // Listen for the OAuth / admin sign-in callback so the redirect happens
+    // even when the session arrives after the page has mounted.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        navigate({ to: "/dashboard" });
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
+
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
