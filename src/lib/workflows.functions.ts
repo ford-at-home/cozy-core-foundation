@@ -62,6 +62,12 @@ export type StartWorkflowInput = {
   research?: string;
   goal?: string;
   requestId?: string;
+  attachments?: Array<{
+    path: string;      // storage path within research-attachments bucket
+    name: string;      // display filename
+    contentType?: string;
+    size?: number;
+  }>;
 };
 
 export const startWorkflow = createServerFn({ method: "POST" })
