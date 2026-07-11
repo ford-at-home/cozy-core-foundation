@@ -1,6 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  ensureAdminUser,
+  ADMIN_EMAIL,
+  ADMIN_PASSWORD,
+} from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -20,6 +27,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const ensureAdmin = useServerFn(ensureAdminUser);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -49,6 +57,38 @@ function AuthPage() {
       navigate({ to: "/dashboard" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGoogle() {
+    setError(null);
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) throw new Error(result.error.message ?? "Google sign-in failed");
+      if (result.redirected) return;
+      navigate({ to: "/dashboard" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Google sign-in failed");
+    }
+  }
+
+  async function handleAdmin() {
+    setLoading(true);
+    setError(null);
+    try {
+      await ensureAdmin();
+      const { error } = await supabase.auth.signInWithPassword({
+        email: ADMIN_EMAIL,
+        password: ADMIN_PASSWORD,
+      });
+      if (error) throw error;
+      navigate({ to: "/dashboard" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Admin sign-in failed");
     } finally {
       setLoading(false);
     }
@@ -98,6 +138,24 @@ function AuthPage() {
                 : "Create account"}
           </button>
         </form>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={handleGoogle}
+            disabled={loading}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent disabled:opacity-60"
+          >
+            Continue with Google
+          </button>
+          <button
+            type="button"
+            onClick={handleAdmin}
+            disabled={loading}
+            className="w-full rounded-md border border-dashed border-input bg-background px-3 py-2 text-xs text-muted-foreground hover:bg-accent disabled:opacity-60"
+          >
+            Sign in as demo admin
+          </button>
+        </div>
         <button
           type="button"
           onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
