@@ -21,6 +21,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildComposePrompt, slugify } from "../_shared/prompt.ts";
 import { dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
+import { buildImageCreds } from "../_shared/image-token.ts";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 
 const corsHeaders = {
@@ -96,10 +97,11 @@ Deno.serve(async (req) => {
   // --- 4. Resolve voice from the caller's profile (server-side only) -------
   const { data: profile } = await admin
     .from("profiles")
-    .select("style_text")
+    .select("style_text, image_style")
     .eq("user_id", userId)
     .maybeSingle();
   const styleText = (profile?.style_text ?? "").trim();
+  const imageStyle = (profile?.image_style ?? "").trim();
   if (!styleText) {
     return json(
       { error: "Your voice profile is empty. Describe your style at /profile first." },
@@ -141,6 +143,9 @@ Deno.serve(async (req) => {
   }
   const runId = inserted.id as string;
 
+  // Per-run image-gen credentials for the agent to call our public route.
+  const imageCreds = await buildImageCreds(runId);
+
   // --- 5b. Materialize attachments: inline text, sign URLs for binaries ----
   const attachments = await resolveAttachments(admin, userId, rawAttachments);
 
@@ -154,6 +159,9 @@ Deno.serve(async (req) => {
       research,
       goal: goal || null,
       styleText,
+      imageStyle,
+      imageEndpoint: imageCreds?.endpoint,
+      imageToken: imageCreds?.token,
       attachments,
     }),
     ref: Deno.env.get("AGENT_REPO_REF") ?? "main",

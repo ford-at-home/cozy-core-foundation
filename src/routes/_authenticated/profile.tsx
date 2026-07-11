@@ -28,6 +28,7 @@ function ProfilePage() {
   });
 
   const [styleText, setStyleText] = useState("");
+  const [imageStyle, setImageStyle] = useState("");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -280,14 +281,17 @@ function ProfilePage() {
 
   // Seed the editor once the profile loads; don't clobber in-progress edits.
   useEffect(() => {
-    if (!dirty && data?.profile) setStyleText(data.profile.style_text);
+    if (!dirty && data?.profile) {
+      setStyleText(data.profile.style_text);
+      setImageStyle(data.profile.image_style ?? "");
+    }
   }, [data, dirty]);
 
   async function handleSave() {
     setSaving(true);
     setSaveError(null);
     try {
-      const { profile } = await save({ data: { styleText } });
+      const { profile } = await save({ data: { styleText, imageStyle } });
       queryClient.setQueryData(["profile", "me"], { profile });
       setDirty(false);
       setSavedAt(profile.updated_at);
@@ -403,6 +407,31 @@ function ProfilePage() {
                 {saveError}
               </p>
             )}
+
+            <label className="block space-y-2 border-t border-border/60 pt-5">
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Image style
+              </span>
+              <p className="text-xs text-muted-foreground">
+                Describe the visual style for images generated with your pieces —
+                medium, palette, mood, references. Applied to every image the agent
+                creates for a post. Leave blank to skip images.
+              </p>
+              <textarea
+                value={imageStyle}
+                onChange={(e) => {
+                  setImageStyle(e.target.value);
+                  setDirty(true);
+                }}
+                rows={5}
+                placeholder={
+                  "e.g. hand-drawn ink and wash on off-white paper, minimal palette, " +
+                  "loose linework in the style of a nature journal — never photorealistic, " +
+                  "never glossy 3D renders."
+                }
+                className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-3 text-sm leading-relaxed outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
+              />
+            </label>
 
             <div className="flex items-center justify-between border-t border-border/60 pt-5">
               <p className="text-xs text-muted-foreground">

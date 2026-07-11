@@ -20,6 +20,7 @@ import {
   buildResynthPrompt,
   buildRevisionPrompt,
 } from "../_shared/prompt.ts";
+import { buildImageCreds } from "../_shared/image-token.ts";
 import { dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
 
 const corsHeaders = {
@@ -109,10 +110,11 @@ Deno.serve(async (req) => {
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("style_text")
+    .select("style_text, image_style")
     .eq("user_id", userId)
     .maybeSingle();
   const styleText = (profile?.style_text ?? "").trim();
+  const imageStyle = (profile?.image_style ?? "").trim();
   if (!styleText) {
     return json({ error: "Your voice profile is empty. Describe your style at /profile first." }, 422);
   }
@@ -131,28 +133,15 @@ Deno.serve(async (req) => {
   const mainRef = Deno.env.get("AGENT_REPO_REF") ?? "main";
   const ref = action === "revise" ? mainRef : (lastRun?.branch ?? mainRef);
 
-  let prompt: string;
+  // Pre-check resynth needs the prior input; the prompt itself is built
+  // AFTER the run is inserted so the image token can be bound to runId.
+  let priorResearch: { research: string; goal: string | null } | null = null;
   if (action === "resynth") {
     const priorInput = (lastRun?.input ?? {}) as { research?: string; goal?: string };
     if (!priorInput.research) {
       return json({ error: "No completed proposal run with research found for this piece" }, 409);
     }
-    prompt = buildResynthPrompt({
-      pieceSlug: piece.slug,
-      research: priorInput.research,
-      goal: priorInput.goal ?? null,
-      styleText,
-      feedback: feedback || null,
-    });
-  } else if (action === "ready") {
-    prompt = buildDraftPrompt({ pieceSlug: piece.slug, styleText, feedback: feedback || null });
-  } else {
-    prompt = buildRevisionPrompt({
-      pieceSlug: piece.slug,
-      draftPath: `pieces/${piece.slug}/draft.md`,
-      transcript: feedback,
-      styleText,
-    });
+    priorResearch = { research: priorInput.research, goal: priorInput.goal ?? null };
   }
 
   const { data: inserted, error: insertErr } = await admin
@@ -179,6 +168,39 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (existing) return json({ runId: existing.id, pieceId }, 202);
     return json({ error: insertErr?.message ?? "Insert failed" }, 500);
+  }
+
+  const imageCreds = await buildImageCreds(inserted.id);
+  const imageBits = {
+    imageStyle,
+    imageEndpoint: imageCreds?.endpoint,
+    imageToken: imageCreds?.token,
+  };
+  let prompt: string;
+  if (action === "resynth" && priorResearch) {
+    prompt = buildResynthPrompt({
+      pieceSlug: piece.slug,
+      research: priorResearch.research,
+      goal: priorResearch.goal,
+      styleText,
+      feedback: feedback || null,
+      ...imageBits,
+    });
+  } else if (action === "ready") {
+    prompt = buildDraftPrompt({
+      pieceSlug: piece.slug,
+      styleText,
+      feedback: feedback || null,
+      ...imageBits,
+    });
+  } else {
+    prompt = buildRevisionPrompt({
+      pieceSlug: piece.slug,
+      draftPath: `pieces/${piece.slug}/draft.md`,
+      transcript: feedback,
+      styleText,
+      ...imageBits,
+    });
   }
 
   await admin

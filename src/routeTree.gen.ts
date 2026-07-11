@@ -16,6 +16,7 @@ import { Route as ApiTranscribeRouteImport } from './routes/api/transcribe'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/new'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as ApiPublicGenerateImageRouteImport } from './routes/api/public/generate-image'
 import { Route as AuthenticatedRunsRunIdRouteImport } from './routes/_authenticated/runs.$runId'
 import { Route as AuthenticatedPrintRunIdRouteImport } from './routes/_authenticated/print.$runId'
 
@@ -53,6 +54,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicGenerateImageRoute = ApiPublicGenerateImageRouteImport.update({
+  id: '/api/public/generate-image',
+  path: '/api/public/generate-image',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedRunsRunIdRoute = AuthenticatedRunsRunIdRouteImport.update({
   id: '/runs/$runId',
   path: '/runs/$runId',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/api/transcribe': typeof ApiTranscribeRoute
   '/print/$runId': typeof AuthenticatedPrintRunIdRoute
   '/runs/$runId': typeof AuthenticatedRunsRunIdRoute
+  '/api/public/generate-image': typeof ApiPublicGenerateImageRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/api/transcribe': typeof ApiTranscribeRoute
   '/print/$runId': typeof AuthenticatedPrintRunIdRoute
   '/runs/$runId': typeof AuthenticatedRunsRunIdRoute
+  '/api/public/generate-image': typeof ApiPublicGenerateImageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/api/transcribe': typeof ApiTranscribeRoute
   '/_authenticated/print/$runId': typeof AuthenticatedPrintRunIdRoute
   '/_authenticated/runs/$runId': typeof AuthenticatedRunsRunIdRoute
+  '/api/public/generate-image': typeof ApiPublicGenerateImageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/api/transcribe'
     | '/print/$runId'
     | '/runs/$runId'
+    | '/api/public/generate-image'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/api/transcribe'
     | '/print/$runId'
     | '/runs/$runId'
+    | '/api/public/generate-image'
   id:
     | '__root__'
     | '/'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/api/transcribe'
     | '/_authenticated/print/$runId'
     | '/_authenticated/runs/$runId'
+    | '/api/public/generate-image'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -135,6 +147,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiTranscribeRoute: typeof ApiTranscribeRoute
+  ApiPublicGenerateImageRoute: typeof ApiPublicGenerateImageRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -188,6 +201,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/generate-image': {
+      id: '/api/public/generate-image'
+      path: '/api/public/generate-image'
+      fullPath: '/api/public/generate-image'
+      preLoaderRoute: typeof ApiPublicGenerateImageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/runs/$runId': {
       id: '/_authenticated/runs/$runId'
       path: '/runs/$runId'
@@ -229,6 +249,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiTranscribeRoute: ApiTranscribeRoute,
+  ApiPublicGenerateImageRoute: ApiPublicGenerateImageRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

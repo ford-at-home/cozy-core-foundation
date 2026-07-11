@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export type Profile = {
   user_id: string;
   style_text: string;
+  image_style: string;
   created_at: string;
   updated_at: string;
 };
@@ -13,7 +14,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<{ profile: Profile | null }> => {
     const { data, error } = await context.supabase
       .from("profiles")
-      .select("user_id, style_text, created_at, updated_at")
+      .select("user_id, style_text, image_style, created_at, updated_at")
       .eq("user_id", context.userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -22,20 +23,22 @@ export const getMyProfile = createServerFn({ method: "GET" })
 
 export const saveMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { styleText?: string }) => data ?? {})
+  .inputValidator((data: { styleText?: string; imageStyle?: string }) => data ?? {})
   .handler(async ({ data, context }): Promise<{ profile: Profile }> => {
     const styleText = typeof data.styleText === "string" ? data.styleText : "";
+    const imageStyle = typeof data.imageStyle === "string" ? data.imageStyle : "";
     const { data: saved, error } = await context.supabase
       .from("profiles")
       .upsert(
         {
           user_id: context.userId,
           style_text: styleText,
+          image_style: imageStyle,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" },
       )
-      .select("user_id, style_text, created_at, updated_at")
+      .select("user_id, style_text, image_style, created_at, updated_at")
       .single();
     if (error) throw new Error(error.message);
     return { profile: saved as Profile };
