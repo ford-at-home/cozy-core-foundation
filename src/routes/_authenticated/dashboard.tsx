@@ -68,7 +68,11 @@ function DashboardPage() {
             </thead>
             <tbody>
               {data!.runs.map((r) => (
-                <tr key={r.id} className="border-b border-border last:border-0">
+                <tr
+                  key={r.id}
+                  onClick={() => router.navigate({ to: "/runs/$runId", params: { runId: r.id } })}
+                  className="cursor-pointer border-b border-border last:border-0 hover:bg-accent/50"
+                >
                   <td className="px-4 py-2">
                     {new Date(r.created_at).toLocaleString()}
                   </td>

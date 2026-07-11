@@ -142,3 +142,72 @@
     color: var(--color-foreground);
   }
 }
+
+/* Rendered markdown output (run brief + piece). markdown-it emits raw HTML;
+   Tailwind's reset strips defaults, so restore just enough for readable prose. */
+.markdown-output {
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+.markdown-output > :first-child {
+  margin-top: 0;
+}
+.markdown-output h1,
+.markdown-output h2,
+.markdown-output h3 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+}
+.markdown-output h1 {
+  font-size: 1.5rem;
+}
+.markdown-output h2 {
+  font-size: 1.25rem;
+}
+.markdown-output h3 {
+  font-size: 1.1rem;
+}
+.markdown-output p,
+.markdown-output ul,
+.markdown-output ol,
+.markdown-output blockquote,
+.markdown-output pre {
+  margin: 0.75em 0;
+}
+.markdown-output ul,
+.markdown-output ol {
+  padding-left: 1.4em;
+}
+.markdown-output ul {
+  list-style: disc;
+}
+.markdown-output ol {
+  list-style: decimal;
+}
+.markdown-output a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+.markdown-output blockquote {
+  border-left: 3px solid var(--color-border);
+  padding-left: 1em;
+  color: var(--color-muted-foreground);
+}
+.markdown-output code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+  background: var(--color-muted);
+  padding: 0.1em 0.35em;
+  border-radius: 0.25rem;
+}
+.markdown-output pre {
+  background: var(--color-muted);
+  padding: 0.9em 1em;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+.markdown-output pre code {
+  background: none;
+  padding: 0;
+}
