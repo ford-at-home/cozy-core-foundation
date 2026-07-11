@@ -1,7 +1,8 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listMyRuns } from "@/lib/workflows.functions";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
