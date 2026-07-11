@@ -72,7 +72,10 @@ Deno.serve(async (req) => {
   const requestId = typeof body?.requestId === "string" && body.requestId
     ? body.requestId
     : crypto.randomUUID();
-  if (!research) return json({ error: "research is required" }, 400);
+  const rawAttachments = Array.isArray(body?.attachments) ? body.attachments : [];
+  if (!research && rawAttachments.length === 0) {
+    return json({ error: "research or at least one attachment is required" }, 400);
+  }
 
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -137,15 +140,111 @@ Deno.serve(async (req) => {
   }
   const runId = inserted.id as string;
 
+  // --- 5b. Materialize attachments: inline text, sign URLs for binaries ----
+  const attachments = await resolveAttachments(admin, userId, rawAttachments);
+
   // --- 6. Dispatch ----------------------------------------------------------
   await dispatchRun({
     admin,
     provider: resolveProvider(),
     runId,
-    prompt: buildComposePrompt({ pieceSlug: slug, research, goal: goal || null, styleText }),
+    prompt: buildComposePrompt({
+      pieceSlug: slug,
+      research,
+      goal: goal || null,
+      styleText,
+      attachments,
+    }),
     ref: Deno.env.get("AGENT_REPO_REF") ?? "main",
     autoCreatePr: false, // proposal runs push a branch only; PRs come later via "ready"
   });
 
   return json({ runId, pieceId: piece.id }, 202);
 });
+
+// Cap how much attachment text we inline into a single prompt to avoid
+// blowing past provider limits. Non-text and oversized files fall back to
+// signed URLs.
+const INLINE_TEXT_MAX_BYTES = 200_000; // ~200 KB per file
+const INLINE_TOTAL_MAX_BYTES = 500_000; // ~500 KB across all attachments
+const TEXT_MIME_PREFIXES = ["text/"];
+const TEXT_MIME_EXACT = new Set([
+  "application/json",
+  "application/xml",
+  "application/yaml",
+  "application/x-yaml",
+  "application/javascript",
+  "application/typescript",
+  "application/sql",
+  "application/toml",
+]);
+const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24; // 24h
+
+function isTextLike(contentType: string | undefined, name: string): boolean {
+  const ct = (contentType ?? "").toLowerCase();
+  if (TEXT_MIME_PREFIXES.some((p) => ct.startsWith(p))) return true;
+  if (TEXT_MIME_EXACT.has(ct)) return true;
+  const ext = name.toLowerCase().split(".").pop() ?? "";
+  return [
+    "txt", "md", "markdown", "csv", "tsv", "json", "yaml", "yml",
+    "xml", "html", "htm", "log", "toml", "ini",
+  ].includes(ext);
+}
+
+async function resolveAttachments(
+  admin: any,
+  userId: string,
+  raw: any[],
+): Promise<Array<{
+  name: string;
+  contentType?: string;
+  size?: number;
+  text?: string;
+  url?: string;
+  truncated?: boolean;
+}>> {
+  const out: Array<any> = [];
+  let inlinedTotal = 0;
+  for (const item of raw.slice(0, 10)) {
+    const path = typeof item?.path === "string" ? item.path : "";
+    const name = typeof item?.name === "string" ? item.name : path.split("/").pop() ?? "file";
+    const contentType = typeof item?.contentType === "string" ? item.contentType : undefined;
+    const size = typeof item?.size === "number" ? item.size : undefined;
+    if (!path) continue;
+    // Ownership: path must live under the caller's own folder.
+    const first = path.split("/")[0];
+    if (first !== userId) continue;
+
+    if (
+      isTextLike(contentType, name) &&
+      (size === undefined || size <= INLINE_TEXT_MAX_BYTES) &&
+      inlinedTotal < INLINE_TOTAL_MAX_BYTES
+    ) {
+      try {
+        const { data: blob, error: dlErr } = await admin.storage
+          .from("research-attachments")
+          .download(path);
+        if (!dlErr && blob) {
+          const buf = new Uint8Array(await blob.arrayBuffer());
+          const remaining = INLINE_TOTAL_MAX_BYTES - inlinedTotal;
+          const slice = buf.slice(0, Math.min(INLINE_TEXT_MAX_BYTES, remaining));
+          const truncated = buf.length > slice.length;
+          const text = new TextDecoder("utf-8", { fatal: false }).decode(slice);
+          inlinedTotal += slice.length;
+          out.push({ name, contentType, size, text, truncated });
+          continue;
+        }
+      } catch {
+        // fall through to signed URL
+      }
+    }
+
+    const { data: signed } = await admin.storage
+      .from("research-attachments")
+      .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+    if (signed?.signedUrl) {
+      out.push({ name, contentType, size, url: signed.signedUrl });
+    }
+  }
+  return out;
+}

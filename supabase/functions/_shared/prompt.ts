@@ -10,6 +10,20 @@ export interface ComposePromptInput {
   research: string;
   goal: string | null;
   styleText: string;
+  attachments?: PromptAttachment[];
+}
+
+export interface PromptAttachment {
+  name: string;
+  contentType?: string;
+  /** Inlined text content (for text-like files). */
+  text?: string;
+  /** Signed URL the agent can fetch (for binary/large files). */
+  url?: string;
+  /** Size in bytes (informational). */
+  size?: number;
+  /** Set when text was truncated to fit the prompt budget. */
+  truncated?: boolean;
 }
 
 export interface RevisionPromptInput {
@@ -44,20 +58,28 @@ Non-negotiables (from the contract):
 
 export function buildComposePrompt(input: ComposePromptInput): string {
   const dir = `pieces/${input.pieceSlug}`;
+  const attachmentsBlock = renderAttachments(input.attachments, dir);
   return `${CONTRACT_PREAMBLE}
 TASK: compose a proposal for a new long-form piece.
 
 Steps:
 1. Write the research provided below, verbatim, to ${dir}/research/research.md.
-2. Author ${dir}/brief.md per contract/references/BRIEF.template.md. For the
+2. If any ATTACHMENTS are provided below, treat them as additional research
+   input. For each inline-text attachment, write it verbatim to
+   ${dir}/research/attachments/<safe-name>. For each URL attachment, fetch it
+   (curl/wget) and save the raw bytes to ${dir}/research/attachments/<safe-name>;
+   if the file is text-like, additionally extract its readable content into
+   ${dir}/research/attachments/<safe-name>.txt. If a fetch fails, record the
+   URL and error in ${dir}/notes/unresolved.md and continue.
+3. Author ${dir}/brief.md per contract/references/BRIEF.template.md. For the
    Voice field write "inline (from profile)" and treat the VOICE text below as
    that voice. Persona, throughline, and stakes come from the research and GOAL.
-3. Synthesize ${dir}/proposal.md — the piece itself, brief-faithful, in the
+4. Synthesize ${dir}/proposal.md — the piece itself, brief-faithful, in the
    inline voice, with inline hyperlinked citations. This is the artifact peers
    will read and comment on: it must stand alone.
-4. Write ${dir}/notes/to-research.md, ${dir}/notes/tighten.md, and
+5. Write ${dir}/notes/to-research.md, ${dir}/notes/tighten.md, and
    ${dir}/notes/unresolved.md per the contract (always, even if empty).
-5. Commit all files to your working branch with message
+6. Commit all files to your working branch with message
    "piece(${input.pieceSlug}): proposal". Do NOT open a pull request.
 
 GOAL (optional steer for persona + throughline):
@@ -72,7 +94,32 @@ RESEARCH:
 <<<RESEARCH
 ${input.research.trim()}
 RESEARCH>>>
-`;
+${attachmentsBlock}`;
+}
+
+function renderAttachments(atts: PromptAttachment[] | undefined, dir: string): string {
+  if (!atts || atts.length === 0) return "";
+  const parts: string[] = [
+    "",
+    "ATTACHMENTS (additional research input; save each to " + dir + "/research/attachments/):",
+  ];
+  for (const a of atts) {
+    parts.push("");
+    parts.push(`--- ATTACHMENT: ${a.name}` +
+      (a.contentType ? ` (${a.contentType})` : "") +
+      (typeof a.size === "number" ? ` [${a.size} bytes]` : ""));
+    if (a.url) {
+      parts.push(`FETCH_URL: ${a.url}`);
+      parts.push("(Signed URL; expires. Fetch immediately and save the bytes.)");
+    }
+    if (typeof a.text === "string") {
+      parts.push(a.truncated ? "INLINE_TEXT (truncated to fit prompt budget):" : "INLINE_TEXT:");
+      parts.push("<<<FILE");
+      parts.push(a.text);
+      parts.push("FILE>>>");
+    }
+  }
+  return parts.join("\n") + "\n";
 }
 
 export function buildRevisionPrompt(input: RevisionPromptInput): string {
