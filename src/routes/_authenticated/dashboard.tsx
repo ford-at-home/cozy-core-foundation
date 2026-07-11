@@ -20,7 +20,7 @@ function DashboardPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
-    queryKey: ["workflow_runs", "recent"],
+    queryKey: ["agent_runs", "recent"],
     queryFn: () => fetchRuns(),
   });
 
@@ -67,7 +67,7 @@ function DashboardPage() {
             </div>
             <button
               type="button"
-              onClick={() => queryClient.invalidateQueries({ queryKey: ["workflow_runs", "recent"] })}
+              onClick={() => queryClient.invalidateQueries({ queryKey: ["agent_runs", "recent"] })}
               className="self-start rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent"
             >
               Try again
@@ -115,7 +115,7 @@ function DashboardPage() {
                   <td className="px-5 py-3.5">
                     {new Date(r.created_at).toLocaleString()}
                   </td>
-                  <td className="px-5 py-3.5 text-muted-foreground">{r.workflow_type}</td>
+                  <td className="px-5 py-3.5 text-muted-foreground">{r.kind}</td>
                   <td className="px-5 py-3.5">
                     <StatusPill status={r.status} />
                   </td>
@@ -134,11 +134,16 @@ function DashboardPage() {
 
 function StatusPill({ status }: { status: string }) {
   const tone: Record<string, string> = {
+    requested: "bg-muted text-muted-foreground",
+    dispatching: "bg-muted text-muted-foreground",
+    dispatch_unknown: "bg-amber-500/15 text-amber-500",
     queued: "bg-muted text-muted-foreground",
     running: "bg-primary/15 text-primary",
-    succeeded: "bg-emerald-500/15 text-emerald-400",
+    awaiting_fetch: "bg-primary/15 text-primary",
+    completed: "bg-emerald-500/15 text-emerald-400",
     failed: "bg-destructive/15 text-destructive",
-    canceled: "bg-muted text-muted-foreground",
+    cancel_requested: "bg-amber-500/15 text-amber-500",
+    cancelled: "bg-muted text-muted-foreground",
   };
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${tone[status] ?? tone.queued}`}>

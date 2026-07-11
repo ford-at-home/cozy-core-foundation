@@ -2,31 +2,57 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Json } from "@/integrations/supabase/types";
 
-export type WorkflowRun = {
+// Canonical run states — mirror of supabase/functions/_shared/state.ts.
+export type RunStatus =
+  | "requested"
+  | "dispatching"
+  | "dispatch_unknown"
+  | "queued"
+  | "running"
+  | "awaiting_fetch"
+  | "completed"
+  | "failed"
+  | "cancel_requested"
+  | "cancelled";
+
+export const ACTIVE_RUN_STATUSES: RunStatus[] = [
+  "requested",
+  "dispatching",
+  "dispatch_unknown",
+  "queued",
+  "running",
+  "awaiting_fetch",
+  "cancel_requested",
+];
+
+export type AgentRun = {
   id: string;
   user_id: string;
-  status: "queued" | "running" | "succeeded" | "failed" | "canceled";
-  workflow_type: string;
+  piece_id: string | null;
+  status: RunStatus;
+  kind: string;
   input: Json | null;
   result: Json | null;
   error: string | null;
+  branch: string | null;
   created_at: string;
-  started_at: string | null;
+  dispatched_at: string | null;
   completed_at: string | null;
 };
 
+const RUN_COLUMNS =
+  "id, user_id, piece_id, status, kind, input, result, error, branch, created_at, dispatched_at, completed_at";
+
 export const listMyRuns = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<{ runs: WorkflowRun[] }> => {
+  .handler(async ({ context }): Promise<{ runs: AgentRun[] }> => {
     const { data, error } = await context.supabase
-      .from("workflow_runs")
-      .select(
-        "id, user_id, status, workflow_type, input, result, error, created_at, started_at, completed_at",
-      )
+      .from("agent_runs")
+      .select(RUN_COLUMNS)
       .order("created_at", { ascending: false })
       .limit(20);
     if (error) throw new Error(error.message);
-    return { runs: (data ?? []) as WorkflowRun[] };
+    return { runs: (data ?? []) as AgentRun[] };
   });
 
 // Safe inputs only. The server resolves everything else (voice from the

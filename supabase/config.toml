@@ -1,1 +1,12 @@
 project_id = "dlaojinagezrlbwyritd"
+
+# Cursor sends no Supabase JWT; auth is the HMAC signature over the raw body.
+[functions.cursor-webhook]
+verify_jwt = false
+
+# Invoked by pg_cron via pg_net; guarded by RECONCILE_TOKEN when set.
+[functions.reconcile-runs]
+verify_jwt = false
+
+[functions.start-workflow]
+verify_jwt = true

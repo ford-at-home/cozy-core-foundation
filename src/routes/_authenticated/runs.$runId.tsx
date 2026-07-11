@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { WorkflowRun } from "@/lib/workflows.functions";
+import { ACTIVE_RUN_STATUSES, type AgentRun, type RunStatus } from "@/lib/workflows.functions";
 import type { Json } from "@/integrations/supabase/types";
 import MarkdownView from "@/components/MarkdownView";
 
@@ -21,9 +21,12 @@ type OutputChannel = { channel: string; files: OutputFile[] };
 type GeneratedBrief = { path?: string; content: string };
 const BRIEF_TAB = "__brief__";
 
+const RUN_COLUMNS =
+  "id, user_id, piece_id, status, kind, input, result, error, branch, created_at, dispatched_at, completed_at";
+
 function RunDetailPage() {
   const { runId } = Route.useParams();
-  const [run, setRun] = useState<WorkflowRun | null>(null);
+  const [run, setRun] = useState<AgentRun | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeFile, setActiveFile] = useState<string | null>(null);
@@ -32,28 +35,26 @@ function RunDetailPage() {
     let cancelled = false;
 
     supabase
-      .from("workflow_runs")
-      .select(
-        "id, user_id, status, workflow_type, input, result, error, created_at, started_at, completed_at",
-      )
+      .from("agent_runs")
+      .select(RUN_COLUMNS)
       .eq("id", runId)
       .maybeSingle()
       .then(({ data, error }) => {
         if (cancelled) return;
         if (error) setLoadError(error.message);
         else if (!data) setLoadError("Run not found.");
-        else setRun(data as WorkflowRun);
+        else setRun(data as AgentRun);
         setLoading(false);
       });
 
-    // Live updates as the worker moves the run queued → running → succeeded.
+    // Live updates as the controller moves the run through the state machine.
     const channel = supabase
       .channel(`run-${runId}`)
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "workflow_runs", filter: `id=eq.${runId}` },
+        { event: "UPDATE", schema: "public", table: "agent_runs", filter: `id=eq.${runId}` },
         (payload) => {
-          if (!cancelled) setRun(payload.new as WorkflowRun);
+          if (!cancelled) setRun(payload.new as AgentRun);
         },
       )
       .subscribe();
@@ -107,21 +108,21 @@ function RunDetailPage() {
             </span>
           </div>
 
-          {(run.status === "queued" || run.status === "running") && (
+          {ACTIVE_RUN_STATUSES.includes(run.status) && (
             <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
-              {run.status === "queued"
-                ? "Queued — waiting for the worker to pick it up. (If WORKER_URL isn't configured on the edge function yet, it stays queued.)"
-                : "Working — the agent is authoring the brief and synthesizing the piece. This page updates live."}
+              {activeStatusMessage(run.status)}
             </div>
           )}
 
-          {run.status === "failed" && (
+          {(run.status === "failed" || run.status === "cancelled") && (
             <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-              {run.error ?? "The run failed without an error message."}
+              {run.status === "cancelled"
+                ? "This run was cancelled."
+                : (run.error ?? "The run failed without an error message.")}
             </div>
           )}
 
-          {run.status === "succeeded" && (channels.length > 0 || brief) && (
+          {run.status === "completed" && (channels.length > 0 || brief) && (
             <section className="space-y-2">
               <div className="flex flex-wrap gap-2">
                 {brief && (
@@ -155,15 +156,35 @@ function RunDetailPage() {
             </section>
           )}
 
-          {run.status === "succeeded" && channels.length === 0 && !brief && (
+          {run.status === "completed" && channels.length === 0 && !brief && (
             <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
-              The run succeeded but produced no readable output.
+              The run completed but produced no readable output.
             </div>
           )}
         </>
       )}
     </div>
   );
+}
+
+function activeStatusMessage(status: RunStatus): string {
+  switch (status) {
+    case "requested":
+    case "dispatching":
+      return "Starting — handing the run to the cloud agent.";
+    case "dispatch_unknown":
+      return "Starting… — dispatch is unconfirmed; the reconciler is resolving it. This page updates live.";
+    case "queued":
+      return "Queued — the agent's workspace is being prepared.";
+    case "running":
+      return "Working — the agent is authoring the brief and synthesizing the piece. This page updates live.";
+    case "awaiting_fetch":
+      return "Almost done — the piece is written; fetching it back now.";
+    case "cancel_requested":
+      return "Cancelling — waiting for the agent to confirm.";
+    default:
+      return "In progress.";
+  }
 }
 
 function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
@@ -183,13 +204,18 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
   );
 }
 
-function StatusBadge({ status }: { status: WorkflowRun["status"] }) {
-  const tone: Record<WorkflowRun["status"], string> = {
+function StatusBadge({ status }: { status: RunStatus }) {
+  const tone: Record<RunStatus, string> = {
+    requested: "bg-muted text-muted-foreground",
+    dispatching: "bg-muted text-muted-foreground",
+    dispatch_unknown: "bg-amber-500/15 text-amber-600",
     queued: "bg-muted text-muted-foreground",
     running: "bg-primary/15 text-primary",
-    succeeded: "bg-emerald-500/15 text-emerald-600",
+    awaiting_fetch: "bg-primary/15 text-primary",
+    completed: "bg-emerald-500/15 text-emerald-600",
     failed: "bg-destructive/15 text-destructive",
-    canceled: "bg-muted text-muted-foreground",
+    cancel_requested: "bg-amber-500/15 text-amber-600",
+    cancelled: "bg-muted text-muted-foreground",
   };
   return (
     <span className={`rounded px-2 py-0.5 text-xs font-medium ${tone[status]}`}>{status}</span>
