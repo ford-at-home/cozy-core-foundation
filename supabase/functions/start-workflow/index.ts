@@ -204,6 +204,66 @@ async function extractPdfText(buf: Uint8Array): Promise<string> {
   return Array.isArray(text) ? text.join("\n\n") : String(text ?? "");
 }
 
+// OCR fallback for scanned PDFs. When pdf.js pulls almost no text out of a
+// PDF (image-only scans, camera captures), we ask a vision model to
+// transcribe it. Uses the Lovable AI Gateway so no extra provider secret
+// is needed.
+const OCR_MIN_CHARS = 200; // below this we treat extraction as "empty enough"
+const OCR_MAX_PDF_BYTES = 15 * 1024 * 1024; // 15 MB — gateway/provider ceiling
+const OCR_MODEL = "google/gemini-2.5-flash";
+const OCR_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+}
+
+async function ocrPdf(buf: Uint8Array, name: string): Promise<string> {
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) return "";
+  if (buf.length > OCR_MAX_PDF_BYTES) return "";
+  const dataUrl = `data:application/pdf;base64,${bytesToBase64(buf)}`;
+  const res = await fetch(OCR_GATEWAY_URL, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: OCR_MODEL,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text:
+                "Transcribe ALL text from this PDF verbatim. Preserve reading order and paragraph breaks. " +
+                "Do not summarize, translate, or add commentary. If a page is blank, write '[blank page]'.",
+            },
+            {
+              type: "file",
+              file: { filename: name, file_data: dataUrl },
+            },
+          ],
+        },
+      ],
+    }),
+  });
+  if (!res.ok) return "";
+  const json = await res.json().catch(() => null) as any;
+  const text = json?.choices?.[0]?.message?.content;
+  return typeof text === "string" ? text : "";
+}
+
+function nonWhitespaceLength(s: string): number {
+  return s.replace(/\s+/g, "").length;
+}
+
 async function resolveAttachments(
   admin: any,
   userId: string,
@@ -259,7 +319,21 @@ async function resolveAttachments(
           .download(path);
         if (!dlErr && blob) {
           const buf = new Uint8Array(await blob.arrayBuffer());
-          const full = await extractPdfText(buf);
+          let full = "";
+          try {
+            full = await extractPdfText(buf);
+          } catch {
+            full = "";
+          }
+          let source: "pdf-text" | "pdf-ocr" = "pdf-text";
+          if (nonWhitespaceLength(full) < OCR_MIN_CHARS) {
+            const ocr = await ocrPdf(buf, name).catch(() => "");
+            if (nonWhitespaceLength(ocr) > nonWhitespaceLength(full)) {
+              full = ocr;
+              source = "pdf-ocr";
+            }
+          }
+          if (!full) throw new Error("empty");
           const remaining = INLINE_TOTAL_MAX_BYTES - inlinedTotal;
           const cap = Math.min(INLINE_TEXT_MAX_BYTES, remaining);
           const encoded = new TextEncoder().encode(full);
@@ -268,11 +342,14 @@ async function resolveAttachments(
             ? new TextDecoder("utf-8", { fatal: false }).decode(encoded.slice(0, cap))
             : full;
           inlinedTotal += truncated ? cap : encoded.length;
+          const prefix = source === "pdf-ocr"
+            ? "[OCR transcription — original PDF had no embedded text layer]\n\n"
+            : "";
           out.push({
             name,
             contentType: contentType ?? "application/pdf",
             size,
-            text,
+            text: prefix + text,
             truncated,
           });
           continue;
