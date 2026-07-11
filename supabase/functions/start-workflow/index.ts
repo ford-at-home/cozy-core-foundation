@@ -96,10 +96,11 @@ Deno.serve(async (req) => {
   // --- 4. Resolve voice from the caller's profile (server-side only) -------
   const { data: profile } = await admin
     .from("profiles")
-    .select("style_text")
+    .select("style_text, image_style")
     .eq("user_id", userId)
     .maybeSingle();
   const styleText = (profile?.style_text ?? "").trim();
+  const imageStyle = (profile?.image_style ?? "").trim();
   if (!styleText) {
     return json(
       { error: "Your voice profile is empty. Describe your style at /profile first." },
@@ -141,6 +142,9 @@ Deno.serve(async (req) => {
   }
   const runId = inserted.id as string;
 
+  // Per-run image-gen credentials for the agent to call our public route.
+  const imageCreds = buildImageCreds(runId);
+
   // --- 5b. Materialize attachments: inline text, sign URLs for binaries ----
   const attachments = await resolveAttachments(admin, userId, rawAttachments);
 
@@ -154,6 +158,9 @@ Deno.serve(async (req) => {
       research,
       goal: goal || null,
       styleText,
+      imageStyle,
+      imageEndpoint: imageCreds?.endpoint,
+      imageToken: imageCreds?.token,
       attachments,
     }),
     ref: Deno.env.get("AGENT_REPO_REF") ?? "main",
@@ -162,6 +169,113 @@ Deno.serve(async (req) => {
 
   return json({ runId, pieceId: piece.id }, 202);
 });
+
+// Mints an HMAC-scoped image-gen bearer token bound to this run so a leaked
+// token can only generate images for one run. Returns null if the endpoint
+// isn't configured (falls back to legacy SVG rule).
+function buildImageCreds(runId: string): { endpoint: string; token: string } | null {
+  const base = Deno.env.get("APP_PUBLIC_URL")?.trim();
+  const secret = Deno.env.get("AGENT_IMAGE_SECRET")?.trim();
+  if (!base || !secret) return null;
+  const token = `${runId}.${hmacHex(secret, runId)}`;
+  return { endpoint: `${base.replace(/\/$/, "")}/api/public/generate-image`, token };
+}
+
+function hmacHex(secret: string, msg: string): string {
+  const enc = new TextEncoder();
+  // Sync HMAC via crypto.subtle is async; do it once at module load isn't
+  // possible per-run, so we use a small sync helper via SubtleCrypto below.
+  // Note: we intentionally use SHA-256 HMAC via a small sync-looking wrapper.
+  // deno-lint-ignore no-explicit-any
+  const key = (globalThis as any).crypto.subtle;
+  // fall through to async signer
+  return _hmacHexSync(secret, msg);
+  // eslint-disable-next-line no-unreachable
+  void enc; void key;
+}
+
+// Simple sync-ish HMAC-SHA256 using WebCrypto (awaited via top-level await
+// inside the caller is impractical here — dispatch is not async in this path).
+// We implement a compact HMAC-SHA256 in pure JS to keep prompt building sync.
+function _hmacHexSync(secret: string, msg: string): string {
+  const enc = new TextEncoder();
+  const keyBytes = enc.encode(secret);
+  const msgBytes = enc.encode(msg);
+  const blockSize = 64;
+  let k = keyBytes;
+  if (k.length > blockSize) k = new Uint8Array(sha256(k));
+  if (k.length < blockSize) {
+    const padded = new Uint8Array(blockSize);
+    padded.set(k);
+    k = padded;
+  }
+  const oKeyPad = new Uint8Array(blockSize);
+  const iKeyPad = new Uint8Array(blockSize);
+  for (let i = 0; i < blockSize; i++) {
+    oKeyPad[i] = k[i] ^ 0x5c;
+    iKeyPad[i] = k[i] ^ 0x36;
+  }
+  const inner = sha256(concat(iKeyPad, msgBytes));
+  const outer = sha256(concat(oKeyPad, new Uint8Array(inner)));
+  return [...new Uint8Array(outer)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+function concat(a: Uint8Array, b: Uint8Array): Uint8Array {
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a); out.set(b, a.length);
+  return out;
+}
+// Minimal SHA-256 (FIPS 180-4). Compact, ~1KB. Sufficient here — not perf critical.
+function sha256(bytes: Uint8Array): ArrayBuffer {
+  const K = new Uint32Array([
+    0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2,
+  ]);
+  const l = bytes.length;
+  const withPad = new Uint8Array(((l + 9 + 63) >> 6) << 6);
+  withPad.set(bytes);
+  withPad[l] = 0x80;
+  const bitLen = BigInt(l) * 8n;
+  const dv = new DataView(withPad.buffer);
+  dv.setBigUint64(withPad.length - 8, bitLen, false);
+  const H = new Uint32Array([
+    0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19,
+  ]);
+  const w = new Uint32Array(64);
+  for (let i = 0; i < withPad.length; i += 64) {
+    for (let t = 0; t < 16; t++) w[t] = dv.getUint32(i + t * 4, false);
+    for (let t = 16; t < 64; t++) {
+      const s0 = ror(w[t-15], 7) ^ ror(w[t-15], 18) ^ (w[t-15] >>> 3);
+      const s1 = ror(w[t-2], 17) ^ ror(w[t-2], 19) ^ (w[t-2] >>> 10);
+      w[t] = (w[t-16] + s0 + w[t-7] + s1) >>> 0;
+    }
+    let [a,b,c,d,e,f,g,h] = H;
+    for (let t = 0; t < 64; t++) {
+      const S1 = ror(e,6) ^ ror(e,11) ^ ror(e,25);
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (h + S1 + ch + K[t] + w[t]) >>> 0;
+      const S0 = ror(a,2) ^ ror(a,13) ^ ror(a,22);
+      const mj = (a & b) ^ (a & c) ^ (b & c);
+      const t2 = (S0 + mj) >>> 0;
+      h = g; g = f; f = e; e = (d + t1) >>> 0;
+      d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+    }
+    H[0] = (H[0]+a)>>>0; H[1] = (H[1]+b)>>>0; H[2] = (H[2]+c)>>>0; H[3] = (H[3]+d)>>>0;
+    H[4] = (H[4]+e)>>>0; H[5] = (H[5]+f)>>>0; H[6] = (H[6]+g)>>>0; H[7] = (H[7]+h)>>>0;
+  }
+  const out = new ArrayBuffer(32);
+  const odv = new DataView(out);
+  for (let i = 0; i < 8; i++) odv.setUint32(i * 4, H[i], false);
+  return out;
+}
+function ror(x: number, n: number): number {
+  return ((x >>> n) | (x << (32 - n))) >>> 0;
+}
 
 // Cap how much attachment text we inline into a single prompt to avoid
 // blowing past provider limits. Non-text and oversized files fall back to
