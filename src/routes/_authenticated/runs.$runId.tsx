@@ -1,7 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { ACTIVE_RUN_STATUSES, type AgentRun, type RunStatus } from "@/lib/workflows.functions";
+import { runPieceAction, type PieceAction } from "@/lib/pieces.functions";
 import type { Json } from "@/integrations/supabase/types";
 import MarkdownView from "@/components/MarkdownView";
 
@@ -161,9 +163,145 @@ function RunDetailPage() {
               The run completed but produced no readable output.
             </div>
           )}
+
+          {run.status === "completed" && run.piece_id && <ActionsPanel run={run} />}
         </>
       )}
     </div>
+  );
+}
+
+// Next-step actions after a completed run (plan v2 §product experience).
+// Which actions make sense depends on what this run produced.
+function ActionsPanel({ run }: { run: AgentRun }) {
+  const router = useRouter();
+  const act = useServerFn(runPieceAction);
+  const [feedback, setFeedback] = useState("");
+  const [transcript, setTranscript] = useState("");
+  const [pending, setPending] = useState<PieceAction | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const isProposal = run.kind === "proposal" || run.kind === "resynth";
+  const isDraft = run.kind === "draft";
+
+  async function dispatch(action: PieceAction) {
+    if (!run.piece_id || pending) return;
+    setPending(action);
+    setError(null);
+    try {
+      const { runId } = await act({
+        data: {
+          pieceId: run.piece_id,
+          action,
+          feedback: action === "revise" ? transcript : feedback,
+          requestId: crypto.randomUUID(),
+        },
+      });
+      router.navigate({ to: "/runs/$runId", params: { runId } });
+      setPending(null);
+      setFeedback("");
+      setTranscript("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Action failed");
+      setPending(null);
+    }
+  }
+
+  return (
+    <section className="space-y-4 rounded-xl border border-border bg-card p-6">
+      <h2 className="font-serif text-xl">Next step</h2>
+
+      {isProposal && (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Happy with the proposal? <strong>Ready</strong> produces the final draft as a
+            pull request you approve. Not quite? Say why and <strong>Resynth</strong> for
+            a fresh attempt.
+          </p>
+          <textarea
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            rows={3}
+            placeholder="Optional steering: I'd cut the second section; lean harder on the case study; less formal…"
+            className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-2.5 text-sm outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
+          />
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => dispatch("ready")}
+              disabled={pending !== null}
+              className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {pending === "ready" ? "Starting…" : "Ready → final draft PR"}
+            </button>
+            <button
+              type="button"
+              onClick={() => dispatch("resynth")}
+              disabled={pending !== null}
+              className="rounded-md border border-border px-5 py-2.5 text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50"
+            >
+              {pending === "resynth" ? "Starting…" : "Resynth"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isDraft && (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            <Link
+              to="/print/$runId"
+              params={{ runId: run.id }}
+              className="underline hover:text-foreground"
+            >
+              Print this draft
+            </Link>{" "}
+            for pen markup, then type your annotations back here (block anchors like
+            “S4P3: tighten”, marks like “mark three: cut”). <strong>Revise</strong>{" "}
+            produces the final version as a pull request.
+          </p>
+          <textarea
+            value={transcript}
+            onChange={(e) => setTranscript(e.target.value)}
+            rows={6}
+            placeholder={'S2P1: tighten to one sentence.\nMark three: cut everything after the comma.\nThe viz on page 2: sketch of the handoff gap.'}
+            className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-2.5 font-mono text-sm outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
+          />
+          <button
+            type="button"
+            onClick={() => dispatch("revise")}
+            disabled={pending !== null || transcript.trim() === ""}
+            className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            {pending === "revise" ? "Starting…" : "Revise → final PR"}
+          </button>
+        </div>
+      )}
+
+      {run.kind === "revision" && (
+        <p className="text-sm text-muted-foreground">
+          Final version produced. Approve its pull request on GitHub, then copy the piece
+          from the tabs above wherever it's going.
+        </p>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        <Link
+          to="/print/$runId"
+          params={{ runId: run.id }}
+          className="underline hover:text-foreground"
+        >
+          Print view
+        </Link>{" "}
+        · branch: <span className="font-mono">{run.branch ?? "—"}</span>
+      </p>
+
+      {error && (
+        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {error}
+        </p>
+      )}
+    </section>
   );
 }
 

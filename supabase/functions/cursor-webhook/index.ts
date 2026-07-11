@@ -15,6 +15,7 @@ import { verifyWebhookSignature } from "../_shared/webhook.ts";
 import {
   applyExternalStatus,
   fetchRunResult,
+  prUrlFieldForKind,
   stageForCompletedKind,
   type RunRow,
 } from "../_shared/complete.ts";
@@ -107,10 +108,13 @@ Deno.serve(async (req) => {
             })
             .eq("id", run.id);
           if (run.piece_id) {
+            const prField = prUrlFieldForKind(run.kind);
+            const prUrl = payload?.target?.prUrl;
             await admin
               .from("pieces")
               .update({
                 stage: stageForCompletedKind(run.kind),
+                ...(prField && typeof prUrl === "string" ? { [prField]: prUrl } : {}),
                 updated_at: new Date().toISOString(),
               })
               .eq("id", run.piece_id);

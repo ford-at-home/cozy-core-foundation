@@ -22,6 +22,7 @@ import { ProviderHttpError } from "../_shared/provider.ts";
 import {
   applyExternalStatus,
   fetchRunResult,
+  prUrlFieldForKind,
   stageForCompletedKind,
   type RunRow,
 } from "../_shared/complete.ts";
@@ -180,10 +181,12 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
         .update({ status: "completed", result, completed_at: new Date().toISOString() })
         .eq("id", run.id);
       if (run.piece_id) {
+        const prField = prUrlFieldForKind(run.kind);
         await admin
           .from("pieces")
           .update({
             stage: stageForCompletedKind(run.kind),
+            ...(prField && agent.prUrl ? { [prField]: agent.prUrl } : {}),
             updated_at: new Date().toISOString(),
           })
           .eq("id", run.piece_id);

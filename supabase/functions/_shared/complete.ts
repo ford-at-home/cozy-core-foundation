@@ -58,6 +58,13 @@ export function mainFileForKind(kind: string): string {
   }
 }
 
+/** Which pieces column records this kind's PR (approval moments). */
+export function prUrlFieldForKind(kind: string): "draft_pr_url" | "final_pr_url" | null {
+  if (kind === "draft") return "draft_pr_url";
+  if (kind === "revision") return "final_pr_url";
+  return null;
+}
+
 /** The piece stage a completed run of this kind advances to. */
 export function stageForCompletedKind(kind: string): string {
   switch (kind) {
