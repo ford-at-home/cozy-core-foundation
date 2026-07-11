@@ -17,7 +17,7 @@ export type WorkflowRun = {
 
 export const listMyRuns = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .handler(async ({ context }): Promise<{ runs: WorkflowRun[] }> => {
     const { data, error } = await context.supabase
       .from("workflow_runs")
       .select(
@@ -40,7 +40,7 @@ export type StartWorkflowInput = {
 export const startWorkflow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: StartWorkflowInput) => data ?? {})
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }): Promise<{ runId: string }> => {
     // Invoke the start-workflow edge function as the signed-in user.
     const { data: result, error } = await context.supabase.functions.invoke(
       "start-workflow",
