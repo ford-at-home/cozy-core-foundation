@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      workflow_runs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          id: string
+          input: Json | null
+          result: Json | null
+          started_at: string | null
+          status: string
+          user_id: string
+          workflow_type: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          input?: Json | null
+          result?: Json | null
+          started_at?: string | null
+          status?: string
+          user_id: string
+          workflow_type?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          input?: Json | null
+          result?: Json | null
+          started_at?: string | null
+          status?: string
+          user_id?: string
+          workflow_type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
