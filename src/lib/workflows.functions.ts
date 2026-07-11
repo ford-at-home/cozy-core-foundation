@@ -29,12 +29,13 @@ export const listMyRuns = createServerFn({ method: "GET" })
     return { runs: (data ?? []) as WorkflowRun[] };
   });
 
+// Safe inputs only. The server resolves everything else (voice from the
+// caller's profile; repo/model/prompt server-side). requestId seeds the
+// idempotency key so retried submissions cannot double-dispatch.
 export type StartWorkflowInput = {
   research?: string;
-  voice?: string;
   goal?: string;
-  bundle?: unknown;
-  model?: string;
+  requestId?: string;
 };
 
 export const startWorkflow = createServerFn({ method: "POST" })

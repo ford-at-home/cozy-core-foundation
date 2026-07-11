@@ -1,14 +1,14 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { startWorkflow } from "@/lib/workflows.functions";
+import { getMyProfile } from "@/lib/profile.functions";
 
-// Migrated from packages/studio: paste research, pick a voice, and compose.
-// The generation runs on the self-hosted worker (via the start-workflow edge
-// function); this page only kicks off the run and hands off to the run detail.
-const DEFAULT_BUNDLE = "voice-only";
-const DEFAULT_MODEL = "composer-2.5";
-
+// Composer: paste research, optionally steer with a goal, and compose.
+// Voice is NOT an input here — it comes from the signed-in user's profile
+// (style_text) and is resolved server-side at dispatch. The browser sends
+// only safe inputs: research, goal, requestId.
 export const Route = createFileRoute("/_authenticated/new")({
   head: () => ({
     meta: [
@@ -23,13 +23,23 @@ export const Route = createFileRoute("/_authenticated/new")({
 function NewPiecePage() {
   const router = useRouter();
   const start = useServerFn(startWorkflow);
+  const fetchProfile = useServerFn(getMyProfile);
   const [research, setResearch] = useState("");
-  const [voice, setVoice] = useState("");
   const [goal, setGoal] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSubmit = !submitting && research.trim() !== "" && voice.trim() !== "";
+  // requestId is the idempotency seed: stable for this form instance, so a
+  // double-click or a retried request cannot dispatch two runs.
+  const requestId = useMemo(() => crypto.randomUUID(), []);
+
+  const { data: profileData, isLoading: profileLoading } = useQuery({
+    queryKey: ["profile", "me"],
+    queryFn: () => fetchProfile(),
+  });
+  const hasStyle = (profileData?.profile?.style_text ?? "").trim() !== "";
+
+  const canSubmit = !submitting && !profileLoading && hasStyle && research.trim() !== "";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,13 +48,7 @@ function NewPiecePage() {
     setError(null);
     try {
       const { runId } = await start({
-        data: {
-          research,
-          voice: voice.trim(),
-          goal: goal.trim(),
-          bundle: DEFAULT_BUNDLE,
-          model: DEFAULT_MODEL,
-        },
+        data: { research, goal: goal.trim(), requestId },
       });
       router.navigate({ to: "/runs/$runId", params: { runId } });
     } catch (err) {
@@ -59,10 +63,23 @@ function NewPiecePage() {
         <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Studio</p>
         <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">New piece</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Paste your research, pick a voice, and hit Create. The studio authors a
-          writing brief from the research in your voice, then synthesizes the piece.
+          Paste your research and hit Create. The studio authors a writing brief from the
+          research in your voice — taken from{" "}
+          <Link to="/profile" className="underline hover:text-foreground">
+            your profile
+          </Link>
+          {" "}— then synthesizes the piece.
         </p>
       </div>
+
+      {!profileLoading && !hasStyle && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+          Your voice profile is empty, and composing without a voice is refused by design.{" "}
+          <Link to="/profile" className="font-medium underline">
+            Describe your style first →
+          </Link>
+        </div>
+      )}
 
       <form
         onSubmit={handleSubmit}
@@ -81,34 +98,17 @@ function NewPiecePage() {
           />
         </label>
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          <label className="block space-y-2">
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Voice
-            </span>
-            <input
-              value={voice}
-              onChange={(e) => setVoice(e.target.value)}
-              placeholder="e.g. ford"
-              className="w-full rounded-md border border-input bg-background/60 px-3.5 py-2.5 text-sm outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
-            />
-            <span className="block text-xs text-muted-foreground">
-              A voice defined on the worker (under <code className="font-mono text-[11px]">~/.me/voices/</code>).
-            </span>
-          </label>
-
-          <label className="block space-y-2">
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Goal <span className="normal-case tracking-normal text-muted-foreground/70">— optional</span>
-            </span>
-            <input
-              value={goal}
-              onChange={(e) => setGoal(e.target.value)}
-              placeholder="What should the reader walk away with?"
-              className="w-full rounded-md border border-input bg-background/60 px-3.5 py-2.5 text-sm outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
-            />
-          </label>
-        </div>
+        <label className="block space-y-2">
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Goal <span className="normal-case tracking-normal text-muted-foreground/70">— optional</span>
+          </span>
+          <input
+            value={goal}
+            onChange={(e) => setGoal(e.target.value)}
+            placeholder="What should the reader walk away with?"
+            className="w-full rounded-md border border-input bg-background/60 px-3.5 py-2.5 text-sm outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
+          />
+        </label>
 
         {error && (
           <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -118,7 +118,7 @@ function NewPiecePage() {
 
         <div className="flex items-center justify-between border-t border-border/60 pt-5">
           <p className="text-xs text-muted-foreground">
-            {DEFAULT_BUNDLE} · {DEFAULT_MODEL}
+            Voice: {profileLoading ? "loading…" : hasStyle ? "from your profile" : "not set"}
           </p>
           <button
             type="submit"

@@ -58,6 +58,13 @@ function AuthenticatedLayout() {
               >
                 New piece
               </Link>
+              <Link
+                to="/profile"
+                activeProps={{ className: "rounded-md px-3 py-1.5 bg-accent text-foreground" }}
+                inactiveProps={{ className: "rounded-md px-3 py-1.5 text-muted-foreground hover:text-foreground hover:bg-accent/50" }}
+              >
+                Profile
+              </Link>
             </nav>
           </div>
           <div className="flex shrink-0 items-center gap-3 text-sm">
