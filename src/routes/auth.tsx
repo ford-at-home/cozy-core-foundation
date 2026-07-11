@@ -51,8 +51,8 @@ function AuthPage() {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-
   async function handleSubmit(e: React.FormEvent) {
+
     e.preventDefault();
     setLoading(true);
     setError(null);
