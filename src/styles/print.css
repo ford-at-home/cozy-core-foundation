@@ -1,0 +1,214 @@
+/* print.css - Wide-margin, hand-markup-friendly print styling.
+ * Used by scripts/print-markup. Tuned for marking up with pen + highlighter.
+ */
+
+@page {
+  size: letter;
+  margin: 1.5in 2in 1.5in 1.5in;
+}
+
+html, body {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 12pt;
+  line-height: 1.7;
+  color: #1a1a1a;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  padding: 1in 1.25in 1in 1in;
+}
+
+@media print {
+  body { padding: 0; }
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1.3;
+  page-break-after: avoid;
+  margin-top: 1.4em;
+  margin-bottom: 0.4em;
+}
+
+h1 { font-size: 1.6em; }
+h2 { font-size: 1.3em; }
+h3 { font-size: 1.1em; }
+
+p, li {
+  margin: 0.6em 0;
+  orphans: 3;
+  widows: 3;
+}
+
+li { margin: 0.3em 0; }
+
+blockquote {
+  border-left: 3px solid #888;
+  margin-left: 0;
+  padding-left: 1em;
+  color: #333;
+}
+
+code {
+  font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+  background: #f3f3f3;
+  padding: 0.05em 0.25em;
+  border-radius: 2px;
+}
+
+pre {
+  font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace;
+  font-size: 0.85em;
+  background: #f5f5f5;
+  padding: 0.6em 0.8em;
+  border-radius: 3px;
+  page-break-inside: avoid;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+pre code {
+  background: transparent;
+  padding: 0;
+}
+
+a { color: #1a1a1a; text-decoration: underline; }
+
+img { max-width: 100%; }
+
+hr {
+  border: none;
+  border-top: 1px solid #aaa;
+  margin: 1.5em 0;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  page-break-inside: avoid;
+}
+
+th, td {
+  border: 1px solid #aaa;
+  padding: 0.4em 0.6em;
+  text-align: left;
+}
+
+th { background: #efefef; }
+
+/* Footer page numbers when supported by the print engine */
+@media print {
+  @page {
+    @bottom-center { content: counter(page); }
+  }
+}
+
+/* Hide on-screen affordances when printing */
+@media print {
+  nav, footer, .no-print { display: none !important; }
+}
+
+/* ============================================================
+ * Pre-printed block anchors (S{n}P{m} labels in the left margin)
+ *
+ * Active when <body class="with-anchors"> (default for print-markup).
+ * Disabled by passing --no-anchors to print-markup.
+ *
+ * Two nested counters:
+ *   - `section` increments on every heading (h1-h6). The heading itself
+ *     is labeled "S{n}" alone — it *is* the section, not a paragraph in it.
+ *   - `para` increments on every non-heading block (paragraphs, blockquotes,
+ *     code blocks, tables) and resets to 0 at each heading. Those blocks
+ *     are labeled "S{n}P{m}".
+ * `section` starts at 0 so the first *heading* in the document becomes S1
+ * (matching how a person reading top to bottom would count sections).
+ * Any lead-in content before that first heading — rare, but possible — is
+ * labeled S0P1, S0P2, … rather than stealing the S1 slot from the real
+ * first section.
+ *
+ * NOT counted: list items (skipped to avoid bullet conflicts).
+ *
+ * The block-counting rule must stay in sync with references/MARKUP.md
+ * "Pre-printed block anchors" — synthesize uses the same rule when
+ * resolving "S4P3" / "section 4 paragraph 3" voice references.
+ * ============================================================ */
+
+body.with-anchors {
+  counter-reset: section 0 para 0;
+}
+
+body.with-anchors :is(h1, h2, h3, h4, h5, h6) {
+  counter-increment: section;
+  counter-reset: para 0;
+  position: relative;
+}
+
+body.with-anchors :is(h1, h2, h3, h4, h5, h6)::before {
+  content: "S" counter(section);
+}
+
+body.with-anchors :is(p, blockquote, pre, table) {
+  counter-increment: para;
+  position: relative;
+}
+
+body.with-anchors :is(p, blockquote, pre, table)::before {
+  content: "S" counter(section) "P" counter(para);
+}
+
+body.with-anchors :is(p, h1, h2, h3, h4, h5, h6, blockquote, pre, table)::before {
+  position: absolute;
+  left: -4.5em;
+  top: 0.2em;
+  width: 4em;
+  text-align: right;
+  font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace;
+  font-size: 8.5pt;
+  font-weight: normal;
+  color: #b45309;
+  letter-spacing: 0.02em;
+  user-select: none;          /* don't include in copy/paste */
+}
+
+/* Pandoc's standalone mode emits a title block; skip it so user content
+ * starts at S1 instead of the document title. */
+body.with-anchors #title-block-header :is(h1, h2, h3, p) {
+  counter-increment: none;
+  counter-reset: none;
+}
+body.with-anchors #title-block-header :is(h1, h2, h3, p)::before {
+  content: none;
+}
+
+/* Blockquotes wrap paragraphs in <p>. Count the blockquote itself as one
+ * block; suppress the inner <p> so each quote gets exactly one anchor. */
+body.with-anchors blockquote :is(p, h1, h2, h3, h4, h5, h6) {
+  counter-increment: none;
+  counter-reset: none;
+}
+body.with-anchors blockquote :is(p, h1, h2, h3, h4, h5, h6)::before {
+  content: none;
+}
+
+/* Slightly muted on paper to keep the prose dominant */
+@media print {
+  body.with-anchors :is(p, h1, h2, h3, h4, h5, h6, blockquote, pre, table)::before {
+    color: #888;
+  }
+}
+
+/* Code blocks have padding that pushes content right; pull the anchor
+ * out a bit further so it lines up with prose anchors. */
+body.with-anchors pre::before {
+  top: 0.6em;
+}
+
+/* Table anchors sit at the top-left of the table grid. */
+body.with-anchors table::before {
+  top: 0.4em;
+}
