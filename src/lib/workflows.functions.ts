@@ -1,13 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Json } from "@/integrations/supabase/types";
 
 export type WorkflowRun = {
   id: string;
   user_id: string;
   status: "queued" | "running" | "succeeded" | "failed" | "canceled";
   workflow_type: string;
-  input: unknown;
-  result: unknown;
+  input: Json | null;
+  result: Json | null;
   error: string | null;
   created_at: string;
   started_at: string | null;
