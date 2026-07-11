@@ -54,10 +54,11 @@ function NewPiecePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold">New piece</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Studio</p>
+        <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">New piece</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Paste your research, pick a voice, and hit Create. The studio authors a
           writing brief from the research in your voice, then synthesizes the piece.
         </p>
@@ -65,55 +66,68 @@ function NewPiecePage() {
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-4 rounded-lg border border-border bg-card p-6 text-card-foreground"
+        className="space-y-6 rounded-xl border border-border bg-card p-7 text-card-foreground shadow-sm"
       >
-        <label className="block space-y-1">
-          <span className="text-sm font-medium">Research</span>
+        <label className="block space-y-2">
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Research
+          </span>
           <textarea
             value={research}
             onChange={(e) => setResearch(e.target.value)}
-            rows={10}
+            rows={12}
             placeholder="Paste notes, transcripts, links, a rough dump — whatever the piece is drawn from."
-            className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm"
+            className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-3 font-mono text-sm leading-relaxed outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
           />
         </label>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block space-y-1">
-            <span className="text-sm font-medium">Voice</span>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <label className="block space-y-2">
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Voice
+            </span>
             <input
               value={voice}
               onChange={(e) => setVoice(e.target.value)}
               placeholder="e.g. ford"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="w-full rounded-md border border-input bg-background/60 px-3.5 py-2.5 text-sm outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
             />
-            <span className="text-xs text-muted-foreground">
-              A voice defined on the worker (under <code>~/.me/voices/</code>).
+            <span className="block text-xs text-muted-foreground">
+              A voice defined on the worker (under <code className="font-mono text-[11px]">~/.me/voices/</code>).
             </span>
           </label>
 
-          <label className="block space-y-1">
-            <span className="text-sm font-medium">
-              Goal <span className="font-normal text-muted-foreground">— optional</span>
+          <label className="block space-y-2">
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Goal <span className="normal-case tracking-normal text-muted-foreground/70">— optional</span>
             </span>
             <input
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
-              placeholder="What should the reader walk away with / who's it for?"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              placeholder="What should the reader walk away with?"
+              className="w-full rounded-md border border-input bg-background/60 px-3.5 py-2.5 text-sm outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
             />
           </label>
         </div>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && (
+          <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </p>
+        )}
 
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
-        >
-          {submitting ? "Creating…" : "Create"}
-        </button>
+        <div className="flex items-center justify-between border-t border-border/60 pt-5">
+          <p className="text-xs text-muted-foreground">
+            {DEFAULT_BUNDLE} · {DEFAULT_MODEL}
+          </p>
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+          >
+            {submitting ? "Creating…" : "Create piece →"}
+          </button>
+        </div>
       </form>
     </div>
   );
