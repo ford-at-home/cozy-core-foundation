@@ -14,42 +14,172 @@ export type Database = {
   }
   public: {
     Tables: {
-      workflow_runs: {
+      agent_run_events: {
         Row: {
+          event_type: string | null
+          external_event_id: string | null
+          id: string
+          payload: Json | null
+          received_at: string
+          run_id: string
+          source: string
+        }
+        Insert: {
+          event_type?: string | null
+          external_event_id?: string | null
+          id?: string
+          payload?: Json | null
+          received_at?: string
+          run_id: string
+          source: string
+        }
+        Update: {
+          event_type?: string | null
+          external_event_id?: string | null
+          id?: string
+          payload?: Json | null
+          received_at?: string
+          run_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_run_events_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_runs: {
+        Row: {
+          branch: string | null
+          cancellation_status: string
           completed_at: string | null
           created_at: string
+          dispatched_at: string | null
           error: string | null
+          external_agent_id: string | null
+          external_raw_status: string | null
+          external_run_id: string | null
           id: string
+          idempotency_key: string | null
           input: Json | null
+          kind: string
+          piece_id: string | null
           result: Json | null
           started_at: string | null
           status: string
           user_id: string
-          workflow_type: string
         }
         Insert: {
+          branch?: string | null
+          cancellation_status?: string
           completed_at?: string | null
           created_at?: string
+          dispatched_at?: string | null
           error?: string | null
+          external_agent_id?: string | null
+          external_raw_status?: string | null
+          external_run_id?: string | null
           id?: string
+          idempotency_key?: string | null
           input?: Json | null
+          kind?: string
+          piece_id?: string | null
           result?: Json | null
           started_at?: string | null
           status?: string
           user_id: string
-          workflow_type?: string
         }
         Update: {
+          branch?: string | null
+          cancellation_status?: string
           completed_at?: string | null
           created_at?: string
+          dispatched_at?: string | null
           error?: string | null
+          external_agent_id?: string | null
+          external_raw_status?: string | null
+          external_run_id?: string | null
           id?: string
+          idempotency_key?: string | null
           input?: Json | null
+          kind?: string
+          piece_id?: string | null
           result?: Json | null
           started_at?: string | null
           status?: string
           user_id?: string
-          workflow_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_runs_piece_id_fkey"
+            columns: ["piece_id"]
+            isOneToOne: false
+            referencedRelation: "pieces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pieces: {
+        Row: {
+          created_at: string
+          draft_pr_url: string | null
+          final_pr_url: string | null
+          id: string
+          issue_number: number | null
+          slug: string
+          stage: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          draft_pr_url?: string | null
+          final_pr_url?: string | null
+          id?: string
+          issue_number?: number | null
+          slug: string
+          stage?: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          draft_pr_url?: string | null
+          final_pr_url?: string | null
+          id?: string
+          issue_number?: number | null
+          slug?: string
+          stage?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          style_text: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          style_text?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          style_text?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
