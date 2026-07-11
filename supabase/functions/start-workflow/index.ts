@@ -20,10 +20,7 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildComposePrompt, slugify } from "../_shared/prompt.ts";
-import type { AgentProvider } from "../_shared/provider.ts";
-import { ProviderHttpError } from "../_shared/provider.ts";
-import { CursorProvider } from "../_shared/provider.cursor.ts";
-import { StubProvider } from "../_shared/provider.stub.ts";
+import { dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,15 +34,6 @@ function json(body: unknown, status = 200) {
     status,
     headers: { "content-type": "application/json", ...corsHeaders },
   });
-}
-
-function resolveProvider(): AgentProvider {
-  if (Deno.env.get("AGENT_PROVIDER") === "stub") return new StubProvider();
-  const key = Deno.env.get("CURSOR_API_KEY")?.trim();
-  if (key) return new CursorProvider(key);
-  // No key configured: the stub keeps the pipeline exercisable end-to-end in
-  // the UI while clearly marking runs as stubbed (external id bc_stub_...).
-  return new StubProvider();
 }
 
 Deno.serve(async (req) => {
@@ -150,71 +138,14 @@ Deno.serve(async (req) => {
   const runId = inserted.id as string;
 
   // --- 6. Dispatch ----------------------------------------------------------
-  const provider = resolveProvider();
-  const prompt = buildComposePrompt({ pieceSlug: slug, research, goal: goal || null, styleText });
-  const repository = Deno.env.get("AGENT_REPO_URL") ??
-    "https://github.com/ford-at-home/cozy-core-foundation";
-  const ref = Deno.env.get("AGENT_REPO_REF") ?? "main";
-  const webhookUrl = `${SUPABASE_URL}/functions/v1/cursor-webhook`;
-  const webhookSecret = Deno.env.get("CURSOR_WEBHOOK_SECRET")?.trim();
-
-  async function logEvent(eventType: string, payload: unknown) {
-    await admin.from("agent_run_events").insert({
-      run_id: runId,
-      source: "edge",
-      event_type: eventType,
-      payload,
-    });
-  }
-
-  try {
-    const agent = await provider.createAgent({
-      prompt,
-      repository,
-      ref,
-      autoCreatePr: false, // proposal runs push a branch only; PRs come later via "ready"
-      model: Deno.env.get("AGENT_MODEL") ?? undefined,
-      webhookUrl: webhookSecret ? webhookUrl : undefined,
-      webhookSecret: webhookSecret || undefined,
-    });
-    await admin
-      .from("agent_runs")
-      .update({
-        status: "queued",
-        external_agent_id: agent.externalAgentId,
-        external_raw_status: agent.rawStatus,
-        branch: agent.branch,
-        dispatched_at: new Date().toISOString(),
-      })
-      .eq("id", runId);
-    await logEvent("dispatched", {
-      provider: provider.name,
-      externalAgentId: agent.externalAgentId,
-      rawStatus: agent.rawStatus,
-    });
-  } catch (err) {
-    if (err instanceof ProviderHttpError && !err.retryable) {
-      // Definitive vendor rejection (4xx): the agent was not created.
-      await admin
-        .from("agent_runs")
-        .update({ status: "failed", error: err.message, completed_at: new Date().toISOString() })
-        .eq("id", runId);
-      await logEvent("dispatch_rejected", { status: err.status, message: err.message });
-    } else {
-      // Timeout / network / 5xx after send: Cursor MAY have created the agent.
-      // Ambiguity state; the reconciler matches or releases it. No retry here.
-      await admin
-        .from("agent_runs")
-        .update({
-          status: "dispatch_unknown",
-          error: err instanceof Error ? err.message : String(err),
-        })
-        .eq("id", runId);
-      await logEvent("dispatch_unknown", {
-        message: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }
+  await dispatchRun({
+    admin,
+    provider: resolveProvider(),
+    runId,
+    prompt: buildComposePrompt({ pieceSlug: slug, research, goal: goal || null, styleText }),
+    ref: Deno.env.get("AGENT_REPO_REF") ?? "main",
+    autoCreatePr: false, // proposal runs push a branch only; PRs come later via "ready"
+  });
 
   return json({ runId, pieceId: piece.id }, 202);
 });

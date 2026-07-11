@@ -19,7 +19,12 @@ import { CursorProvider } from "../_shared/provider.cursor.ts";
 import { StubProvider } from "../_shared/provider.stub.ts";
 import type { AgentProvider } from "../_shared/provider.ts";
 import { ProviderHttpError } from "../_shared/provider.ts";
-import { applyExternalStatus, fetchRunResult, type RunRow } from "../_shared/complete.ts";
+import {
+  applyExternalStatus,
+  fetchRunResult,
+  stageForCompletedKind,
+  type RunRow,
+} from "../_shared/complete.ts";
 
 const RELEASE_AFTER_MIN = 30;
 
@@ -177,7 +182,10 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
       if (run.piece_id) {
         await admin
           .from("pieces")
-          .update({ stage: "proposed", updated_at: new Date().toISOString() })
+          .update({
+            stage: stageForCompletedKind(run.kind),
+            updated_at: new Date().toISOString(),
+          })
           .eq("id", run.piece_id);
       }
     }

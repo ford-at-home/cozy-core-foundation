@@ -10,3 +10,6 @@ verify_jwt = false
 
 [functions.start-workflow]
 verify_jwt = true
+
+[functions.piece-action]
+verify_jwt = true

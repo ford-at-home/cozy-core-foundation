@@ -46,11 +46,35 @@ async function fetchFileFromBranch(
   return await res.text();
 }
 
+/** The deliverable filename each run kind produces (plan v2 §repo layout). */
+export function mainFileForKind(kind: string): string {
+  switch (kind) {
+    case "draft":
+      return "draft.md";
+    case "revision":
+      return "final.md";
+    default:
+      return "proposal.md";
+  }
+}
+
+/** The piece stage a completed run of this kind advances to. */
+export function stageForCompletedKind(kind: string): string {
+  switch (kind) {
+    case "draft":
+      return "drafted";
+    case "revision":
+      return "finalized";
+    default:
+      return "proposed";
+  }
+}
+
 /** Pull the piece files the run should have produced; null-safe per file. */
 export async function fetchRunResult(run: RunRow, slug: string) {
   if (!run.branch) return null;
   const dir = `pieces/${slug}`;
-  const mainFile = run.kind === "revision" ? "final.md" : "proposal.md";
+  const mainFile = mainFileForKind(run.kind);
   const [main, brief, toResearch, tighten, unresolved] = await Promise.all([
     fetchFileFromBranch(`${dir}/${mainFile}`, run.branch),
     fetchFileFromBranch(`${dir}/brief.md`, run.branch),

@@ -110,6 +110,56 @@ ANNOTATIONS>>>
 `;
 }
 
+export interface ResynthPromptInput extends ComposePromptInput {
+  feedback: string | null;
+}
+
+/** Second (third, ...) attempt at the proposal, steered by owner feedback. */
+export function buildResynthPrompt(input: ResynthPromptInput): string {
+  const dir = `pieces/${input.pieceSlug}`;
+  return buildComposePrompt(input) + `
+NOTE: this is a RE-SYNTHESIS. A prior attempt exists at ${dir}/proposal.md on
+your base branch. Read it, then produce a fresh attempt (overwrite the file) —
+do not lightly edit the old one. Address this feedback:
+<<<FEEDBACK
+${input.feedback?.trim() || "(none provided — take a substantially different angle)"}
+FEEDBACK>>>
+`;
+}
+
+export interface DraftPromptInput {
+  pieceSlug: string;
+  styleText: string;
+  feedback: string | null;
+}
+
+/** "Ready": turn the accepted proposal into the final draft, PR'd for approval. */
+export function buildDraftPrompt(input: DraftPromptInput): string {
+  const dir = `pieces/${input.pieceSlug}`;
+  return `${CONTRACT_PREAMBLE}
+TASK: the proposal has been accepted. Produce the final draft.
+
+Steps:
+1. Read ${dir}/brief.md, ${dir}/proposal.md, and the notes in ${dir}/notes/.
+2. Write ${dir}/draft.md — the finished piece: brief-faithful, in the inline
+   voice, every citation inline-hyperlinked, ready to print and mark up.
+   Resolve the open questions in notes/tighten.md where the proposal and
+   feedback give you the answer; carry the rest into an updated notes/tighten.md.
+3. Commit with message "piece(${input.pieceSlug}): draft". A pull request WILL
+   be opened for this run automatically — that is expected.
+
+FEEDBACK from the owner (may be empty):
+<<<FEEDBACK
+${input.feedback?.trim() || "(none)"}
+FEEDBACK>>>
+
+VOICE (inline):
+<<<VOICE
+${input.styleText.trim()}
+VOICE>>>
+`;
+}
+
 export function slugify(title: string): string {
   const base = title
     .toLowerCase()

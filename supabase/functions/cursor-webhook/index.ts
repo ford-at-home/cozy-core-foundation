@@ -12,7 +12,12 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verifyWebhookSignature } from "../_shared/webhook.ts";
-import { applyExternalStatus, fetchRunResult, type RunRow } from "../_shared/complete.ts";
+import {
+  applyExternalStatus,
+  fetchRunResult,
+  stageForCompletedKind,
+  type RunRow,
+} from "../_shared/complete.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("method not allowed", { status: 405 });
@@ -104,7 +109,10 @@ Deno.serve(async (req) => {
           if (run.piece_id) {
             await admin
               .from("pieces")
-              .update({ stage: "proposed", updated_at: new Date().toISOString() })
+              .update({
+                stage: stageForCompletedKind(run.kind),
+                updated_at: new Date().toISOString(),
+              })
               .eq("id", run.piece_id);
           }
         }
