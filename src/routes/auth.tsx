@@ -33,12 +33,26 @@ function AuthPage() {
   const busy = loading || googleLoading || adminLoading;
 
   useEffect(() => {
+    // If the user is already signed in, go straight to the dashboard.
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) navigate({ to: "/dashboard" });
     });
+
+    // Listen for the OAuth / admin sign-in callback so the redirect happens
+    // even when the session arrives after the page has mounted.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        navigate({ to: "/dashboard" });
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
+
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -71,8 +85,9 @@ function AuthPage() {
     setGoogleLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: `${window.location.origin}/auth`,
       });
+
       if (result.error) throw new Error(result.error.message ?? "Google sign-in failed");
       if (result.redirected) return; // browser is navigating away; keep the button in loading state
       navigate({ to: "/dashboard" });
