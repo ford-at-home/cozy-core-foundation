@@ -10,6 +10,9 @@ export interface ComposePromptInput {
   research: string;
   goal: string | null;
   styleText: string;
+  imageStyle?: string;
+  imageEndpoint?: string;
+  imageToken?: string;
   attachments?: PromptAttachment[];
 }
 
@@ -31,9 +34,20 @@ export interface RevisionPromptInput {
   draftPath: string; // e.g. pieces/<slug>/draft.md
   transcript: string; // typed (later dictated) shorthand annotations
   styleText: string;
+  imageStyle?: string;
+  imageEndpoint?: string;
+  imageToken?: string;
 }
 
-const CONTRACT_PREAMBLE = `You are running the synthesize contract of this repository.
+function buildPreamble(opts: {
+  imageStyle?: string;
+  imageEndpoint?: string;
+  imageToken?: string;
+}): string {
+  const imgBlock = opts.imageEndpoint && opts.imageToken
+    ? renderImageRule(opts.imageEndpoint, opts.imageToken, opts.imageStyle ?? "")
+    : LEGACY_VISUALS_RULE;
+  return `You are running the synthesize contract of this repository.
 
 Read first, in order:
 1. contract/SKILL.md            — the synthesize contract. Follow it.
@@ -56,7 +70,11 @@ Non-negotiables (from the contract):
   citations; never strip a URL the research provided.
 - No emoji unless the source used them. No AI-tell filler.
 
-VISUALS RULE (applies whenever you produce a diagram or image):
+${imgBlock}
+`;
+}
+
+const LEGACY_VISUALS_RULE = `VISUALS RULE (applies whenever you produce a diagram or image):
 - The piece is rendered by a plain markdown renderer and printed to paper.
   Do NOT emit mermaid/graphviz code fences or raw HTML in the deliverable —
   they will show up as literal code.
@@ -70,13 +88,56 @@ VISUALS RULE (applies whenever you produce a diagram or image):
   deleted.)
 - If you cannot produce the SVG, insert a bracketed placeholder
   ([Diagram: ...] / [Sketch: ...]) and record it in notes/unresolved.md —
-  never silently drop a requested visual.
-`;
+  never silently drop a requested visual.`;
+
+function renderImageRule(endpoint: string, token: string, style: string): string {
+  const styleBlock = style.trim()
+    ? `Author's IMAGE STYLE (apply to every generated image):\n<<<IMAGE_STYLE\n${style.trim()}\nIMAGE_STYLE>>>`
+    : `The author has NOT set an image style. Skip generating images and use bracketed placeholders instead ([Image: ...]) recorded in notes/unresolved.md.`;
+  return `VISUALS RULE — the piece gets real generated images, not SVGs.
+
+${styleBlock}
+
+For each place the piece benefits from a visual (cover image at the top of the
+piece is required when IMAGE_STYLE is set; section illustrations are optional
+but encouraged where they earn their place), generate a raster image and
+commit it to pieces/<slug>/assets/. Do NOT emit mermaid/graphviz code fences,
+HTML, or SVG for illustrative visuals — only real images.
+
+How to generate an image (call this endpoint from the sandbox):
+  curl -sS -X POST "${endpoint}" \\
+    -H "authorization: Bearer ${token}" \\
+    -H "content-type: application/json" \\
+    -d '{"prompt": "<concrete visual description that inlines the IMAGE_STYLE above>", "filename": "<slug>-cover.png"}' \\
+    --output pieces/<slug>/assets/<slug>-cover.png
+
+Rules:
+- The prompt you send MUST inline the IMAGE_STYLE verbatim so every image
+  looks like it belongs to the same author. Add the specific subject after.
+- Use descriptive filenames: <slug>-cover.png, <slug>-01-<topic>.png, etc.
+- Verify the response is a PNG (\`file pieces/<slug>/assets/<name>.png\`
+  reports "PNG image data"). If the response is JSON, it is an error —
+  read the message, adjust the prompt, and retry once.
+- Commit the images to your working branch, then reference them in the
+  markdown with the IMMUTABLE commit-pinned URL:
+  ![<alt text>](https://raw.githubusercontent.com/ford-at-home/cozy-core-foundation/<commit sha>/pieces/<slug>/assets/<file>.png)
+  (Get the sha with \`git rev-parse HEAD\` after the commit that adds the asset.)
+- Real diagrams (flowcharts, data plots) may still be SVG via the legacy path,
+  but prefer a generated image with a hand-drawn feel where possible.
+- If the endpoint fails twice in a row, insert a bracketed placeholder
+  ([Image: ...]) and record it in notes/unresolved.md. Never silently drop
+  a visual.`;
+}
 
 export function buildComposePrompt(input: ComposePromptInput): string {
   const dir = `pieces/${input.pieceSlug}`;
   const attachmentsBlock = renderAttachments(input.attachments, dir);
-  return `${CONTRACT_PREAMBLE}
+  const preamble = buildPreamble({
+    imageStyle: input.imageStyle,
+    imageEndpoint: input.imageEndpoint,
+    imageToken: input.imageToken,
+  });
+  return `${preamble}
 TASK: compose a proposal for a new long-form piece.
 
 Steps:
@@ -141,7 +202,12 @@ function renderAttachments(atts: PromptAttachment[] | undefined, dir: string): s
 
 export function buildRevisionPrompt(input: RevisionPromptInput): string {
   const dir = `pieces/${input.pieceSlug}`;
-  return `${CONTRACT_PREAMBLE}
+  const preamble = buildPreamble({
+    imageStyle: input.imageStyle,
+    imageEndpoint: input.imageEndpoint,
+    imageToken: input.imageToken,
+  });
+  return `${preamble}
 Also read contract/references/MARKUP.md — the pen-and-paper markup protocol.
 The ANNOTATIONS below are the author's dictated shorthand notes from a printed
 copy of ${input.draftPath}. Block anchors (S{n}P{m}) follow MARKUP.md's counting
@@ -198,12 +264,20 @@ export interface DraftPromptInput {
   pieceSlug: string;
   styleText: string;
   feedback: string | null;
+  imageStyle?: string;
+  imageEndpoint?: string;
+  imageToken?: string;
 }
 
 /** "Ready": turn the accepted proposal into the final draft, PR'd for approval. */
 export function buildDraftPrompt(input: DraftPromptInput): string {
   const dir = `pieces/${input.pieceSlug}`;
-  return `${CONTRACT_PREAMBLE}
+  const preamble = buildPreamble({
+    imageStyle: input.imageStyle,
+    imageEndpoint: input.imageEndpoint,
+    imageToken: input.imageToken,
+  });
+  return `${preamble}
 TASK: the proposal has been accepted. Produce the final draft.
 
 Steps:

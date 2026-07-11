@@ -408,6 +408,31 @@ function ProfilePage() {
               </p>
             )}
 
+            <label className="block space-y-2 border-t border-border/60 pt-5">
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Image style
+              </span>
+              <p className="text-xs text-muted-foreground">
+                Describe the visual style for images generated with your pieces —
+                medium, palette, mood, references. Applied to every image the agent
+                creates for a post. Leave blank to skip images.
+              </p>
+              <textarea
+                value={imageStyle}
+                onChange={(e) => {
+                  setImageStyle(e.target.value);
+                  setDirty(true);
+                }}
+                rows={5}
+                placeholder={
+                  "e.g. hand-drawn ink and wash on off-white paper, minimal palette, " +
+                  "loose linework in the style of a nature journal — never photorealistic, " +
+                  "never glossy 3D renders."
+                }
+                className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-3 text-sm leading-relaxed outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
+              />
+            </label>
+
             <div className="flex items-center justify-between border-t border-border/60 pt-5">
               <p className="text-xs text-muted-foreground">
                 {savedAt
