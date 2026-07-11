@@ -52,8 +52,25 @@ Non-negotiables (from the contract):
 - Never invent facts, statistics, quotes, or sources. Where the research is
   thin, write [Source needed: ...] and list it in notes/to-research.md.
 - Every claim that came from the research carries an inline markdown link to
-  its source when a URL exists in the research.
+  its source when a URL exists in the research. Preserve the research's own
+  citations; never strip a URL the research provided.
 - No emoji unless the source used them. No AI-tell filler.
+
+VISUALS RULE (applies whenever you produce a diagram or image):
+- The piece is rendered by a plain markdown renderer and printed to paper.
+  Do NOT emit mermaid/graphviz code fences or raw HTML in the deliverable —
+  they will show up as literal code.
+- Instead, render each diagram to an SVG yourself (e.g.
+  \`npx -y @mermaid-js/mermaid-cli -i diagram.mmd -o out.svg\`), commit it to
+  pieces/<slug>/assets/, and after committing reference it as a standard
+  markdown image with the IMMUTABLE commit-pinned URL:
+  ![<alt text>](https://raw.githubusercontent.com/ford-at-home/cozy-core-foundation/<commit sha of your commit>/pieces/<slug>/assets/<file>.svg)
+  (Get the sha with \`git rev-parse HEAD\` after the commit that adds the
+  asset; commit-pinned URLs keep working after the branch is merged and
+  deleted.)
+- If you cannot produce the SVG, insert a bracketed placeholder
+  ([Diagram: ...] / [Sketch: ...]) and record it in notes/unresolved.md —
+  never silently drop a requested visual.
 `;
 
 export function buildComposePrompt(input: ComposePromptInput): string {
@@ -136,9 +153,12 @@ Steps:
 1. Read ${input.draftPath}. Resolve every annotation per MARKUP.md's resolution
    order (block anchor -> hand-numbered handle -> symbol class -> content).
 2. Write ${dir}/final.md — the finished piece in the inline voice, every
-   citation inline-hyperlinked. Where a VISUALIZE directive lands, insert a
-   fenced mermaid diagram or a bracketed [Sketch: ...] placeholder per the
-   annotation's parameter.
+   citation inline-hyperlinked (carry every source link from the draft; add
+   the ones the annotations request). Where a VISUALIZE directive lands,
+   produce the visual per the VISUALS RULE above, honoring the annotation's
+   parameter (diagram / infographic / sketch). Also inject visuals where the
+   piece clearly benefits (per the voice's visual preferences), not only
+   where directives land.
 3. Update ${dir}/notes/unresolved.md with any annotation that could not be
    resolved (never silently drop one) and ${dir}/notes/tighten.md per the contract.
 4. Commit to your working branch with message
