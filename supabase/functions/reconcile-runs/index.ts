@@ -29,6 +29,8 @@ import {
 import { reconcileResearch } from "../_shared/research.ts";
 import { errorResponse, jsonResponse, logEvent, newRequestId } from "../_shared/observability.ts";
 import { recordInference, cursorInferenceUsage } from "../_shared/usage.ts";
+import { releaseRunCredits, settleRunCredits, sweepStaleReservations } from "../_shared/credits.ts";
+import { reconcilePurchases } from "../_shared/stripe-reconcile.ts";
 
 const FN = "reconcile-runs";
 
@@ -67,7 +69,7 @@ Deno.serve(async (req) => {
   const { data: open, error } = await admin
     .from("agent_runs")
     .select(
-      "id, user_id, piece_id, status, kind, branch, input, external_agent_id, external_run_id, created_at, dispatched_at, session_id, cancellation_status",
+      "id, user_id, piece_id, status, kind, branch, input, external_agent_id, external_run_id, created_at, dispatched_at, session_id, cancellation_status, parent_run_id",
     )
     .not("status", "in", "(completed,failed,cancelled)")
     .order("created_at", { ascending: true })
@@ -105,8 +107,45 @@ Deno.serve(async (req) => {
     }
   }
 
-  logEvent(FN, "info", { requestId: rid, event: "swept", scanned: open?.length ?? 0, summary });
-  return jsonResponse({ scanned: open?.length ?? 0, summary }, 200, rid);
+  // Safety net: resolve credit holds whose runs went terminal without their
+  // reservation being settled/released (crash between the two writes).
+  let reservationsResolved = 0;
+  try {
+    reservationsResolved = await sweepStaleReservations(admin);
+  } catch (err) {
+    logEvent(FN, "error", {
+      requestId: rid,
+      event: "reservation_sweep_failed",
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  // Stripe-vs-ledger reconciliation: heal paid-but-ungranted purchases and
+  // close out expired sessions. No-op until STRIPE_SECRET_KEY is configured.
+  let purchases = { healed: 0, expired: 0, flagged: 0 };
+  try {
+    purchases = await reconcilePurchases(admin);
+  } catch (err) {
+    logEvent(FN, "error", {
+      requestId: rid,
+      event: "purchase_reconcile_failed",
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  logEvent(FN, "info", {
+    requestId: rid,
+    event: "swept",
+    scanned: open?.length ?? 0,
+    summary,
+    reservationsResolved,
+    purchases,
+  });
+  return jsonResponse(
+    { scanned: open?.length ?? 0, summary, reservationsResolved, purchases },
+    200,
+    rid,
+  );
 });
 
 async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
@@ -131,6 +170,7 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
           completed_at: new Date().toISOString(),
         })
         .eq("id", run.id);
+      await releaseRunCredits(admin, run, "dispatch never confirmed", "reconciler");
     }
     return;
   }
@@ -148,6 +188,7 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
           completed_at: new Date().toISOString(),
         })
         .eq("id", run.id);
+      await releaseRunCredits(admin, run, "agent not found at provider", "reconciler");
       return;
     }
     throw err;
@@ -173,6 +214,9 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
         ...(update.status === "failed" ? { completed_at: new Date().toISOString() } : {}),
       })
       .eq("id", run.id);
+    if (update.status === "failed") {
+      await releaseRunCredits(admin, run, "agent reported failure", "reconciler");
+    }
   }
 
   // Cancellation confirm: agent no longer running after a stop request.
@@ -189,6 +233,7 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
           completed_at: new Date().toISOString(),
         })
         .eq("id", run.id);
+      await releaseRunCredits(admin, run, "run cancelled", "reconciler");
       return;
     }
     // Finished before the stop landed: raced; fall through to fetch.
@@ -242,6 +287,8 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
         .from("agent_runs")
         .update({ status: "completed", result, completed_at: new Date().toISOString() })
         .eq("id", run.id);
+      // Success condition met: consume the credit hold exactly once.
+      await settleRunCredits(admin, run, "reconciler");
       if (run.piece_id) {
         const prField = prUrlFieldForKind(run.kind);
         await admin

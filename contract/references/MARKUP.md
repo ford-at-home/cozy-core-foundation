@@ -98,7 +98,7 @@ Write symbols in the margin pointing at the affected text, or directly on it (e.
 
 ### Pre-Printed Block Anchors (`S{n}P{m}`)
 
-When `print-markup` runs with anchors on (the default), every addressable block in the
+When the app's print view renders with anchors on (the default), every addressable block in the
 document gets a small label printed in the left margin. You don't need to write
 anything on the page to use these — they're already there.
 
@@ -117,17 +117,21 @@ how you'd count sections by eye. Content before that first heading (rare) is `S0
 
 1. Paragraphs (`<p>`)
 2. Headings (`<h1>`–`<h6>`) — these bump the section counter, not the paragraph counter
-3. Blockquotes (the wrapper, not the inner paragraphs — one anchor per quote)
+3. Blockquotes (the wrapper, not the blocks inside it — one anchor per quote)
 4. Code blocks (`<pre>`)
 5. Tables
 
 **What does not count:**
 
-- List items (the list as a whole is addressed by surrounding paragraphs or by content)
-- Images, horizontal rules, inline elements
+- List items, and anything nested inside a list item — including the paragraphs that
+  loose list items wrap their text in (the list as a whole is addressed by surrounding
+  paragraphs or by content)
+- Anything nested inside a blockquote (paragraphs, code blocks, tables — the quote is one block)
+- Images — including a paragraph that contains nothing but an image
+- Horizontal rules, inline elements
 - Pandoc's auto-generated title block
 
-The same rule lives in `scripts/print.css`. If you change one, change both.
+The same rule lives in `src/styles/print.css`. If you change one, change both.
 
 In voice, refer to these as `section 4 paragraph 3`, `S4P3`, or (for a heading itself)
 `section 4` / `S4` — all resolve.
@@ -137,7 +141,7 @@ In voice, refer to these as `section 4 paragraph 3`, `S4P3`, or (for a heading i
 - **Block anchors (`S{n}P{m}`)** — default. No pen strokes needed. Coarse-grained:
   addresses a whole block.
 - **Hand-numbered handles (`① ② ③`)** — when you need finer precision (one phrase inside a
-  long paragraph), or when you printed with `--no-anchors`.
+  long paragraph), or when you printed without anchors.
 
 You can mix both. A page can have `S3P2` (pre-printed) and `①` (hand-written) on the same
 paragraph if you want to address the paragraph as a whole _and_ a specific line inside it.

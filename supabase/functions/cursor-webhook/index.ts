@@ -20,6 +20,7 @@ import {
   type RunRow,
 } from "../_shared/complete.ts";
 import { recordInference, cursorInferenceUsage } from "../_shared/usage.ts";
+import { releaseRunCredits, settleRunCredits } from "../_shared/credits.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("method not allowed", { status: 405 });
@@ -53,7 +54,9 @@ Deno.serve(async (req) => {
 
   const { data: run } = await admin
     .from("agent_runs")
-    .select("id, user_id, piece_id, status, kind, branch, input, dispatched_at, session_id")
+    .select(
+      "id, user_id, piece_id, status, kind, branch, input, dispatched_at, session_id, parent_run_id",
+    )
     .eq("external_agent_id", externalAgentId)
     .maybeSingle();
   // Unknown agent: ack anyway (2xx) — nothing to apply, and retries won't help.
@@ -86,6 +89,10 @@ Deno.serve(async (req) => {
         ...(update.status === "failed" ? { completed_at: new Date().toISOString() } : {}),
       })
       .eq("id", run.id);
+
+    if (update.status === "failed") {
+      await releaseRunCredits(admin, run, "agent reported failure", "cursor-webhook");
+    }
 
     if (update.status === "awaiting_fetch") {
       // Record one calculated inference for this Cursor agent run.
@@ -136,6 +143,8 @@ Deno.serve(async (req) => {
               completed_at: new Date().toISOString(),
             })
             .eq("id", run.id);
+          // Success condition met: consume the credit hold exactly once.
+          await settleRunCredits(admin, run, "cursor-webhook");
           if (run.piece_id) {
             const prField = prUrlFieldForKind(run.kind);
             const prUrl = payload?.target?.prUrl;

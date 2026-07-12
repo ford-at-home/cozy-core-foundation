@@ -52,12 +52,24 @@ for t in $tables; do
     fi
   done
 
+  # RLS-on with zero policies is the strictest posture (deny-all to client
+  # roles; service role bypasses RLS). It's legitimate for server-only tables
+  # like the stripe_events webhook inbox, but it must be declared: a
+  # "-- no policies" comment directly after the ENABLE ROW LEVEL SECURITY
+  # statement.
+  declared_no_policy=0
+  for n in $names; do
+    if printf '%s' "$all_sql" | grep -qE "alter table (public\.)?$n enable row level security; *-- no policies"; then
+      declared_no_policy=1
+    fi
+  done
+
   if [ "$has_rls" -eq 0 ]; then
     echo "FAIL: table '$t' is created but RLS is never enabled on it (or its rename)."
     fail=1
   fi
-  if [ "$has_policy" -eq 0 ]; then
-    echo "FAIL: table '$t' has no CREATE POLICY anywhere in migrations."
+  if [ "$has_policy" -eq 0 ] && [ "$declared_no_policy" -eq 0 ]; then
+    echo "FAIL: table '$t' has no CREATE POLICY anywhere in migrations (add policies, or mark intentional deny-all with a '-- no policies' comment right after ENABLE ROW LEVEL SECURITY)."
     fail=1
   fi
 done

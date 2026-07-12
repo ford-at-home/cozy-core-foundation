@@ -19,6 +19,7 @@ import { buildComposePrompt } from "./prompt.ts";
 import { buildImageCreds } from "./image-token.ts";
 import { dispatchRun, resolveProvider } from "./dispatch.ts";
 import { ensureRunSession, recordInference } from "./usage.ts";
+import { releaseRunCredits } from "./credits.ts";
 
 const RELEASE_AFTER_MIN = 30;
 // Deep research (ultra-fast) is documented at 1-10 min; anything past this is stuck.
@@ -37,6 +38,7 @@ export async function reconcileResearch(admin: any, run: any): Promise<void> {
           completed_at: new Date().toISOString(),
         })
         .eq("id", run.id);
+      await releaseRunCredits(admin, run, "research dispatch never confirmed", "reconciler");
     }
     return;
   }
@@ -66,6 +68,9 @@ export async function reconcileResearch(admin: any, run: any): Promise<void> {
           : {}),
       })
       .eq("id", run.id);
+    if (mapped === "failed") {
+      await releaseRunCredits(admin, run, "research provider failure", "reconciler");
+    }
   }
 
   if (status === "awaiting_fetch") {
@@ -83,6 +88,7 @@ export async function reconcileResearch(admin: any, run: any): Promise<void> {
         completed_at: new Date().toISOString(),
       })
       .eq("id", run.id);
+    await releaseRunCredits(admin, run, "research timed out", "reconciler");
   }
 }
 
@@ -154,6 +160,7 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
         completed_at: new Date().toISOString(),
       })
       .eq("id", run.id);
+    await releaseRunCredits(admin, run, "research chain refused", "reconciler");
     return;
   }
 
@@ -170,6 +177,9 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
       kind: "proposal",
       status: "dispatching",
       idempotency_key: chainKey,
+      // The research run's credit hold covers this chained run; settlement
+      // and release resolve it via parent_run_id.
+      parent_run_id: run.id,
       input: { goal, topic, research: report, from_research_run: run.id },
     })
     .select("id")
