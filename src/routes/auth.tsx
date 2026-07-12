@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 
@@ -14,24 +14,27 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+const fieldClass =
+  "w-full rounded-md border border-input bg-background/60 px-3 py-2.5 text-sm outline-none transition-shadow placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-60";
+
 function AuthPage() {
   const navigate = useNavigate();
+  const emailId = useId();
+  const passwordId = useId();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const busy = loading || googleLoading;
 
   useEffect(() => {
-    // If the user is already signed in, go straight to the dashboard.
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) navigate({ to: "/dashboard" });
     });
 
-    // Listen for the OAuth / admin sign-in callback so the redirect happens
-    // even when the session arrives after the page has mounted.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
@@ -47,6 +50,7 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setNotice(null);
     try {
       if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({
@@ -55,9 +59,9 @@ function AuthPage() {
           options: { emailRedirectTo: window.location.origin },
         });
         if (error) throw error;
-        // Email confirmation required: signUp succeeds with no session.
         if (!data.session) {
-          setError("Check your email to confirm your account before signing in.");
+          setNotice("Check your email to confirm your account before signing in.");
+          setMode("signin");
           return;
         }
       } else {
@@ -78,6 +82,7 @@ function AuthPage() {
   async function handleGoogle() {
     if (busy) return;
     setError(null);
+    setNotice(null);
     setGoogleLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
@@ -85,7 +90,7 @@ function AuthPage() {
       });
 
       if (result.error) throw new Error(result.error.message ?? "Google sign-in failed");
-      if (result.redirected) return; // browser is navigating away; keep the button in loading state
+      if (result.redirected) return;
       navigate({ to: "/dashboard" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Google sign-in failed");
@@ -104,9 +109,12 @@ function AuthPage() {
             "radial-gradient(45rem 30rem at 50% 0%, color-mix(in oklab, var(--color-primary) 10%, transparent), transparent 65%)",
         }}
       />
-      <div className="relative z-10 w-full max-w-sm space-y-7 rounded-xl border border-border bg-card/70 p-7 text-card-foreground shadow-2xl shadow-black/30 backdrop-blur">
+      <div className="relative z-10 w-full max-w-sm space-y-7 rounded-xl border border-border bg-card/70 p-6 text-card-foreground shadow-2xl shadow-black/30 backdrop-blur sm:p-7">
         <div className="space-y-2 text-center">
-          <div className="mx-auto grid h-10 w-10 place-items-center rounded-md bg-primary font-serif text-xl text-primary-foreground">
+          <div
+            className="mx-auto grid h-10 w-10 place-items-center rounded-md bg-primary font-serif text-xl text-primary-foreground"
+            aria-hidden
+          >
             C
           </div>
           <h1 className="font-serif text-3xl tracking-tight">
@@ -118,35 +126,63 @@ function AuthPage() {
               : "Sign up with an email and password."}
           </p>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <input
-            type="email"
-            required
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-md border border-input bg-background/60 px-3 py-2.5 text-sm outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
-          />
-          <input
-            type="password"
-            required
-            minLength={6}
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-md border border-input bg-background/60 px-3 py-2.5 text-sm outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
-          />
-          {error && <p className="text-sm text-destructive">{error}</p>}
+        <form onSubmit={handleSubmit} className="space-y-3" noValidate>
+          <div className="space-y-1.5">
+            <label htmlFor={emailId} className="sr-only">
+              Email
+            </label>
+            <input
+              id={emailId}
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={busy}
+              className={fieldClass}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor={passwordId} className="sr-only">
+              Password
+            </label>
+            <input
+              id={passwordId}
+              type="password"
+              required
+              minLength={6}
+              autoComplete={mode === "signin" ? "current-password" : "new-password"}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={busy}
+              className={fieldClass}
+            />
+          </div>
+          {notice && (
+            <p
+              role="status"
+              className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground"
+            >
+              {notice}
+            </p>
+          )}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-md bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
+            className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
           </button>
         </form>
         <div className="relative">
-          <div className="absolute inset-0 flex items-center">
+          <div className="absolute inset-0 flex items-center" aria-hidden>
             <span className="w-full border-t border-border" />
           </div>
           <div className="relative flex justify-center">
@@ -155,44 +191,46 @@ function AuthPage() {
             </span>
           </div>
         </div>
-        <div className="space-y-2">
-          <button
-            type="button"
-            onClick={handleGoogle}
-            disabled={busy}
-            aria-busy={googleLoading}
-            className="flex w-full items-center justify-center gap-2 rounded-md border border-input bg-background/60 px-3 py-2.5 text-sm font-medium transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {googleLoading ? (
-              <Spinner />
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
-                <path
-                  fill="#4285F4"
-                  d="M23 12.2c0-.8-.1-1.6-.2-2.4H12v4.5h6.2c-.3 1.4-1.1 2.6-2.4 3.4v2.8h3.9c2.3-2.1 3.6-5.2 3.6-8.3z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-4.9H1.3v3.1C3.3 21.4 7.3 24 12 24z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.3 14.4c-.2-.7-.4-1.4-.4-2.1s.1-1.4.4-2.1V7.1H1.3C.5 8.6 0 10.2 0 12s.5 3.4 1.3 4.9l4-2.5z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 4.8c1.7 0 3.3.6 4.5 1.8l3.4-3.4C17.9 1.2 15.2 0 12 0 7.3 0 3.3 2.6 1.3 6.5l4 3.1C6.2 6.9 8.9 4.8 12 4.8z"
-                />
-              </svg>
-            )}
-            {googleLoading ? "Opening Google…" : "Continue with Google"}
-          </button>
-        </div>
         <button
           type="button"
-          onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+          onClick={handleGoogle}
           disabled={busy}
-          className="block w-full text-center text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-60"
+          aria-busy={googleLoading}
+          className="flex h-10 w-full items-center justify-center gap-2 rounded-md border border-input bg-background/60 px-3 text-sm font-medium transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {googleLoading ? (
+            <Spinner />
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
+              <path
+                fill="#4285F4"
+                d="M23 12.2c0-.8-.1-1.6-.2-2.4H12v4.5h6.2c-.3 1.4-1.1 2.6-2.4 3.4v2.8h3.9c2.3-2.1 3.6-5.2 3.6-8.3z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-4.9H1.3v3.1C3.3 21.4 7.3 24 12 24z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.3 14.4c-.2-.7-.4-1.4-.4-2.1s.1-1.4.4-2.1V7.1H1.3C.5 8.6 0 10.2 0 12s.5 3.4 1.3 4.9l4-2.5z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 4.8c1.7 0 3.3.6 4.5 1.8l3.4-3.4C17.9 1.2 15.2 0 12 0 7.3 0 3.3 2.6 1.3 6.5l4 3.1C6.2 6.9 8.9 4.8 12 4.8z"
+              />
+            </svg>
+          )}
+          {googleLoading ? "Opening Google…" : "Continue with Google"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setMode(mode === "signin" ? "signup" : "signin");
+            setError(null);
+            setNotice(null);
+          }}
+          disabled={busy}
+          className="block w-full text-center text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 rounded-md disabled:opacity-60"
         >
           {mode === "signin" ? "Need an account? Sign up" : "Already have an account? Sign in"}
         </button>
