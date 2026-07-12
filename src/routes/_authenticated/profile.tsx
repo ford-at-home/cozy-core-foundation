@@ -342,6 +342,8 @@ function ProfilePage() {
     if (!dirty && data?.profile) {
       setStyleText(data.profile.style_text);
       setImageStyle(data.profile.image_style ?? "");
+      setTextStylePreset(data.profile.text_style_preset ?? null);
+      setImageStylePreset(data.profile.image_style_preset ?? null);
     }
   }, [data, dirty]);
 
