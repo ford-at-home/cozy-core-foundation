@@ -448,8 +448,10 @@ function ProfilePage() {
               <PresetChips
                 presets={TEXT_STYLE_PRESETS}
                 current={styleText}
-                onPick={(v) => {
+                selectedPreset={textStylePreset}
+                onPick={(v, label) => {
                   setStyleText(v);
+                  setTextStylePreset(label);
                   setDirty(true);
                 }}
               />
