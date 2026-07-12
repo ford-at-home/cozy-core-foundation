@@ -162,7 +162,7 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
 
   const branch = agent.branch ?? run.branch;
   const update = applyExternalStatus(run as RunRow, agent.rawStatus);
-  let status = update?.status ?? run.status;
+  const status = update?.status ?? run.status;
   if (update) {
     await admin
       .from("agent_runs")

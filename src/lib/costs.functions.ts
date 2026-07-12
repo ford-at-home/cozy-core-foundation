@@ -154,7 +154,7 @@ export const getSessionDetail = createServerFn({ method: "POST" })
     );
 
     return {
-      ...(session as any),
+      ...(session as Omit<SessionRow, "providers">),
       providers,
       runs: (runs ?? []) as SessionDetail["runs"],
       byProvider,

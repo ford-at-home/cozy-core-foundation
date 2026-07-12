@@ -124,6 +124,9 @@ Deno.test("research completion chains exactly one compose run and dispatches it"
         return null;
       },
       insertSingle: (table, payload) => {
+        // The research run has no session_id, so the chain step creates a
+        // session for the compose run via ensureRunSession.
+        if (table === "sessions") return { data: { id: "session-1" }, error: null };
         assertEquals(table, "agent_runs");
         const p = payload as Record<string, unknown>;
         assertEquals(p.kind, "proposal");
