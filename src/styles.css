@@ -164,6 +164,18 @@
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
+    /* Prefer dynamic viewport height on mobile browsers. */
+    min-height: 100dvh;
+  }
+
+  /* Avoid iOS zooming inputs on focus (needs ≥16px). */
+  @media (max-width: 767px) {
+    input,
+    textarea,
+    select {
+      font-size: 16px;
+    }
   }
 
   ::selection {
