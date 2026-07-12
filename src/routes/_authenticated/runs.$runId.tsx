@@ -113,6 +113,8 @@ function RunDetailPage() {
             </span>
           </div>
 
+          <RunDetailPanel run={run} />
+
           {ACTIVE_RUN_STATUSES.includes(run.status) && (
             <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
               {activeStatusMessage(run.status, run.kind)}
