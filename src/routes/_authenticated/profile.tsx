@@ -6,6 +6,62 @@ import { getMyProfile, saveMyProfile } from "@/lib/profile.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+const TEXT_STYLE_PRESETS: { label: string; value: string }[] = [
+  {
+    label: "Plainspoken essayist",
+    value:
+      "Short sentences. Concrete nouns. One idea per paragraph. No throat-clearing openers, no windup — start on the observation and let the piece breathe. Prefer verbs over adjectives. When a sentence can be cut in half without losing meaning, cut it. End on a line that stands on its own.",
+  },
+  {
+    label: "Punchy operator",
+    value:
+      "First person, direct, opinionated. Talk like you're writing to one smart friend who's short on time. Contractions welcome. Every section ends with a single takeaway line — italicized or on its own paragraph — that the reader could quote back a week later. No hedging, no 'it depends' unless followed by a decision rule.",
+  },
+  {
+    label: "Warm storyteller",
+    value:
+      "Open with a scene, not a thesis: a place, a person, a small moment. Use sensory detail — what you saw, heard, held. Let the point emerge from the story rather than announcing it. Quiet endings; no drum-roll. Contractions and second person are welcome when they earn intimacy.",
+  },
+  {
+    label: "Analytical explainer",
+    value:
+      "Define terms the first time you use them. Structure with numbered steps or clear headings when the logic branches. Cite evidence inline (numbers, dates, sources) rather than gesturing at 'studies show'. Distinguish claims from opinions explicitly. End with the strongest counter-argument you can steelman, then the reason it doesn't win.",
+  },
+  {
+    label: "Dry wit",
+    value:
+      "Understated, observational, occasionally arch. One aside per section, never more. Never sarcastic for its own sake — the humor has to reveal something true about the subject. Prefer specificity over cleverness. Land the piece on a clean, quiet line; no punchline endings.",
+  },
+];
+
+const IMAGE_STYLE_PRESETS: { label: string; value: string }[] = [
+  {
+    label: "Ink & wash journal",
+    value:
+      "Hand-drawn ink on off-white paper, loose confident linework, muted watercolor washes, generous margins, feels like a naturalist's field journal. Never photorealistic, never glossy 3D, no neon.",
+  },
+  {
+    label: "Editorial photo",
+    value:
+      "35mm color photograph, natural available light, shallow depth of field, documentary framing, subtle grain. Neutral palette, no heavy filters, no stock-photo staging.",
+  },
+  {
+    label: "Flat vector",
+    value:
+      "Flat geometric shapes, 3–4 color palette per image, thick consistent outlines, no gradients, no textures. Modern editorial illustration feel — think a smart magazine's op-ed art.",
+  },
+  {
+    label: "Risograph print",
+    value:
+      "Two-color risograph print on warm paper stock, visible grain and slight misregistration, limited palette (e.g. fluorescent pink + navy). Analog print texture, no photorealism.",
+  },
+  {
+    label: "Minimal line art",
+    value:
+      "Single-weight black line on white, generous whitespace, no shading, no fills. Confident continuous strokes, spare composition, one subject centered.",
+  },
+];
+
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
     meta: [
