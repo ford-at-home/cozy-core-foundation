@@ -5,6 +5,8 @@ export type Profile = {
   user_id: string;
   style_text: string;
   image_style: string;
+  text_style_preset: string | null;
+  image_style_preset: string | null;
   created_at: string;
   updated_at: string;
 };
