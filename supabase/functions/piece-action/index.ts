@@ -22,6 +22,7 @@ import {
 } from "../_shared/prompt.ts";
 import { buildImageCreds } from "../_shared/image-token.ts";
 import { dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
+import { ensureRunSession } from "../_shared/usage.ts";
 import {
   corsHeaders,
   errorResponse,
@@ -214,6 +215,14 @@ async function handle(req: Request, rid: string): Promise<Response> {
     });
   }
   logEvent(FN, "info", { requestId: rid, event: "run_created", runId: inserted.id, pieceId, action });
+
+  await ensureRunSession(admin, {
+    runId: inserted.id,
+    userId,
+    pieceId,
+    title: piece.slug,
+    provider: "cursor",
+  });
 
   const imageCreds = await buildImageCreds(inserted.id);
   const imageBits = {
