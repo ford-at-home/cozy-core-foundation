@@ -293,7 +293,7 @@ function ActionsPanel({ run }: { run: AgentRun }) {
   }
 
   return (
-    <section className="space-y-4 rounded-xl border border-border bg-card p-6">
+    <section className="space-y-4 rounded-xl border border-border bg-card p-4 sm:p-6">
       <h2 className="font-serif text-xl">Next step</h2>
 
       {isProposal && (
@@ -308,14 +308,14 @@ function ActionsPanel({ run }: { run: AgentRun }) {
             onChange={(e) => setFeedback(e.target.value)}
             rows={3}
             placeholder="Optional steering: I'd cut the second section; lean harder on the case study; less formal…"
-            className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-2.5 text-sm outline-none transition-shadow focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+            className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-2.5 text-base outline-none transition-shadow focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-sm"
           />
           <div className="flex flex-col gap-3 sm:flex-row">
             <button
               type="button"
               onClick={() => dispatch("ready")}
               disabled={pending !== null}
-              className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
             >
               {pending === "ready" ? "Starting…" : "Ready → final draft PR"}
             </button>
@@ -323,7 +323,7 @@ function ActionsPanel({ run }: { run: AgentRun }) {
               type="button"
               onClick={() => dispatch("resynth")}
               disabled={pending !== null}
-              className="inline-flex h-10 items-center justify-center rounded-md border border-border px-5 text-sm font-medium text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-5 text-sm font-medium text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
             >
               {pending === "resynth" ? "Starting…" : "Resynth"}
             </button>
@@ -352,13 +352,13 @@ function ActionsPanel({ run }: { run: AgentRun }) {
             placeholder={
               "S2P1: tighten to one sentence.\nMark three: cut everything after the comma.\nThe viz on page 2: sketch of the handoff gap."
             }
-            className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-2.5 font-mono text-sm outline-none transition-shadow focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+            className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-2.5 font-mono text-base outline-none transition-shadow focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-sm"
           />
           <button
             type="button"
             onClick={() => dispatch("revise")}
             disabled={pending !== null || transcript.trim() === ""}
-            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
           >
             {pending === "revise" ? "Starting…" : "Revise → final PR"}
           </button>
@@ -444,7 +444,7 @@ function TabButton({
       aria-selected={active}
       onClick={onClick}
       className={
-        "rounded-md border px-3 py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring/60 " +
+        "rounded-md border px-3 py-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring/60 sm:py-1.5 " +
         (active
           ? "border-primary bg-primary/10 text-primary"
           : "border-border text-muted-foreground hover:text-foreground hover:bg-accent/40")
