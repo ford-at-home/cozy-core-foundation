@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { brand } from "@/config/brand";
 import { PageMark } from "@/components/PageMark";
+import { CreditBalance } from "@/components/CreditBalance";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -71,6 +72,7 @@ function AuthenticatedLayout() {
           </nav>
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <CreditBalance />
             <span className="hidden max-w-[14rem] truncate text-xs text-muted-foreground md:inline">
               {email}
             </span>

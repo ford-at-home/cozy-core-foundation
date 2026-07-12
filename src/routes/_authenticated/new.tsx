@@ -6,6 +6,7 @@ import { startWorkflow } from "@/lib/workflows.functions";
 import { getMyProfile } from "@/lib/profile.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { brand, pageTitle } from "@/config/brand";
+import { CREDIT_COST, isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
 
 // Composer: paste research, optionally steer with a goal, and compose.
 // Voice is NOT an input here — it comes from the signed-in user's profile
@@ -46,10 +47,15 @@ function NewPiecePage() {
   });
   const hasStyle = (profileData?.profile?.style_text ?? "").trim() !== "";
 
+  const { balance } = useCreditBalance();
+  const creditCost = mode === "topic" ? CREDIT_COST.research : CREDIT_COST.compose;
+  const outOfCredits = balance !== null && balance < creditCost;
+
   const canSubmit =
     !submitting &&
     !profileLoading &&
     hasStyle &&
+    !outOfCredits &&
     (mode === "topic" ? topic.trim() !== "" : research.trim() !== "" || files.length > 0);
 
   const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB per file
@@ -144,7 +150,12 @@ function NewPiecePage() {
       });
       router.navigate({ to: "/runs/$runId", params: { runId } });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start");
+      const message = err instanceof Error ? err.message : "Failed to start";
+      setError(
+        isInsufficientCreditsError(message)
+          ? "Not enough credits for this generation. You were not charged."
+          : message,
+      );
       setUploadProgress(null);
     } finally {
       setSubmitting(false);
@@ -173,6 +184,17 @@ function NewPiecePage() {
           Your voice profile is empty, and drafting without a voice is refused by design.{" "}
           <Link to="/profile" className="font-medium underline">
             Describe your style first →
+          </Link>
+        </div>
+      )}
+
+      {outOfCredits && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+          {mode === "topic"
+            ? `A deep-research start uses ${CREDIT_COST.research} credits and you have ${balance}.`
+            : "You're out of credits."}{" "}
+          <Link to="/billing" className="font-medium underline">
+            Get credits →
           </Link>
         </div>
       )}
@@ -323,6 +345,9 @@ function NewPiecePage() {
         <div className="flex flex-col gap-3 border-t border-border/60 pt-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-muted-foreground">
             Voice: {profileLoading ? "loading…" : hasStyle ? "from your profile" : "not set"}
+            {" · "}
+            Uses {creditCost} credit{creditCost === 1 ? "" : "s"}
+            {balance !== null ? ` (you have ${balance})` : ""}
           </p>
           <button
             type="submit"

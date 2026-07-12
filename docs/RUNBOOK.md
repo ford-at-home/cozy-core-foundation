@@ -62,3 +62,10 @@ failed with guidance; check https://platform.parallel.ai for the task.
   when a run misbehaves.
 - Backend tests: `deno test --allow-env supabase/functions/_tests/`
   (`--allow-env` is required by the research-chain tests).
+
+## Billing and credits
+
+Credits, Stripe setup, the test-mode plan, admin adjustments, and money
+failure scenarios live in [docs/BILLING.md](BILLING.md). Required secrets:
+`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `APP_PUBLIC_URL`; optional
+`CREDITS_MODE=log` as the incident lever that meters without blocking.

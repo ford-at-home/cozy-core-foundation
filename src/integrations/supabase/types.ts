@@ -71,6 +71,7 @@ export type Database = {
           input_summary: string | null
           kind: string
           output_summary: string | null
+          parent_run_id: string | null
           piece_id: string | null
           provider: string | null
           result: Json | null
@@ -98,6 +99,7 @@ export type Database = {
           input_summary?: string | null
           kind?: string
           output_summary?: string | null
+          parent_run_id?: string | null
           piece_id?: string | null
           provider?: string | null
           result?: Json | null
@@ -125,6 +127,7 @@ export type Database = {
           input_summary?: string | null
           kind?: string
           output_summary?: string | null
+          parent_run_id?: string | null
           piece_id?: string | null
           provider?: string | null
           result?: Json | null
@@ -135,6 +138,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "agent_runs_parent_run_id_fkey"
+            columns: ["parent_run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "agent_runs_piece_id_fkey"
             columns: ["piece_id"]
@@ -147,6 +157,176 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_customers: {
+        Row: {
+          created_at: string
+          email: string | null
+          stripe_customer_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          stripe_customer_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          stripe_customer_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      credit_accounts: {
+        Row: {
+          balance: number
+          created_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      credit_ledger: {
+        Row: {
+          actor: string
+          amount: number
+          created_at: string
+          entry_type: string
+          id: string
+          idempotency_key: string
+          metadata: Json
+          purchase_id: string | null
+          reason: string | null
+          reservation_id: string | null
+          run_id: string | null
+          stripe_event_id: string | null
+          user_id: string
+        }
+        Insert: {
+          actor?: string
+          amount: number
+          created_at?: string
+          entry_type: string
+          id?: string
+          idempotency_key: string
+          metadata?: Json
+          purchase_id?: string | null
+          reason?: string | null
+          reservation_id?: string | null
+          run_id?: string | null
+          stripe_event_id?: string | null
+          user_id: string
+        }
+        Update: {
+          actor?: string
+          amount?: number
+          created_at?: string
+          entry_type?: string
+          id?: string
+          idempotency_key?: string
+          metadata?: Json
+          purchase_id?: string | null
+          reason?: string | null
+          reservation_id?: string | null
+          run_id?: string | null
+          stripe_event_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      credit_products: {
+        Row: {
+          active: boolean
+          amount_cents: number
+          created_at: string
+          credits: number
+          currency: string
+          id: string
+          name: string
+          sort: number
+          stripe_price_id: string
+          stripe_product_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          amount_cents: number
+          created_at?: string
+          credits: number
+          currency?: string
+          id?: string
+          name: string
+          sort?: number
+          stripe_price_id: string
+          stripe_product_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          amount_cents?: number
+          created_at?: string
+          credits?: number
+          currency?: string
+          id?: string
+          name?: string
+          sort?: number
+          stripe_price_id?: string
+          stripe_product_id?: string | null
+        }
+        Relationships: []
+      }
+      credit_reservations: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          reason: string | null
+          resolved_at: string | null
+          run_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          reason?: string | null
+          resolved_at?: string | null
+          run_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          reason?: string | null
+          resolved_at?: string | null
+          run_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_reservations_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: true
+            referencedRelation: "agent_runs"
             referencedColumns: ["id"]
           },
         ]
@@ -438,6 +618,48 @@ export type Database = {
           },
         ]
       }
+      purchases: {
+        Row: {
+          amount_total_cents: number | null
+          created_at: string
+          credits: number
+          currency: string | null
+          id: string
+          status: string
+          stripe_checkout_session_id: string
+          stripe_payment_intent_id: string | null
+          stripe_price_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_total_cents?: number | null
+          created_at?: string
+          credits: number
+          currency?: string | null
+          id?: string
+          status?: string
+          stripe_checkout_session_id: string
+          stripe_payment_intent_id?: string | null
+          stripe_price_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_total_cents?: number | null
+          created_at?: string
+          credits?: number
+          currency?: string | null
+          id?: string
+          status?: string
+          stripe_checkout_session_id?: string
+          stripe_payment_intent_id?: string | null
+          stripe_price_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sessions: {
         Row: {
           completed_at: string | null
@@ -497,16 +719,121 @@ export type Database = {
           },
         ]
       }
+      stripe_events: {
+        Row: {
+          error: string | null
+          id: string
+          payload: Json
+          processed_at: string | null
+          received_at: string
+          status: string
+          type: string
+        }
+        Insert: {
+          error?: string | null
+          id: string
+          payload: Json
+          processed_at?: string | null
+          received_at?: string
+          status?: string
+          type: string
+        }
+        Update: {
+          error?: string | null
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          received_at?: string
+          status?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          created_at: string
+          credits_per_period: number
+          current_period_end: string | null
+          id: string
+          status: string
+          stripe_price_id: string
+          stripe_subscription_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_per_period?: number
+          current_period_end?: string | null
+          id?: string
+          status?: string
+          stripe_price_id: string
+          stripe_subscription_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_per_period?: number
+          current_period_end?: string | null
+          id?: string
+          status?: string
+          stripe_price_id?: string
+          stripe_subscription_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      admin_adjust_credits: {
+        Args: {
+          _actor: string
+          _amount: number
+          _idempotency_key: string
+          _reason: string
+          _user_id: string
+        }
+        Returns: string
+      }
+      grant_credits: {
+        Args: {
+          _actor?: string
+          _amount: number
+          _entry_type: string
+          _idempotency_key: string
+          _metadata?: Json
+          _purchase_id?: string
+          _reason?: string
+          _run_id?: string
+          _stripe_event_id?: string
+          _user_id: string
+        }
+        Returns: string
+      }
       recompute_run_totals: { Args: { _run_id: string }; Returns: undefined }
       recompute_session_totals: {
         Args: { _session_id: string }
         Returns: undefined
       }
+      release_reservation: {
+        Args: { _reason?: string; _run_id: string }
+        Returns: boolean
+      }
+      reserve_credits: {
+        Args: {
+          _amount: number
+          _reason?: string
+          _run_id: string
+          _user_id: string
+        }
+        Returns: string
+      }
+      settle_reservation: { Args: { _run_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
