@@ -533,8 +533,10 @@ function ProfilePage() {
               <PresetChips
                 presets={IMAGE_STYLE_PRESETS}
                 current={imageStyle}
-                onPick={(v) => {
+                selectedPreset={imageStylePreset}
+                onPick={(v, label) => {
                   setImageStyle(v);
+                  setImageStylePreset(label);
                   setDirty(true);
                 }}
               />
