@@ -6,6 +6,7 @@ import { ACTIVE_RUN_STATUSES, type AgentRun, type RunStatus } from "@/lib/workfl
 import { runPieceAction, type PieceAction } from "@/lib/pieces.functions";
 import type { Json } from "@/integrations/supabase/types";
 import MarkdownView from "@/components/MarkdownView";
+import { RunCostCard } from "@/components/RunCostCard";
 
 export const Route = createFileRoute("/_authenticated/runs/$runId")({
   head: () => ({
@@ -24,7 +25,7 @@ type GeneratedBrief = { path?: string; content: string };
 const BRIEF_TAB = "__brief__";
 
 const RUN_COLUMNS =
-  "id, user_id, piece_id, status, kind, input, result, error, branch, created_at, dispatched_at, completed_at";
+  "id, user_id, piece_id, session_id, provider, total_cost_usd, status, kind, input, result, error, branch, created_at, dispatched_at, completed_at";
 
 function RunDetailPage() {
   const { runId } = Route.useParams();
@@ -114,6 +115,12 @@ function RunDetailPage() {
           </div>
 
           <RunDetailPanel run={run} />
+
+          <RunCostCard
+            runId={run.id}
+            sessionId={run.session_id}
+            runCostUsd={run.total_cost_usd}
+          />
 
           {ACTIVE_RUN_STATUSES.includes(run.status) && (
             <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
