@@ -7,6 +7,8 @@ import { runPieceAction, type PieceAction } from "@/lib/pieces.functions";
 import type { Json } from "@/integrations/supabase/types";
 import MarkdownView from "@/components/MarkdownView";
 import { RunCostCard } from "@/components/RunCostCard";
+import { StatusPill } from "@/components/StatusPill";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/runs/$runId")({
   head: () => ({
@@ -128,19 +130,35 @@ function RunDetailPage() {
   }, [channels, brief, activeFile]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Run</h1>
-          <p className="font-mono text-xs text-muted-foreground">{runId}</p>
+    <div className="space-y-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Studio</p>
+          <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Run</h1>
+          <p className="mt-1 truncate font-mono text-xs text-muted-foreground" title={runId}>
+            {runId}
+          </p>
         </div>
-        <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link
+          to="/dashboard"
+          className="shrink-0 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 rounded-sm"
+        >
           ← Dashboard
         </Link>
       </div>
 
-      {loading && <div className="text-sm text-muted-foreground">Loading…</div>}
-      {loadError && <p className="text-sm text-destructive">{loadError}</p>}
+      {loading && (
+        <div className="space-y-3" aria-busy="true" aria-label="Loading run">
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <Skeleton className="h-40 w-full rounded-xl" />
+        </div>
+      )}
+      {loadError && (
+        <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {loadError}
+        </p>
+      )}
 
       {run && (
         <>
@@ -275,7 +293,7 @@ function ActionsPanel({ run }: { run: AgentRun }) {
   }
 
   return (
-    <section className="space-y-4 rounded-xl border border-border bg-card p-6">
+    <section className="space-y-4 rounded-xl border border-border bg-card p-4 sm:p-6">
       <h2 className="font-serif text-xl">Next step</h2>
 
       {isProposal && (
@@ -290,14 +308,14 @@ function ActionsPanel({ run }: { run: AgentRun }) {
             onChange={(e) => setFeedback(e.target.value)}
             rows={3}
             placeholder="Optional steering: I'd cut the second section; lean harder on the case study; less formal…"
-            className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-2.5 text-sm outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
+            className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-2.5 text-base outline-none transition-shadow focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-sm"
           />
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <button
               type="button"
               onClick={() => dispatch("ready")}
               disabled={pending !== null}
-              className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
             >
               {pending === "ready" ? "Starting…" : "Ready → final draft PR"}
             </button>
@@ -305,7 +323,7 @@ function ActionsPanel({ run }: { run: AgentRun }) {
               type="button"
               onClick={() => dispatch("resynth")}
               disabled={pending !== null}
-              className="rounded-md border border-border px-5 py-2.5 text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-5 text-sm font-medium text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
             >
               {pending === "resynth" ? "Starting…" : "Resynth"}
             </button>
@@ -334,13 +352,13 @@ function ActionsPanel({ run }: { run: AgentRun }) {
             placeholder={
               "S2P1: tighten to one sentence.\nMark three: cut everything after the comma.\nThe viz on page 2: sketch of the handoff gap."
             }
-            className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-2.5 font-mono text-sm outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
+            className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-2.5 font-mono text-base outline-none transition-shadow focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-sm"
           />
           <button
             type="button"
             onClick={() => dispatch("revise")}
             disabled={pending !== null || transcript.trim() === ""}
-            className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
           >
             {pending === "revise" ? "Starting…" : "Revise → final PR"}
           </button>
@@ -422,12 +440,14 @@ function TabButton({
   return (
     <button
       type="button"
+      role="tab"
+      aria-selected={active}
       onClick={onClick}
       className={
-        "rounded border px-2 py-1 text-xs " +
+        "rounded-md border px-3 py-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring/60 sm:py-1.5 " +
         (active
-          ? "border-primary text-primary"
-          : "border-border text-muted-foreground hover:text-foreground")
+          ? "border-primary bg-primary/10 text-primary"
+          : "border-border text-muted-foreground hover:text-foreground hover:bg-accent/40")
       }
     >
       {label}
@@ -436,21 +456,7 @@ function TabButton({
 }
 
 function StatusBadge({ status }: { status: RunStatus }) {
-  const tone: Record<RunStatus, string> = {
-    requested: "bg-muted text-muted-foreground",
-    dispatching: "bg-muted text-muted-foreground",
-    dispatch_unknown: "bg-amber-500/15 text-amber-600",
-    queued: "bg-muted text-muted-foreground",
-    running: "bg-primary/15 text-primary",
-    awaiting_fetch: "bg-primary/15 text-primary",
-    completed: "bg-emerald-500/15 text-emerald-600",
-    failed: "bg-destructive/15 text-destructive",
-    cancel_requested: "bg-amber-500/15 text-amber-600",
-    cancelled: "bg-muted text-muted-foreground",
-  };
-  return (
-    <span className={`rounded px-2 py-0.5 text-xs font-medium ${tone[status]}`}>{status}</span>
-  );
+  return <StatusPill status={status} />;
 }
 
 // -----------------------------------------------------------------------------

@@ -9,10 +9,10 @@ const LABELS: Record<PricingSource, string> = {
 };
 
 const TONES: Record<PricingSource, string> = {
-  provider_reported: "bg-emerald-500/15 text-emerald-600",
+  provider_reported: "bg-emerald-500/15 text-emerald-400",
   fixed_task_price: "bg-primary/15 text-primary",
-  calculated: "bg-blue-500/15 text-blue-600",
-  estimated: "bg-amber-500/15 text-amber-700",
+  calculated: "bg-sky-500/15 text-sky-400",
+  estimated: "bg-amber-500/15 text-amber-400",
   manual: "bg-muted text-muted-foreground",
 };
 

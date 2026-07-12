@@ -393,10 +393,18 @@ function ProfilePage() {
         </p>
       </div>
 
-      <div className="space-y-6 rounded-xl border border-border bg-card p-7 text-card-foreground shadow-sm">
-        {isLoading && <p className="text-sm text-muted-foreground">Loading your profile…</p>}
+      <div className="space-y-6 rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm sm:p-7">
+        {isLoading && (
+          <div className="space-y-3" aria-busy="true" aria-label="Loading profile">
+            <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+            <div className="h-40 w-full animate-pulse rounded-md bg-muted" />
+          </div>
+        )}
         {error && (
-          <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <p
+            role="alert"
+            className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
             {error.message}
           </p>
         )}
@@ -417,7 +425,7 @@ function ProfilePage() {
                       setDirty(true);
                     }}
                     disabled={!styleText && !textStylePreset}
-                    className="inline-flex items-center rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+                    className="inline-flex min-h-11 items-center rounded-md border border-border bg-background px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
                     title="Clear the style field"
                   >
                     Clear
@@ -427,7 +435,7 @@ function ProfilePage() {
                     onClick={recording ? stopRecording : startRecording}
                     disabled={transcribing}
                     className={
-                      "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 " +
+                      "inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors disabled:opacity-50 " +
                       (recording
                         ? "border-destructive/60 bg-destructive/10 text-destructive hover:bg-destructive/15"
                         : "border-border bg-background hover:bg-muted")
@@ -468,7 +476,7 @@ function ProfilePage() {
                   "rhythm, vocabulary you love and hate, how you handle evidence, how you " +
                   "land an ending. Paste examples of lines that sound like you."
                 }
-                className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-3 text-sm leading-relaxed outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
+                className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-3 text-base leading-relaxed outline-none transition-shadow focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-sm"
               />
             </label>
 
@@ -520,7 +528,7 @@ function ProfilePage() {
                     setDirty(true);
                   }}
                   disabled={!imageStyle && !imageStylePreset}
-                  className="inline-flex items-center rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+                  className="inline-flex min-h-11 items-center rounded-md border border-border bg-background px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
                   title="Clear the image style field"
                 >
                   Clear
@@ -553,11 +561,11 @@ function ProfilePage() {
                   "loose linework in the style of a nature journal — never photorealistic, " +
                   "never glossy 3D renders."
                 }
-                className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-3 text-sm leading-relaxed outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
+                className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-3 text-base leading-relaxed outline-none transition-shadow focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-sm"
               />
             </label>
 
-            <div className="flex items-center justify-between gap-4 border-t border-border/60 pt-5">
+            <div className="flex flex-col gap-3 border-t border-border/60 pt-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">
                   {savedAt
@@ -576,7 +584,8 @@ function ProfilePage() {
                 type="button"
                 onClick={handleSave}
                 disabled={saving || !dirty || !styleText.trim() || !imageStyle.trim()}
-                className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                aria-busy={saving}
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 sm:w-auto"
               >
                 {saving ? "Saving…" : "Save profile"}
               </button>
@@ -607,6 +616,7 @@ function PresetChips({
           <button
             key={p.label}
             type="button"
+            aria-pressed={active}
             onClick={() => {
               if (
                 current.trim() &&
@@ -618,7 +628,7 @@ function PresetChips({
               onPick(p.value, p.label);
             }}
             className={
-              "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors " +
+              "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring/60 " +
               (active
                 ? "border-primary bg-primary/10 text-foreground"
                 : "border-border bg-background hover:bg-muted")
