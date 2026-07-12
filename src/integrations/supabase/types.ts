@@ -59,18 +59,25 @@ export type Database = {
           completed_at: string | null
           created_at: string
           dispatched_at: string | null
+          duration_ms: number | null
           error: string | null
           external_agent_id: string | null
           external_raw_status: string | null
           external_run_id: string | null
           id: string
           idempotency_key: string | null
+          inference_count: number
           input: Json | null
+          input_summary: string | null
           kind: string
+          output_summary: string | null
           piece_id: string | null
+          provider: string | null
           result: Json | null
+          session_id: string | null
           started_at: string | null
           status: string
+          total_cost_usd: number
           user_id: string
         }
         Insert: {
@@ -79,18 +86,25 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           dispatched_at?: string | null
+          duration_ms?: number | null
           error?: string | null
           external_agent_id?: string | null
           external_raw_status?: string | null
           external_run_id?: string | null
           id?: string
           idempotency_key?: string | null
+          inference_count?: number
           input?: Json | null
+          input_summary?: string | null
           kind?: string
+          output_summary?: string | null
           piece_id?: string | null
+          provider?: string | null
           result?: Json | null
+          session_id?: string | null
           started_at?: string | null
           status?: string
+          total_cost_usd?: number
           user_id: string
         }
         Update: {
@@ -99,18 +113,25 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           dispatched_at?: string | null
+          duration_ms?: number | null
           error?: string | null
           external_agent_id?: string | null
           external_raw_status?: string | null
           external_run_id?: string | null
           id?: string
           idempotency_key?: string | null
+          inference_count?: number
           input?: Json | null
+          input_summary?: string | null
           kind?: string
+          output_summary?: string | null
           piece_id?: string | null
+          provider?: string | null
           result?: Json | null
+          session_id?: string | null
           started_at?: string | null
           status?: string
+          total_cost_usd?: number
           user_id?: string
         }
         Relationships: [
@@ -121,7 +142,168 @@ export type Database = {
             referencedRelation: "pieces"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "agent_runs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      inferences: {
+        Row: {
+          cached_input_cost_usd: number | null
+          cached_input_tokens: number | null
+          calculated_cost_usd: number | null
+          completed_at: string | null
+          created_at: string
+          duration_ms: number | null
+          external_request_id: string | null
+          final_cost_usd: number
+          id: string
+          idempotency_key: string
+          input_cost_usd: number | null
+          input_tokens: number | null
+          metadata: Json
+          model: string | null
+          operation_type: string
+          output_cost_usd: number | null
+          output_tokens: number | null
+          pricing_id: string | null
+          pricing_source: string
+          provider: string
+          provider_reported_cost_usd: number | null
+          run_id: string
+          session_id: string
+          started_at: string | null
+          user_id: string
+        }
+        Insert: {
+          cached_input_cost_usd?: number | null
+          cached_input_tokens?: number | null
+          calculated_cost_usd?: number | null
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          external_request_id?: string | null
+          final_cost_usd?: number
+          id?: string
+          idempotency_key: string
+          input_cost_usd?: number | null
+          input_tokens?: number | null
+          metadata?: Json
+          model?: string | null
+          operation_type?: string
+          output_cost_usd?: number | null
+          output_tokens?: number | null
+          pricing_id?: string | null
+          pricing_source: string
+          provider: string
+          provider_reported_cost_usd?: number | null
+          run_id: string
+          session_id: string
+          started_at?: string | null
+          user_id: string
+        }
+        Update: {
+          cached_input_cost_usd?: number | null
+          cached_input_tokens?: number | null
+          calculated_cost_usd?: number | null
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          external_request_id?: string | null
+          final_cost_usd?: number
+          id?: string
+          idempotency_key?: string
+          input_cost_usd?: number | null
+          input_tokens?: number | null
+          metadata?: Json
+          model?: string | null
+          operation_type?: string
+          output_cost_usd?: number | null
+          output_tokens?: number | null
+          pricing_id?: string | null
+          pricing_source?: string
+          provider?: string
+          provider_reported_cost_usd?: number | null
+          run_id?: string
+          session_id?: string
+          started_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inferences_pricing_id_fkey"
+            columns: ["pricing_id"]
+            isOneToOne: false
+            referencedRelation: "model_pricing"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inferences_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inferences_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      model_pricing: {
+        Row: {
+          cached_input_price_per_million: number | null
+          created_at: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          input_price_per_million: number | null
+          model: string
+          notes: string | null
+          output_price_per_million: number | null
+          per_task_price_usd: number | null
+          pricing_kind: string
+          provider: string
+          source_url: string | null
+        }
+        Insert: {
+          cached_input_price_per_million?: number | null
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          input_price_per_million?: number | null
+          model: string
+          notes?: string | null
+          output_price_per_million?: number | null
+          per_task_price_usd?: number | null
+          pricing_kind: string
+          provider: string
+          source_url?: string | null
+        }
+        Update: {
+          cached_input_price_per_million?: number | null
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          input_price_per_million?: number | null
+          model?: string
+          notes?: string | null
+          output_price_per_million?: number | null
+          per_task_price_usd?: number | null
+          pricing_kind?: string
+          provider?: string
+          source_url?: string | null
+        }
+        Relationships: []
       }
       pieces: {
         Row: {
@@ -186,12 +368,139 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_usage_events: {
+        Row: {
+          event_type: string
+          external_id: string | null
+          id: string
+          inference_id: string | null
+          payload: Json
+          processed_at: string | null
+          processing_error: string | null
+          provider: string
+          received_at: string
+          run_id: string | null
+          session_id: string | null
+        }
+        Insert: {
+          event_type: string
+          external_id?: string | null
+          id?: string
+          inference_id?: string | null
+          payload: Json
+          processed_at?: string | null
+          processing_error?: string | null
+          provider: string
+          received_at?: string
+          run_id?: string | null
+          session_id?: string | null
+        }
+        Update: {
+          event_type?: string
+          external_id?: string | null
+          id?: string
+          inference_id?: string | null
+          payload?: Json
+          processed_at?: string | null
+          processing_error?: string | null
+          provider?: string
+          received_at?: string
+          run_id?: string | null
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_usage_events_inference_id_fkey"
+            columns: ["inference_id"]
+            isOneToOne: false
+            referencedRelation: "inferences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_usage_events_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_usage_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          inference_count: number
+          metadata: Json
+          piece_id: string | null
+          run_count: number
+          started_at: string
+          status: string
+          title: string | null
+          total_cost_usd: number
+          total_duration_ms: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          inference_count?: number
+          metadata?: Json
+          piece_id?: string | null
+          run_count?: number
+          started_at?: string
+          status?: string
+          title?: string | null
+          total_cost_usd?: number
+          total_duration_ms?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          inference_count?: number
+          metadata?: Json
+          piece_id?: string | null
+          run_count?: number
+          started_at?: string
+          status?: string
+          title?: string | null
+          total_cost_usd?: number
+          total_duration_ms?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_piece_id_fkey"
+            columns: ["piece_id"]
+            isOneToOne: false
+            referencedRelation: "pieces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      recompute_run_totals: { Args: { _run_id: string }; Returns: undefined }
+      recompute_session_totals: {
+        Args: { _session_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
