@@ -23,6 +23,7 @@ import { buildComposePrompt, slugify } from "../_shared/prompt.ts";
 import { dispatchResearchRun, dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
 import { resolveProcessor } from "../_shared/parallel.ts";
 import { buildImageCreds } from "../_shared/image-token.ts";
+import { ensureRunSession } from "../_shared/usage.ts";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 import {
   corsHeaders,
@@ -197,6 +198,14 @@ async function handle(req: Request, rid: string): Promise<Response> {
   }
   const runId = inserted.id as string;
   logEvent(FN, "info", { requestId: rid, event: "run_created", runId, pieceId: piece.id, slug });
+
+  await ensureRunSession(admin, {
+    runId,
+    userId,
+    pieceId: piece.id,
+    title: topic || goal || null,
+    provider: researchMode ? "parallel" : "cursor",
+  });
 
   // --- 6a. Research mode: submit to Parallel and return; the reconciler
   //          polls it and chains the compose run when the report lands.
