@@ -493,9 +493,23 @@ function ProfilePage() {
             )}
 
             <label className="block space-y-2 border-t border-border/60 pt-5">
-              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Image style
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Image style
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageStyle("");
+                    setDirty(true);
+                  }}
+                  disabled={!imageStyle}
+                  className="inline-flex items-center rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+                  title="Clear the image style field"
+                >
+                  Clear
+                </button>
+              </div>
               <p className="text-xs text-muted-foreground">
                 Describe the visual style for images generated with your pieces —
                 medium, palette, mood, references. Applied to every image the agent
