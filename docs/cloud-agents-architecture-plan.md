@@ -85,11 +85,19 @@ pieces          id, user_id, slug (unique), title, stage                        
                        → annotating → finalized
                 issue_number, draft_pr_url, final_pr_url, created_at, updated_at
 
-agent_runs      id, user_id, piece_id, kind ('proposal'|'resynth'|'draft'|'revision'),
+agent_runs      id, user_id, piece_id, kind ('research'|'proposal'|'resynth'|'draft'|'revision'),
                 status, idempotency_key (unique), input jsonb,
-                external_agent_id, external_run_id (v1 reserve), external_raw_status,
+                external_agent_id (Cursor), external_run_id (Parallel), external_raw_status,
                 branch, result jsonb, error, cancellation_status,
                 created_at, dispatched_at, completed_at                          [RLS: own rows]
+
+                kind='research' is executed by Parallel AI (Task API), not Cursor:
+                start-workflow accepts {topic} instead of {research}, submits the
+                task, and the reconciler polls it. On completion the report (with
+                provenance frontmatter) is stored on the run and a 'proposal' run
+                is CHAINED (idempotency key compose:<user>:research:<runId>) with
+                the report injected as RESEARCH — so the compose agent commits it
+                to pieces/<slug>/research/research.md, the versioned copy.
 
 agent_run_events id, run_id, source ('edge'|'cursor-webhook'|'github-webhook'|'reconciler'),
                 external_event_id, event_type, payload jsonb, received_at,

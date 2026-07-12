@@ -20,7 +20,8 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildComposePrompt, slugify } from "../_shared/prompt.ts";
-import { dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
+import { dispatchResearchRun, dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
+import { resolveProcessor } from "../_shared/parallel.ts";
 import { buildImageCreds } from "../_shared/image-token.ts";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 
@@ -70,13 +71,22 @@ Deno.serve(async (req) => {
     body = {};
   }
   const research = typeof body?.research === "string" ? body.research.trim() : "";
+  const topic = typeof body?.topic === "string" ? body.topic.trim() : "";
   const goal = typeof body?.goal === "string" ? body.goal.trim() : "";
   const requestId = typeof body?.requestId === "string" && body.requestId
     ? body.requestId
     : crypto.randomUUID();
   const rawAttachments = Array.isArray(body?.attachments) ? body.attachments : [];
-  if (!research && rawAttachments.length === 0) {
-    return json({ error: "research or at least one attachment is required" }, 400);
+  // Two entry points: bring research (paste/attach) or a topic to deep-research.
+  const researchMode = !research && rawAttachments.length === 0 && topic !== "";
+  if (!research && rawAttachments.length === 0 && !topic) {
+    return json({ error: "research, an attachment, or a topic is required" }, 400);
+  }
+  if (researchMode && !Deno.env.get("PARALLEL_API_KEY")?.trim()) {
+    return json(
+      { error: "Deep research is not configured (PARALLEL_API_KEY missing). Paste research instead." },
+      422,
+    );
   }
 
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -84,7 +94,7 @@ Deno.serve(async (req) => {
   });
 
   // --- 3. Idempotency: an existing run for this requestId wins -------------
-  const idempotencyKey = `compose:${userId}:${requestId}`;
+  const idempotencyKey = `${researchMode ? "research" : "compose"}:${userId}:${requestId}`;
   {
     const { data: existing } = await admin
       .from("agent_runs")
@@ -110,10 +120,11 @@ Deno.serve(async (req) => {
   }
 
   // --- 5. Insert piece + run BEFORE dispatching -----------------------------
-  const slug = `${slugify(goal || research.slice(0, 60))}-${crypto.randomUUID().slice(0, 6)}`;
+  const processor = resolveProcessor();
+  const slug = `${slugify(topic || goal || research.slice(0, 60))}-${crypto.randomUUID().slice(0, 6)}`;
   const { data: piece, error: pieceErr } = await admin
     .from("pieces")
-    .insert({ user_id: userId, slug, title: goal || null, stage: "research" })
+    .insert({ user_id: userId, slug, title: goal || topic || null, stage: "research" })
     .select("id")
     .single();
   if (pieceErr || !piece) return json({ error: pieceErr?.message ?? "Insert failed" }, 500);
@@ -123,11 +134,13 @@ Deno.serve(async (req) => {
     .insert({
       user_id: userId,
       piece_id: piece.id,
-      kind: "proposal",
+      kind: researchMode ? "research" : "proposal",
       status: "dispatching",
       idempotency_key: idempotencyKey,
       // style_text deliberately NOT stored here (sensitive profile data).
-      input: { research, goal: goal || null },
+      input: researchMode
+        ? { topic, goal: goal || null, processor }
+        : { research, goal: goal || null },
     })
     .select("id")
     .single();
@@ -142,6 +155,13 @@ Deno.serve(async (req) => {
     return json({ error: insertErr?.message ?? "Insert failed" }, 500);
   }
   const runId = inserted.id as string;
+
+  // --- 6a. Research mode: submit to Parallel and return; the reconciler
+  //          polls it and chains the compose run when the report lands.
+  if (researchMode) {
+    await dispatchResearchRun({ admin, runId, topic, processor });
+    return json({ runId, pieceId: piece.id }, 202);
+  }
 
   // Per-run image-gen credentials for the agent to call our public route.
   const imageCreds = await buildImageCreds(runId);

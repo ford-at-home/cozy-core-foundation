@@ -67,7 +67,10 @@ function RunDetailPage() {
     };
   }, [runId]);
 
-  const { brief, channels } = useMemo(() => parseResult(run?.result ?? null), [run?.result]);
+  const { brief, channels, nextRunId } = useMemo(
+    () => parseResult(run?.result ?? null),
+    [run?.result],
+  );
 
   // Default the visible tab once results arrive: post.md if present, else brief.
   useEffect(() => {
@@ -112,7 +115,27 @@ function RunDetailPage() {
 
           {ACTIVE_RUN_STATUSES.includes(run.status) && (
             <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
-              {activeStatusMessage(run.status)}
+              {activeStatusMessage(run.status, run.kind)}
+            </div>
+          )}
+
+          {run.kind === "research" && run.status === "completed" && (
+            <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm">
+              Research complete.{" "}
+              {nextRunId ? (
+                <>
+                  The piece is now being composed from this report in your voice —{" "}
+                  <Link
+                    to="/runs/$runId"
+                    params={{ runId: nextRunId }}
+                    className="font-medium underline"
+                  >
+                    follow the compose run →
+                  </Link>
+                </>
+              ) : (
+                "The compose run is being prepared; it will appear on your dashboard within a couple of minutes."
+              )}
             </div>
           )}
 
@@ -164,7 +187,9 @@ function RunDetailPage() {
             </div>
           )}
 
-          {run.status === "completed" && run.piece_id && <ActionsPanel run={run} />}
+          {run.status === "completed" && run.piece_id && run.kind !== "research" && (
+            <ActionsPanel run={run} />
+          )}
         </>
       )}
     </div>
@@ -305,7 +330,23 @@ function ActionsPanel({ run }: { run: AgentRun }) {
   );
 }
 
-function activeStatusMessage(status: RunStatus): string {
+function activeStatusMessage(status: RunStatus, kind: string): string {
+  if (kind === "research") {
+    switch (status) {
+      case "requested":
+      case "dispatching":
+        return "Starting — submitting the topic for deep research.";
+      case "dispatch_unknown":
+        return "Starting… — dispatch is unconfirmed; the reconciler is resolving it. This page updates live.";
+      case "queued":
+      case "running":
+        return "Researching — scanning sources across the web and assembling a cited report. Deep research usually takes 2–10 minutes. This page updates live.";
+      case "awaiting_fetch":
+        return "Almost done — the report is ready; fetching it and starting the compose run.";
+      default:
+        return "In progress.";
+    }
+  }
   switch (status) {
     case "requested":
     case "dispatching":
@@ -360,11 +401,14 @@ function StatusBadge({ status }: { status: RunStatus }) {
   );
 }
 
-function parseResult(result: Json | null): { brief: GeneratedBrief | null; channels: OutputChannel[] } {
+function parseResult(
+  result: Json | null,
+): { brief: GeneratedBrief | null; channels: OutputChannel[]; nextRunId: string | null } {
   if (!result || typeof result !== "object" || Array.isArray(result)) {
-    return { brief: null, channels: [] };
+    return { brief: null, channels: [], nextRunId: null };
   }
   const r = result as Record<string, unknown>;
+  const nextRunId = typeof r.nextRunId === "string" ? r.nextRunId : null;
 
   let brief: GeneratedBrief | null = null;
   const rawBrief = r.brief;
@@ -396,7 +440,7 @@ function parseResult(result: Json | null): { brief: GeneratedBrief | null; chann
     }
   }
 
-  return { brief, channels };
+  return { brief, channels, nextRunId };
 }
 
 function pickDefaultFile(channels: OutputChannel[], brief: GeneratedBrief | null): string | null {

@@ -19,6 +19,13 @@
      defaults are unset model, this repo, `main`.
    - `GITHUB_TOKEN` — only needed if this repo goes private (read-only
      contents scope; used by fetch-back, never given to agents).
+   - `PARALLEL_API_KEY` — enables the "Research it for me" entry point
+     (Parallel AI Task API). Without it, topic submissions are rejected with
+     a clear 422; paste-research mode is unaffected. The key never reaches
+     the browser or any agent VM.
+   - `PARALLEL_PROCESSOR` — optional; overrides the research depth
+     (`lite-fast`/`base-fast`/`core-fast`/`pro-fast`/`ultra-fast`,
+     default `ultra-fast`).
 3. **Reconciler schedule** — migration `20260711150000_reconciler_cron.sql`
    schedules it every 2 min via pg_cron/pg_net. `[Unverified]` on Lovable
    Cloud: confirm with `select * from cron.job;`. Manual fallback:
@@ -33,6 +40,18 @@
 - **Style questionnaire** — profile is a free-text `style_text` until the
   elicitation questions land.
 
+## Deep research flow (kind: research)
+
+Topic → `start-workflow` submits a Parallel task and returns 202 → the
+reconciler polls it (statuses: queued/running/completed/failed) → on
+completion it fetches the report, wraps it with provenance frontmatter
+(query, processor, run_id, date), stores it on the run, and CHAINS a
+`proposal` run (Cursor) with the report as RESEARCH. The compose agent
+commits the report verbatim to `pieces/<slug>/research/research.md` — that
+is the versioned copy in GitHub. The chain is exactly-once (idempotency key
+`compose:<user>:research:<runId>`). A research run stuck past 45 minutes is
+failed with guidance; check https://platform.parallel.ai for the task.
+
 ## Operating notes
 
 - A run stuck in `dispatch_unknown` for >30 min is auto-failed with guidance;
@@ -41,3 +60,5 @@
   pause the pg_cron job. In-flight agents can be stopped from cursor.com/agents.
 - `agent_run_events` holds verbatim webhook/poll payloads per run — first stop
   when a run misbehaves.
+- Backend tests: `deno test --allow-env supabase/functions/_tests/`
+  (`--allow-env` is required by the research-chain tests).

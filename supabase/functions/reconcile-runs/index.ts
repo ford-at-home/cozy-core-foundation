@@ -26,6 +26,7 @@ import {
   stageForCompletedKind,
   type RunRow,
 } from "../_shared/complete.ts";
+import { reconcileResearch } from "../_shared/research.ts";
 
 const RELEASE_AFTER_MIN = 30;
 
@@ -58,7 +59,9 @@ Deno.serve(async (req) => {
 
   const { data: open, error } = await admin
     .from("agent_runs")
-    .select("id, piece_id, status, kind, branch, input, external_agent_id, created_at, cancellation_status")
+    .select(
+      "id, user_id, piece_id, status, kind, branch, input, external_agent_id, external_run_id, created_at, cancellation_status",
+    )
     .not("status", "in", "(completed,failed,cancelled)")
     .order("created_at", { ascending: true })
     .limit(25);
@@ -89,6 +92,7 @@ Deno.serve(async (req) => {
 });
 
 async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
+  if (run.kind === "research") return reconcileResearch(admin, run);
   const ageMin = (Date.now() - new Date(run.created_at).getTime()) / 60_000;
 
   // Never dispatched, or ambiguous dispatch: without vendor-side correlation

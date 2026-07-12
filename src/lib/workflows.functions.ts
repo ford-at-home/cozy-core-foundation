@@ -60,6 +60,8 @@ export const listMyRuns = createServerFn({ method: "GET" })
 // idempotency key so retried submissions cannot double-dispatch.
 export type StartWorkflowInput = {
   research?: string;
+  /** Deep-research entry point: a topic the backend researches for you. */
+  topic?: string;
   goal?: string;
   requestId?: string;
   attachments?: Array<{

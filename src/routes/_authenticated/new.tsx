@@ -25,7 +25,9 @@ function NewPiecePage() {
   const router = useRouter();
   const start = useServerFn(startWorkflow);
   const fetchProfile = useServerFn(getMyProfile);
+  const [mode, setMode] = useState<"paste" | "topic">("paste");
   const [research, setResearch] = useState("");
+  const [topic, setTopic] = useState("");
   const [goal, setGoal] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +46,10 @@ function NewPiecePage() {
   const hasStyle = (profileData?.profile?.style_text ?? "").trim() !== "";
 
   const canSubmit =
-    !submitting && !profileLoading && hasStyle && (research.trim() !== "" || files.length > 0);
+    !submitting && !profileLoading && hasStyle &&
+    (mode === "topic"
+      ? topic.trim() !== ""
+      : research.trim() !== "" || files.length > 0);
 
   const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB per file
   const MAX_TOTAL_FILES = 10;
@@ -77,6 +82,14 @@ function NewPiecePage() {
     setSubmitting(true);
     setError(null);
     try {
+      if (mode === "topic") {
+        const { runId } = await start({
+          data: { topic: topic.trim(), goal: goal.trim(), requestId },
+        });
+        router.navigate({ to: "/runs/$runId", params: { runId } });
+        return;
+      }
+
       // 1. Upload attachments (if any) to the private research-attachments
       //    bucket, scoped under the caller's own folder so RLS matches.
       const attachments: {
@@ -146,6 +159,40 @@ function NewPiecePage() {
         onSubmit={handleSubmit}
         className="space-y-6 rounded-xl border border-border bg-card p-7 text-card-foreground shadow-sm"
       >
+        <div className="flex gap-2" role="tablist" aria-label="Research source">
+          <ModeButton
+            label="I have research"
+            active={mode === "paste"}
+            onClick={() => setMode("paste")}
+          />
+          <ModeButton
+            label="Research it for me"
+            active={mode === "topic"}
+            onClick={() => setMode("topic")}
+          />
+        </div>
+
+        {mode === "topic" && (
+          <label className="block space-y-2">
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Topic
+            </span>
+            <textarea
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              rows={4}
+              placeholder="What should we research? Be specific: the question, the angle, the timeframe, any actors to focus on."
+              className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-3 text-sm leading-relaxed outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
+            />
+            <p className="text-xs text-muted-foreground">
+              Deep web research runs first (usually 2–10 minutes, with sources cited),
+              then the piece is composed from the report in your voice. The report is
+              versioned with the piece.
+            </p>
+          </label>
+        )}
+
+        {mode === "paste" && (
         <label className="block space-y-2">
           <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Research
@@ -158,7 +205,9 @@ function NewPiecePage() {
             className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-3 font-mono text-sm leading-relaxed outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
           />
         </label>
+        )}
 
+        {mode === "paste" && (
         <div className="space-y-2">
           <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Attachments <span className="normal-case tracking-normal text-muted-foreground/70">— optional, up to {MAX_TOTAL_FILES} · 20 MB each</span>
@@ -204,6 +253,7 @@ function NewPiecePage() {
             </ul>
           )}
         </div>
+        )}
 
         <label className="block space-y-2">
           <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -238,10 +288,41 @@ function NewPiecePage() {
             disabled={!canSubmit}
             className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
-            {submitting ? (uploadProgress ? "Uploading…" : "Creating…") : "Create piece →"}
+            {submitting
+              ? (uploadProgress ? "Uploading…" : "Creating…")
+              : mode === "topic"
+              ? "Research & create →"
+              : "Create piece →"}
           </button>
         </div>
       </form>
     </div>
+  );
+}
+
+function ModeButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={
+        "rounded-md border px-4 py-2 text-sm font-medium transition-colors " +
+        (active
+          ? "border-primary bg-primary/10 text-primary"
+          : "border-border text-muted-foreground hover:text-foreground")
+      }
+    >
+      {label}
+    </button>
   );
 }
