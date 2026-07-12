@@ -85,6 +85,8 @@ function ProfilePage() {
 
   const [styleText, setStyleText] = useState("");
   const [imageStyle, setImageStyle] = useState("");
+  const [textStylePreset, setTextStylePreset] = useState<string | null>(null);
+  const [imageStylePreset, setImageStylePreset] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -340,6 +342,8 @@ function ProfilePage() {
     if (!dirty && data?.profile) {
       setStyleText(data.profile.style_text);
       setImageStyle(data.profile.image_style ?? "");
+      setTextStylePreset(data.profile.text_style_preset ?? null);
+      setImageStylePreset(data.profile.image_style_preset ?? null);
     }
   }, [data, dirty]);
 
@@ -353,7 +357,14 @@ function ProfilePage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const { profile } = await save({ data: { styleText, imageStyle } });
+      const { profile } = await save({
+        data: {
+          styleText,
+          imageStyle,
+          textStylePreset,
+          imageStylePreset,
+        },
+      });
       queryClient.setQueryData(["profile", "me"], { profile });
       setDirty(false);
       setSavedAt(profile.updated_at);
@@ -397,9 +408,10 @@ function ProfilePage() {
                     type="button"
                     onClick={() => {
                       setStyleText("");
+                      setTextStylePreset(null);
                       setDirty(true);
                     }}
-                    disabled={!styleText}
+                    disabled={!styleText && !textStylePreset}
                     className="inline-flex items-center rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
                     title="Clear the style field"
                   >
@@ -436,8 +448,10 @@ function ProfilePage() {
               <PresetChips
                 presets={TEXT_STYLE_PRESETS}
                 current={styleText}
-                onPick={(v) => {
+                selectedPreset={textStylePreset}
+                onPick={(v, label) => {
                   setStyleText(v);
+                  setTextStylePreset(label);
                   setDirty(true);
                 }}
               />
@@ -501,9 +515,10 @@ function ProfilePage() {
                   type="button"
                   onClick={() => {
                     setImageStyle("");
+                    setImageStylePreset(null);
                     setDirty(true);
                   }}
-                  disabled={!imageStyle}
+                  disabled={!imageStyle && !imageStylePreset}
                   className="inline-flex items-center rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
                   title="Clear the image style field"
                 >
@@ -518,8 +533,10 @@ function ProfilePage() {
               <PresetChips
                 presets={IMAGE_STYLE_PRESETS}
                 current={imageStyle}
-                onPick={(v) => {
+                selectedPreset={imageStylePreset}
+                onPick={(v, label) => {
                   setImageStyle(v);
+                  setImageStylePreset(label);
                   setDirty(true);
                 }}
               />
@@ -575,16 +592,19 @@ function ProfilePage() {
 function PresetChips({
   presets,
   current,
+  selectedPreset,
   onPick,
 }: {
   presets: { label: string; value: string }[];
   current: string;
-  onPick: (value: string) => void;
+  selectedPreset: string | null;
+  onPick: (value: string, label: string) => void;
 }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {presets.map((p) => {
-        const active = current.trim() === p.value.trim();
+        const active =
+          selectedPreset === p.label || current.trim() === p.value.trim();
         return (
           <button
             key={p.label}
@@ -597,7 +617,7 @@ function PresetChips({
               ) {
                 return;
               }
-              onPick(p.value);
+              onPick(p.value, p.label);
             }}
             className={
               "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors " +

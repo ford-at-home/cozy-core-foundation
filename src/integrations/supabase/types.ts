@@ -348,21 +348,27 @@ export type Database = {
         Row: {
           created_at: string
           image_style: string
+          image_style_preset: string | null
           style_text: string
+          text_style_preset: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
           image_style?: string
+          image_style_preset?: string | null
           style_text?: string
+          text_style_preset?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
           image_style?: string
+          image_style_preset?: string | null
           style_text?: string
+          text_style_preset?: string | null
           updated_at?: string
           user_id?: string
         }
