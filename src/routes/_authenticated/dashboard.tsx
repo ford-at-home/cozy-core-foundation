@@ -1,7 +1,8 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listMyRuns } from "@/lib/workflows.functions";
+import { formatUsd } from "@/components/CostBadge";
 
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -102,6 +103,7 @@ function DashboardPage() {
                 <th className="px-5 py-3 font-medium">Created</th>
                 <th className="px-5 py-3 font-medium">Type</th>
                 <th className="px-5 py-3 font-medium">Status</th>
+                <th className="px-5 py-3 font-medium text-right">Run cost</th>
                 <th className="px-5 py-3 font-medium">ID</th>
               </tr>
             </thead>
@@ -118,6 +120,23 @@ function DashboardPage() {
                   <td className="px-5 py-3.5 text-muted-foreground">{r.kind}</td>
                   <td className="px-5 py-3.5">
                     <StatusPill status={r.status} />
+                  </td>
+                  <td className="px-5 py-3.5 text-right font-mono text-xs">
+                    {formatUsd(r.total_cost_usd)}
+                    {r.session_id && (
+                      <>
+                        {" "}
+                        <Link
+                          to="/sessions/$sessionId"
+                          params={{ sessionId: r.session_id }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-muted-foreground hover:underline"
+                          title="View piece session cost"
+                        >
+                          session
+                        </Link>
+                      </>
+                    )}
                   </td>
                   <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">
                     {r.id.slice(0, 8)}

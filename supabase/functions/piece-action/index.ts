@@ -270,6 +270,9 @@ async function handle(req: Request, rid: string): Promise<Response> {
     provider: resolveProvider(),
     runId: inserted.id,
     prompt,
+    researchChars: action === "resynth" && priorResearch
+      ? priorResearch.research.length
+      : undefined,
     ref,
     autoCreatePr: action !== "resynth", // ready + revise end in a PR (approval moments)
   });

@@ -293,3 +293,34 @@ export async function ensureRunSession(
   }
   return sessionId;
 }
+
+/** Model slug stored on cursor inferences; env override or placeholder default. */
+export function resolveCursorModel(): string {
+  return Deno.env.get("AGENT_MODEL")?.trim() || "default";
+}
+
+/** Build cursor inference fields from a run row at completion time. */
+export function cursorInferenceUsage(run: {
+  id: string;
+  kind: string;
+  input?: Record<string, unknown> | null;
+}): Pick<RecordInferenceInput, "model" | "inputTokens" | "metadata"> {
+  const promptChars = typeof run.input?.prompt_chars === "number"
+    ? run.input.prompt_chars
+    : null;
+  const promptEstTokens = typeof run.input?.prompt_est_tokens === "number"
+    ? run.input.prompt_est_tokens
+    : null;
+  return {
+    model: resolveCursorModel(),
+    inputTokens: promptEstTokens,
+    metadata: {
+      billable_unit: "cursor_agent_run",
+      kind: run.kind,
+      prompt_chars: promptChars,
+      prompt_est_tokens: promptEstTokens,
+      token_note:
+        "Input tokens are the dispatch-prompt estimate only. Cursor API v0 does not expose per-turn agent usage.",
+    },
+  };
+}

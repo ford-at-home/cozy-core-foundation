@@ -54,6 +54,9 @@ failed with guidance; check https://platform.parallel.ai for the task.
 
 ## Operating notes
 
+- **Cost calibration** — tracked totals use placeholder rates until you calibrate
+  from invoices. See [COST-CALIBRATION.md](./COST-CALIBRATION.md) for the monthly
+  procedure, proxy export queries, and `workflow_cost_targets` tuning.
 - A run stuck in `dispatch_unknown` for >30 min is auto-failed with guidance;
   check the Cursor dashboard for an orphan agent before resubmitting.
 - Kill switch: unset `CURSOR_API_KEY` (new runs fall back to the stub) or

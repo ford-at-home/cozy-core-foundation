@@ -19,7 +19,7 @@ import {
   stageForCompletedKind,
   type RunRow,
 } from "../_shared/complete.ts";
-import { recordInference } from "../_shared/usage.ts";
+import { recordInference, cursorInferenceUsage } from "../_shared/usage.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("method not allowed", { status: 405 });
@@ -99,17 +99,18 @@ Deno.serve(async (req) => {
         const durationMs = dispatchedAt
           ? new Date(now).getTime() - new Date(dispatchedAt).getTime()
           : null;
+        const cursorUsage = cursorInferenceUsage(run as RunRow & { input?: Record<string, unknown> });
         await recordInference(admin, {
           runId: run.id,
           provider: "cursor",
-          model: "default",
           operationType: "llm",
           idempotencyKey: `cursor:${externalAgentId}:complete`,
           externalRequestId: externalAgentId,
           startedAt: dispatchedAt,
           completedAt: now,
           durationMs,
-          metadata: { rawStatus, kind: run.kind, source: "webhook" },
+          ...cursorUsage,
+          metadata: { ...cursorUsage.metadata, rawStatus, source: "webhook" },
           rawPayload: payload,
         });
       } catch (err) {

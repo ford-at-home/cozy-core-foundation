@@ -38,6 +38,29 @@ export type SessionDetail = SessionRow & {
   byProvider: Record<string, number>;
   byPricingSource: Record<PricingSource, number>;
   byModel: Record<string, number>;
+  budget: SessionBudget | null;
+};
+
+export type SessionBudget = {
+  sessionId: string;
+  title: string | null;
+  totalCostUsd: number;
+  targetUsd: number;
+  targetUnit: string;
+  overBudget: boolean;
+  pctOfTarget: number | null;
+  runCount: number;
+};
+
+export type CostProxies = {
+  prompt_est_tokens?: number;
+  prompt_chars?: number;
+  research_chars?: number;
+  duration_ms?: number;
+  image_count?: number;
+  ocr_count?: number;
+  cursor_inference_count?: number;
+  gateway_cost_usd?: number;
 };
 
 export type InferenceRow = {
@@ -68,6 +91,57 @@ function toNum(v: string | number | null | undefined): number {
   if (v === null || v === undefined) return 0;
   return typeof v === "number" ? v : Number(v);
 }
+
+async function lookupCostTarget(
+  supabase: { from: (t: string) => any },
+  unit: string,
+): Promise<{ target_usd: number; unit: string } | null> {
+  const { data } = await supabase
+    .from("workflow_cost_targets")
+    .select("unit, target_usd, effective_from, effective_to")
+    .eq("unit", unit)
+    .lte("effective_from", new Date().toISOString())
+    .order("effective_from", { ascending: false })
+    .limit(1);
+  const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+  if (!row) return null;
+  if (row.effective_to && new Date(row.effective_to).getTime() < Date.now()) return null;
+  return { target_usd: toNum(row.target_usd), unit: row.unit as string };
+}
+
+function buildSessionBudget(
+  session: { id: string; title: string | null; total_cost_usd: string | number; run_count: number },
+  target: { target_usd: number; unit: string } | null,
+): SessionBudget {
+  const total = toNum(session.total_cost_usd);
+  const targetUsd = target?.target_usd ?? 0;
+  return {
+    sessionId: session.id,
+    title: session.title,
+    totalCostUsd: total,
+    targetUsd,
+    targetUnit: target?.unit ?? "full_piece",
+    overBudget: targetUsd > 0 && total > targetUsd,
+    pctOfTarget: targetUsd > 0 ? total / targetUsd : null,
+    runCount: session.run_count,
+  };
+}
+
+export const getSessionBudget = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { sessionId?: string }) => data ?? {})
+  .handler(async ({ data, context }): Promise<SessionBudget | null> => {
+    if (!data.sessionId) throw new Error("sessionId required");
+    const { data: session, error } = await context.supabase
+      .from("sessions")
+      .select("id, title, total_cost_usd, run_count")
+      .eq("id", data.sessionId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!session) return null;
+    const target = await lookupCostTarget(context.supabase, "full_piece");
+    return buildSessionBudget(session, target);
+  });
 
 export const listSessions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -153,6 +227,8 @@ export const getSessionDetail = createServerFn({ method: "POST" })
       (r) => r.provider ?? (r.kind === "research" ? "parallel" : "cursor"),
     )));
 
+    const target = await lookupCostTarget(context.supabase, "full_piece");
+
     return {
       ...(session as any),
       providers,
@@ -160,6 +236,7 @@ export const getSessionDetail = createServerFn({ method: "POST" })
       byProvider,
       byPricingSource,
       byModel,
+      budget: buildSessionBudget(session, target),
     };
   });
 

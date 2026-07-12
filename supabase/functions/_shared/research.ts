@@ -112,13 +112,15 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
       externalRequestId: run.external_run_id,
       startedAt: run.dispatched_at ?? run.created_at,
       completedAt: new Date().toISOString(),
+      outputTokens: Math.ceil(report.length / 4),
       metadata: {
         processor,
         topic,
         sources: raw.sourceUrls.length,
         reportChars: report.length,
+        report_est_tokens: Math.ceil(report.length / 4),
       },
-      rawPayload: { processor, sources: raw.sourceUrls.length },
+      rawPayload: { processor, sources: raw.sourceUrls.length, reportChars: report.length },
     });
   } catch (err) {
     await admin.from("agent_run_events").insert({
@@ -231,6 +233,7 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
         imageEndpoint: imageCreds?.endpoint,
         imageToken: imageCreds?.token,
       }),
+      researchChars: report.length,
       ref: Deno.env.get("AGENT_REPO_REF") ?? "main",
       autoCreatePr: false,
     });

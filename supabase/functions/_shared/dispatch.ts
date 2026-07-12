@@ -8,6 +8,7 @@ import { ProviderHttpError } from "./provider.ts";
 import { CursorProvider } from "./provider.cursor.ts";
 import { StubProvider } from "./provider.stub.ts";
 import { createResearchTask } from "./parallel.ts";
+import { estimateTokens, promptSummary } from "./token-estimate.ts";
 
 export function resolveProvider(): AgentProvider {
   if (Deno.env.get("AGENT_PROVIDER") === "stub") return new StubProvider();
@@ -23,6 +24,8 @@ export interface DispatchArgs {
   provider: AgentProvider;
   runId: string;
   prompt: string;
+  /** Character length of research input (for cost proxy calibration). */
+  researchChars?: number;
   /** Base ref the agent starts from (main, or a prior run's branch). */
   ref: string;
   autoCreatePr: boolean;
@@ -34,6 +37,28 @@ export async function dispatchRun(args: DispatchArgs): Promise<void> {
     "https://github.com/ford-at-home/cozy-core-foundation";
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const webhookSecret = Deno.env.get("CURSOR_WEBHOOK_SECRET")?.trim();
+
+  const promptChars = args.prompt.length;
+  const promptEstTokens = estimateTokens(args.prompt);
+  const { data: runRow } = await admin
+    .from("agent_runs")
+    .select("input")
+    .eq("id", runId)
+    .maybeSingle();
+  await admin
+    .from("agent_runs")
+    .update({
+      input: {
+        ...((runRow?.input as Record<string, unknown> | null) ?? {}),
+        prompt_chars: promptChars,
+        prompt_est_tokens: promptEstTokens,
+        ...(typeof args.researchChars === "number" && args.researchChars > 0
+          ? { research_chars: args.researchChars }
+          : {}),
+      },
+      input_summary: promptSummary(promptChars),
+    })
+    .eq("id", runId);
 
   const logEvent = (eventType: string, payload: unknown) =>
     admin.from("agent_run_events").insert({
@@ -67,6 +92,8 @@ export async function dispatchRun(args: DispatchArgs): Promise<void> {
       provider: provider.name,
       externalAgentId: agent.externalAgentId,
       rawStatus: agent.rawStatus,
+      promptChars,
+      promptEstTokens,
     });
   } catch (err) {
     if (err instanceof ProviderHttpError && !err.retryable) {
