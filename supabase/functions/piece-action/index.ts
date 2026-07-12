@@ -22,20 +22,22 @@ import {
 } from "../_shared/prompt.ts";
 import { buildImageCreds } from "../_shared/image-token.ts";
 import { dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
+import {
+  corsHeaders,
+  errorResponse,
+  jsonResponse,
+  logEvent,
+  newRequestId,
+  redactForLog,
+} from "../_shared/observability.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json", ...corsHeaders },
-  });
-}
+const FN = "piece-action";
+const json = (body: unknown, status = 200, rid?: string) => jsonResponse(body, status, rid);
+const err = (
+  status: number,
+  message: string,
+  opts: { requestId?: string; code?: string; details?: unknown; cause?: unknown } = {},
+) => errorResponse(FN, status, message, opts);
 
 const ACTIONS = ["resynth", "ready", "revise"] as const;
 type Action = (typeof ACTIONS)[number];
@@ -50,23 +52,33 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  const rid = newRequestId();
+  if (req.method !== "POST") return err(405, "Method not allowed", { requestId: rid });
+  try {
+    return await handle(req, rid);
+  } catch (e) {
+    return err(500, "Unhandled server error", { requestId: rid, code: "unhandled", cause: e });
+  }
+});
 
+async function handle(req: Request, rid: string): Promise<Response> {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SERVICE_KEY) {
-    return json({ error: "Server misconfigured" }, 500);
+    return err(500, "Server misconfigured", { requestId: rid, code: "env_missing" });
   }
 
   const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (!token) return json({ error: "Unauthorized" }, 401);
+  if (!token) return err(401, "Unauthorized", { requestId: rid, code: "no_token" });
   const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data: userData, error: userErr } = await authClient.auth.getUser(token);
-  if (userErr || !userData.user) return json({ error: "Unauthorized" }, 401);
+  if (userErr || !userData.user) {
+    return err(401, "Unauthorized", { requestId: rid, code: "invalid_token", cause: userErr });
+  }
   const userId = userData.user.id;
 
   let body: any = {};
@@ -81,9 +93,26 @@ Deno.serve(async (req) => {
   const requestId = typeof body?.requestId === "string" && body.requestId
     ? body.requestId
     : crypto.randomUUID();
-  if (!pieceId || !action) return json({ error: "pieceId and a valid action are required" }, 400);
+  logEvent(FN, "info", {
+    requestId: rid,
+    userId,
+    pieceId,
+    action,
+    feedbackChars: feedback.length,
+    clientRequestId: requestId,
+  });
+  if (!pieceId || !action) {
+    return err(400, "pieceId and a valid action are required", {
+      requestId: rid,
+      code: "invalid_input",
+      details: { pieceId: pieceId ? "present" : "missing", action: body?.action ?? null },
+    });
+  }
   if (action === "revise" && !feedback) {
-    return json({ error: "revise requires the annotation transcript in feedback" }, 400);
+    return err(400, "revise requires the annotation transcript in feedback", {
+      requestId: rid,
+      code: "missing_feedback",
+    });
   }
 
   const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
@@ -96,7 +125,9 @@ Deno.serve(async (req) => {
     .select("id, user_id, slug, stage")
     .eq("id", pieceId)
     .maybeSingle();
-  if (!piece || piece.user_id !== userId) return json({ error: "Piece not found" }, 404);
+  if (!piece || piece.user_id !== userId) {
+    return err(404, "Piece not found", { requestId: rid, code: "piece_not_found" });
+  }
 
   const idempotencyKey = `${action}:${userId}:${requestId}`;
   {
@@ -105,7 +136,10 @@ Deno.serve(async (req) => {
       .select("id")
       .eq("idempotency_key", idempotencyKey)
       .maybeSingle();
-    if (existing) return json({ runId: existing.id, pieceId }, 202);
+    if (existing) {
+      logEvent(FN, "info", { requestId: rid, event: "idempotent_hit", runId: existing.id });
+      return json({ runId: existing.id, pieceId }, 202, rid);
+    }
   }
 
   const { data: profile } = await admin
@@ -116,7 +150,10 @@ Deno.serve(async (req) => {
   const styleText = (profile?.style_text ?? "").trim();
   const imageStyle = (profile?.image_style ?? "").trim();
   if (!styleText) {
-    return json({ error: "Your voice profile is empty. Describe your style at /profile first." }, 422);
+    return err(422, "Your voice profile is empty. Describe your style at /profile first.", {
+      requestId: rid,
+      code: "empty_voice",
+    });
   }
 
   // Base ref: continue from the latest completed run's branch so prior piece
@@ -139,7 +176,10 @@ Deno.serve(async (req) => {
   if (action === "resynth") {
     const priorInput = (lastRun?.input ?? {}) as { research?: string; goal?: string };
     if (!priorInput.research) {
-      return json({ error: "No completed proposal run with research found for this piece" }, 409);
+      return err(409, "No completed proposal run with research found for this piece", {
+        requestId: rid,
+        code: "no_prior_research",
+      });
     }
     priorResearch = { research: priorInput.research, goal: priorInput.goal ?? null };
   }
@@ -166,9 +206,14 @@ Deno.serve(async (req) => {
       .select("id")
       .eq("idempotency_key", idempotencyKey)
       .maybeSingle();
-    if (existing) return json({ runId: existing.id, pieceId }, 202);
-    return json({ error: insertErr?.message ?? "Insert failed" }, 500);
+    if (existing) return json({ runId: existing.id, pieceId }, 202, rid);
+    return err(500, insertErr?.message ?? "Insert failed", {
+      requestId: rid,
+      code: "run_insert_failed",
+      cause: insertErr,
+    });
   }
+  logEvent(FN, "info", { requestId: rid, event: "run_created", runId: inserted.id, pieceId, action });
 
   const imageCreds = await buildImageCreds(inserted.id);
   const imageBits = {
@@ -220,5 +265,5 @@ Deno.serve(async (req) => {
     autoCreatePr: action !== "resynth", // ready + revise end in a PR (approval moments)
   });
 
-  return json({ runId: inserted.id, pieceId }, 202);
-});
+  return json({ runId: inserted.id, pieceId }, 202, rid);
+}
