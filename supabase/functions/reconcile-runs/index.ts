@@ -28,6 +28,7 @@ import {
 } from "../_shared/complete.ts";
 import { reconcileResearch } from "../_shared/research.ts";
 import { errorResponse, jsonResponse, logEvent, newRequestId } from "../_shared/observability.ts";
+import { recordInference } from "../_shared/usage.ts";
 
 const FN = "reconcile-runs";
 
@@ -66,7 +67,7 @@ Deno.serve(async (req) => {
   const { data: open, error } = await admin
     .from("agent_runs")
     .select(
-      "id, user_id, piece_id, status, kind, branch, input, external_agent_id, external_run_id, created_at, cancellation_status",
+      "id, user_id, piece_id, status, kind, branch, input, external_agent_id, external_run_id, created_at, dispatched_at, session_id, cancellation_status",
     )
     .not("status", "in", "(completed,failed,cancelled)")
     .order("created_at", { ascending: true })
@@ -190,6 +191,35 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
   }
 
   if (status === "awaiting_fetch") {
+    // Idempotently record cost for the Cursor run (safe re-entry from sweeps).
+    try {
+      const now = new Date().toISOString();
+      const dispatchedAt = (run as any).dispatched_at as string | null;
+      const durationMs = dispatchedAt
+        ? new Date(now).getTime() - new Date(dispatchedAt).getTime()
+        : null;
+      await recordInference(admin, {
+        runId: run.id,
+        provider: "cursor",
+        model: "default",
+        operationType: "llm",
+        idempotencyKey: `cursor:${run.external_agent_id}:complete`,
+        externalRequestId: run.external_agent_id,
+        startedAt: dispatchedAt,
+        completedAt: now,
+        durationMs,
+        metadata: { rawStatus: agent.rawStatus, kind: run.kind, source: "reconciler" },
+        rawPayload: { rawStatus: agent.rawStatus, branch: agent.branch, prUrl: agent.prUrl },
+      });
+    } catch (err) {
+      await admin.from("agent_run_events").insert({
+        run_id: run.id,
+        source: "usage",
+        event_type: "record_error",
+        payload: { message: err instanceof Error ? err.message : String(err) },
+      });
+    }
+
     const { data: piece } = run.piece_id
       ? await admin.from("pieces").select("slug").eq("id", run.piece_id).maybeSingle()
       : { data: null };

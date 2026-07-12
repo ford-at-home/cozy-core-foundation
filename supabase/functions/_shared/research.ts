@@ -18,6 +18,7 @@ import { canTransition } from "./state.ts";
 import { buildComposePrompt } from "./prompt.ts";
 import { buildImageCreds } from "./image-token.ts";
 import { dispatchRun, resolveProvider } from "./dispatch.ts";
+import { ensureRunSession, recordInference } from "./usage.ts";
 
 const RELEASE_AFTER_MIN = 30;
 // Deep research (ultra-fast) is documented at 1-10 min; anything past this is stuck.
@@ -100,6 +101,34 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
     sourceUrls: raw.sourceUrls,
   });
 
+  // Record one fixed-task-price inference for this Parallel run.
+  try {
+    await recordInference(admin, {
+      runId: run.id,
+      provider: "parallel",
+      model: processor,
+      operationType: "extract",
+      idempotencyKey: `parallel:${run.external_run_id}:task`,
+      externalRequestId: run.external_run_id,
+      startedAt: run.dispatched_at ?? run.created_at,
+      completedAt: new Date().toISOString(),
+      metadata: {
+        processor,
+        topic,
+        sources: raw.sourceUrls.length,
+        reportChars: report.length,
+      },
+      rawPayload: { processor, sources: raw.sourceUrls.length },
+    });
+  } catch (err) {
+    await admin.from("agent_run_events").insert({
+      run_id: run.id,
+      source: "usage",
+      event_type: "record_error",
+      payload: { message: err instanceof Error ? err.message : String(err) },
+    });
+  }
+
   // Voice + slug for the chained compose run (server-side, same as submit).
   const { data: profile } = await admin
     .from("profiles")
@@ -173,6 +202,21 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
   });
 
   if (needsDispatch && composeRunId) {
+    // Chained compose run inherits the same session as the research run.
+    if (run.session_id) {
+      await admin
+        .from("agent_runs")
+        .update({ session_id: run.session_id, provider: "cursor" })
+        .eq("id", composeRunId);
+    } else {
+      await ensureRunSession(admin, {
+        runId: composeRunId,
+        userId: run.user_id,
+        pieceId: run.piece_id,
+        title: goal ?? topic ?? null,
+        provider: "cursor",
+      });
+    }
     const imageCreds = await buildImageCreds(composeRunId);
     await dispatchRun({
       admin,
