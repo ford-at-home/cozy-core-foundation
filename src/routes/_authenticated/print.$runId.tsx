@@ -10,10 +10,7 @@ import printCss from "@/styles/print.css?raw";
 
 export const Route = createFileRoute("/_authenticated/print/$runId")({
   head: () => ({
-    meta: [
-      { title: "Print — Compose" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Print — Compose" }, { name: "robots", content: "noindex" }],
   }),
   component: PrintPage,
 });
@@ -60,7 +57,10 @@ function PrintPage() {
       if (iframeReady) return;
       const msg = "Print preview didn't load in time.";
       setIframeError(msg);
-      console.error("[print] main iframe load timeout", { runId, timeoutMs: IFRAME_LOAD_TIMEOUT_MS });
+      console.error("[print] main iframe load timeout", {
+        runId,
+        timeoutMs: IFRAME_LOAD_TIMEOUT_MS,
+      });
       toast.error(msg, {
         description: "Try reloading the page, or use the fallback new-window print.",
       });
@@ -76,7 +76,10 @@ function PrintPage() {
       if (modalReady) return;
       const msg = "Print preview didn't load in the modal.";
       setModalError(msg);
-      console.error("[print] modal iframe load timeout", { runId, timeoutMs: IFRAME_LOAD_TIMEOUT_MS });
+      console.error("[print] modal iframe load timeout", {
+        runId,
+        timeoutMs: IFRAME_LOAD_TIMEOUT_MS,
+      });
       toast.error(msg, {
         description: "Close the dialog and try again, or use Cmd/Ctrl+P from the page.",
       });
@@ -86,28 +89,47 @@ function PrintPage() {
 
   useEffect(() => {
     let cancelled = false;
+    setPost(null);
+    setError(null);
+    setLoading(true);
+    setIframeReady(false);
+    setIframeError(null);
+    setModalOpen(false);
+    setModalReady(false);
+    setModalError(null);
+
     supabase
       .from("agent_runs")
       .select("result, status")
       .eq("id", runId)
       .maybeSingle()
-      .then(({ data, error }: { data: { result: Json | null; status: string } | null; error: { message: string } | null }) => {
-        if (cancelled) return;
-        if (error) setError(error.message);
-        else if (!data) setError("Run not found.");
-        else {
-          const content = extractPost(data.result);
-          if (content) setPost(content);
+      .then(
+        ({
+          data,
+          error,
+        }: {
+          data: { result: Json | null; status: string } | null;
+          error: { message: string } | null;
+        }) => {
+          if (cancelled) return;
+          if (error) setError(error.message);
+          else if (!data) setError("Run not found.");
           else {
-            setError(
-              data.status === "completed"
-                ? "This run has no printable piece."
-                : "This run hasn't completed yet — the piece isn't available to print.",
-            );
+            const content = extractPost(data.result);
+            if (content) {
+              setPost(content);
+              setError(null);
+            } else {
+              setError(
+                data.status === "completed"
+                  ? "This run has no printable piece."
+                  : "This run hasn't completed yet — the piece isn't available to print.",
+              );
+            }
           }
-        }
-        setLoading(false);
-      });
+          setLoading(false);
+        },
+      );
     return () => {
       cancelled = true;
     };
@@ -193,11 +215,13 @@ function PrintPage() {
       // The .d.ts overload resolution picks the (element, options) variant
       // when called with zero args, which types the return as Promise<void>.
       // The actual runtime is a chainable Worker, so cast to that shape.
-      const worker = (html2pdf as unknown as () => {
-        from: (el: HTMLElement) => {
-          set: (opts: Record<string, unknown>) => { save: () => Promise<void> };
-        };
-      })();
+      const worker = (
+        html2pdf as unknown as () => {
+          from: (el: HTMLElement) => {
+            set: (opts: Record<string, unknown>) => { save: () => Promise<void> };
+          };
+        }
+      )();
       await worker
         .from(doc.body)
         .set({
@@ -237,8 +261,8 @@ function PrintPage() {
           <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Studio</p>
           <h1 className="mt-1 font-serif text-3xl tracking-tight">Print for markup</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Wide margins for pen work, S{"{n}"}P{"{m}"} anchors pre-printed in the left
-            margin so you can dictate references like “S4P3: tighten”.
+            Wide margins for pen work, S{"{n}"}P{"{m}"} anchors pre-printed in the left margin so
+            you can dictate references like “S4P3: tighten”.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -369,9 +393,8 @@ function PrintPage() {
               />
             </div>
             <div className="border-t border-border px-5 py-2.5 text-xs text-muted-foreground">
-              Uses your browser's print dialog. Choose <strong>Letter</strong> paper and
-              enable <strong>Background graphics</strong> for the S{"{n}"}P{"{m}"} anchors
-              to appear.
+              Uses your browser's print dialog. Choose <strong>Letter</strong> paper and enable{" "}
+              <strong>Background graphics</strong> for the S{"{n}"}P{"{m}"} anchors to appear.
             </div>
           </div>
         </div>

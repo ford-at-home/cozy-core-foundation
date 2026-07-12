@@ -33,11 +33,7 @@ Deno.serve(async (req) => {
 
   // Raw body FIRST — the signature covers these exact bytes.
   const rawBody = new Uint8Array(await req.arrayBuffer());
-  const ok = await verifyWebhookSignature(
-    secret,
-    rawBody,
-    req.headers.get("x-webhook-signature"),
-  );
+  const ok = await verifyWebhookSignature(secret, rawBody, req.headers.get("x-webhook-signature"));
   if (!ok) return new Response("invalid signature", { status: 401 });
 
   let payload: any;
@@ -99,7 +95,9 @@ Deno.serve(async (req) => {
         const durationMs = dispatchedAt
           ? new Date(now).getTime() - new Date(dispatchedAt).getTime()
           : null;
-        const cursorUsage = cursorInferenceUsage(run as RunRow & { input?: Record<string, unknown> });
+        const cursorUsage = cursorInferenceUsage(
+          run as RunRow & { input?: Record<string, unknown> },
+        );
         await recordInference(admin, {
           runId: run.id,
           provider: "cursor",
@@ -116,7 +114,7 @@ Deno.serve(async (req) => {
       } catch (err) {
         await admin.from("agent_run_events").insert({
           run_id: run.id,
-          source: "usage",
+          source: "cursor-webhook",
           event_type: "record_error",
           payload: { message: err instanceof Error ? err.message : String(err) },
         });

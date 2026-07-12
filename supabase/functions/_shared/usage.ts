@@ -9,21 +9,10 @@
 // deno-lint-ignore-file no-explicit-any
 
 export type PricingSource =
-  | "provider_reported"
-  | "calculated"
-  | "fixed_task_price"
-  | "estimated"
-  | "manual";
+  "provider_reported" | "calculated" | "fixed_task_price" | "estimated" | "manual";
 
 export type OperationType =
-  | "llm"
-  | "search"
-  | "extract"
-  | "crawl"
-  | "embedding"
-  | "rerank"
-  | "tool"
-  | "other";
+  "llm" | "search" | "extract" | "crawl" | "embedding" | "rerank" | "tool" | "other";
 
 export interface RecordInferenceInput {
   runId: string;
@@ -89,10 +78,7 @@ export function computeCost(
   pricing: PricingRow | null,
   input: Pick<
     RecordInferenceInput,
-    | "providerReportedCostUsd"
-    | "inputTokens"
-    | "cachedInputTokens"
-    | "outputTokens"
+    "providerReportedCostUsd" | "inputTokens" | "cachedInputTokens" | "outputTokens"
   >,
 ): {
   finalCost: number;
@@ -268,6 +254,15 @@ export async function ensureRunSession(
         .select("id")
         .single();
       sessionId = created?.id ?? null;
+      // Concurrent creators can lose the unique(piece_id) race — re-read winner.
+      if (!sessionId) {
+        const { data: raced } = await admin
+          .from("sessions")
+          .select("id")
+          .eq("piece_id", pieceId)
+          .maybeSingle();
+        sessionId = raced?.id ?? null;
+      }
     }
   } else {
     const { data: created } = await admin
@@ -305,12 +300,9 @@ export function cursorInferenceUsage(run: {
   kind: string;
   input?: Record<string, unknown> | null;
 }): Pick<RecordInferenceInput, "model" | "inputTokens" | "metadata"> {
-  const promptChars = typeof run.input?.prompt_chars === "number"
-    ? run.input.prompt_chars
-    : null;
-  const promptEstTokens = typeof run.input?.prompt_est_tokens === "number"
-    ? run.input.prompt_est_tokens
-    : null;
+  const promptChars = typeof run.input?.prompt_chars === "number" ? run.input.prompt_chars : null;
+  const promptEstTokens =
+    typeof run.input?.prompt_est_tokens === "number" ? run.input.prompt_est_tokens : null;
   return {
     model: resolveCursorModel(),
     inputTokens: promptEstTokens,

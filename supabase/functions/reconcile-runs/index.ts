@@ -117,8 +117,10 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
   // there is nothing safe to match on. Release stale rows to failed.
   if (!run.external_agent_id) {
     if (
-      (run.status === "dispatch_unknown" || run.status === "requested" ||
-        run.status === "dispatching") && ageMin > RELEASE_AFTER_MIN
+      (run.status === "dispatch_unknown" ||
+        run.status === "requested" ||
+        run.status === "dispatching") &&
+      ageMin > RELEASE_AFTER_MIN
     ) {
       await admin
         .from("agent_runs")
@@ -174,7 +176,10 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
   }
 
   // Cancellation confirm: agent no longer running after a stop request.
-  if (run.status === "cancel_requested" && !["CREATING", "RUNNING"].includes(agent.rawStatus.toUpperCase())) {
+  if (
+    run.status === "cancel_requested" &&
+    !["CREATING", "RUNNING"].includes(agent.rawStatus.toUpperCase())
+  ) {
     if (agent.rawStatus.toUpperCase() !== "FINISHED") {
       await admin
         .from("agent_runs")
@@ -209,13 +214,18 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
         completedAt: now,
         durationMs,
         ...cursorUsage,
-        metadata: { ...cursorUsage.metadata, rawStatus: agent.rawStatus, kind: run.kind, source: "reconciler" },
+        metadata: {
+          ...cursorUsage.metadata,
+          rawStatus: agent.rawStatus,
+          kind: run.kind,
+          source: "reconciler",
+        },
         rawPayload: { rawStatus: agent.rawStatus, branch: agent.branch, prUrl: agent.prUrl },
       });
     } catch (err) {
       await admin.from("agent_run_events").insert({
         run_id: run.id,
-        source: "usage",
+        source: "reconciler",
         event_type: "record_error",
         payload: { message: err instanceof Error ? err.message : String(err) },
       });

@@ -46,29 +46,47 @@ function NewPiecePage() {
   const hasStyle = (profileData?.profile?.style_text ?? "").trim() !== "";
 
   const canSubmit =
-    !submitting && !profileLoading && hasStyle &&
-    (mode === "topic"
-      ? topic.trim() !== ""
-      : research.trim() !== "" || files.length > 0);
+    !submitting &&
+    !profileLoading &&
+    hasStyle &&
+    (mode === "topic" ? topic.trim() !== "" : research.trim() !== "" || files.length > 0);
 
   const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB per file
   const MAX_TOTAL_FILES = 10;
 
   function addFiles(picked: FileList | null) {
     if (!picked) return;
-    const next: File[] = [...files];
-    for (const f of Array.from(picked)) {
+    const pickedArr = Array.from(picked);
+    setFiles((prev) => {
+      const next = [...prev];
+      for (const f of pickedArr) {
+        if (f.size > MAX_FILE_BYTES) continue;
+        if (next.length >= MAX_TOTAL_FILES) break;
+        if (!next.find((x) => x.name === f.name && x.size === f.size)) next.push(f);
+      }
+      return next;
+    });
+    let nextError: string | null = null;
+    let wouldAdd = 0;
+    // Recompute validation against current `files` for the error message only;
+    // the functional update above owns the actual list merge.
+    let count = files.length;
+    for (const f of pickedArr) {
       if (f.size > MAX_FILE_BYTES) {
-        setError(`${f.name} is larger than 20 MB.`);
+        nextError = `${f.name} is larger than 20 MB.`;
         continue;
       }
-      if (next.length >= MAX_TOTAL_FILES) {
-        setError(`Up to ${MAX_TOTAL_FILES} files per piece.`);
+      if (count >= MAX_TOTAL_FILES) {
+        nextError = `Up to ${MAX_TOTAL_FILES} files per piece.`;
         break;
       }
-      if (!next.find((x) => x.name === f.name && x.size === f.size)) next.push(f);
+      if (!files.find((x) => x.name === f.name && x.size === f.size)) {
+        count += 1;
+        wouldAdd += 1;
+      }
     }
-    setFiles(next);
+    if (nextError) setError(nextError);
+    else if (wouldAdd > 0) setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -127,6 +145,7 @@ function NewPiecePage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start");
       setUploadProgress(null);
+    } finally {
       setSubmitting(false);
     }
   }
@@ -137,12 +156,12 @@ function NewPiecePage() {
         <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Studio</p>
         <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">New piece</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Paste your research and hit Create. The studio authors a writing brief from the
-          research in your voice — taken from{" "}
+          Paste your research and hit Create. The studio authors a writing brief from the research
+          in your voice — taken from{" "}
           <Link to="/profile" className="underline hover:text-foreground">
             your profile
-          </Link>
-          {" "}— then synthesizes the piece.
+          </Link>{" "}
+          — then synthesizes the piece.
         </p>
       </div>
 
@@ -185,79 +204,87 @@ function NewPiecePage() {
               className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-3 text-sm leading-relaxed outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
             />
             <p className="text-xs text-muted-foreground">
-              Deep web research runs first (usually 2–10 minutes, with sources cited),
-              then the piece is composed from the report in your voice. The report is
-              versioned with the piece.
+              Deep web research runs first (usually 2–10 minutes, with sources cited), then the
+              piece is composed from the report in your voice. The report is versioned with the
+              piece.
             </p>
           </label>
         )}
 
         {mode === "paste" && (
-        <label className="block space-y-2">
-          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Research
-          </span>
-          <textarea
-            value={research}
-            onChange={(e) => setResearch(e.target.value)}
-            rows={12}
-            placeholder="Paste notes, transcripts, links, a rough dump — whatever the piece is drawn from."
-            className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-3 font-mono text-sm leading-relaxed outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
-          />
-        </label>
+          <label className="block space-y-2">
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Research
+            </span>
+            <textarea
+              value={research}
+              onChange={(e) => setResearch(e.target.value)}
+              rows={12}
+              placeholder="Paste notes, transcripts, links, a rough dump — whatever the piece is drawn from."
+              className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-3 font-mono text-sm leading-relaxed outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
+            />
+          </label>
         )}
 
         {mode === "paste" && (
-        <div className="space-y-2">
-          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Attachments <span className="normal-case tracking-normal text-muted-foreground/70">— optional, up to {MAX_TOTAL_FILES} · 20 MB each</span>
-          </span>
-          <div className="flex flex-wrap items-center gap-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              onChange={(e) => addFiles(e.target.files)}
-              className="hidden"
-              id="attachments-input"
-            />
-            <label
-              htmlFor="attachments-input"
-              className="cursor-pointer rounded-md border border-input bg-background/60 px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-            >
-              + Add files
-            </label>
-            <p className="text-xs text-muted-foreground">
-              Text (.txt/.md/.csv/.json/.html) is inlined into the research; other files are passed as signed URLs the agent can fetch.
-            </p>
-          </div>
-          {files.length > 0 && (
-            <ul className="mt-2 divide-y divide-border rounded-md border border-border bg-background/40 text-sm">
-              {files.map((f, i) => (
-                <li key={`${f.name}-${i}`} className="flex items-center justify-between px-3 py-2">
-                  <div className="min-w-0">
-                    <p className="truncate font-mono text-xs">{f.name}</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {(f.size / 1024).toFixed(1)} KB{f.type ? ` · ${f.type}` : ""}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeFile(i)}
-                    className="ml-3 shrink-0 text-xs text-muted-foreground hover:text-destructive"
+          <div className="space-y-2">
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Attachments{" "}
+              <span className="normal-case tracking-normal text-muted-foreground/70">
+                — optional, up to {MAX_TOTAL_FILES} · 20 MB each
+              </span>
+            </span>
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={(e) => addFiles(e.target.files)}
+                className="hidden"
+                id="attachments-input"
+              />
+              <label
+                htmlFor="attachments-input"
+                className="cursor-pointer rounded-md border border-input bg-background/60 px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+              >
+                + Add files
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Text (.txt/.md/.csv/.json/.html) is inlined into the research; other files are
+                passed as signed URLs the agent can fetch.
+              </p>
+            </div>
+            {files.length > 0 && (
+              <ul className="mt-2 divide-y divide-border rounded-md border border-border bg-background/40 text-sm">
+                {files.map((f, i) => (
+                  <li
+                    key={`${f.name}-${i}`}
+                    className="flex items-center justify-between px-3 py-2"
                   >
-                    Remove
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-mono text-xs">{f.name}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {(f.size / 1024).toFixed(1)} KB{f.type ? ` · ${f.type}` : ""}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(i)}
+                      className="ml-3 shrink-0 text-xs text-muted-foreground hover:text-destructive"
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
 
         <label className="block space-y-2">
           <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Goal <span className="normal-case tracking-normal text-muted-foreground/70">— optional</span>
+            Goal{" "}
+            <span className="normal-case tracking-normal text-muted-foreground/70">— optional</span>
           </span>
           <input
             value={goal}
@@ -289,10 +316,12 @@ function NewPiecePage() {
             className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
             {submitting
-              ? (uploadProgress ? "Uploading…" : "Creating…")
+              ? uploadProgress
+                ? "Uploading…"
+                : "Creating…"
               : mode === "topic"
-              ? "Research & create →"
-              : "Create piece →"}
+                ? "Research & create →"
+                : "Create piece →"}
           </button>
         </div>
       </form>

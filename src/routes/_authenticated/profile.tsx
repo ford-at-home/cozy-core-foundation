@@ -198,10 +198,14 @@ function ProfilePage() {
     const ctx = new AudioContext();
     const source = ctx.createMediaStreamSource(stream);
     const node = ctx.createScriptProcessor(4096, 1, 1);
+    // Mute before destination so the processor stays alive without speaker echo.
+    const mute = ctx.createGain();
+    mute.gain.value = 0;
     const chunks: Float32Array[] = [];
     node.onaudioprocess = (e) => chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
     source.connect(node);
-    node.connect(ctx.destination);
+    node.connect(mute);
+    mute.connect(ctx.destination);
     recRef.current = { stream, ctx, source, node, chunks, sampleRate: ctx.sampleRate };
     setRecording(true);
   }
@@ -289,7 +293,9 @@ function ProfilePage() {
         } else if (res.status >= 500) {
           setDictationError({
             message: "The transcription service hit a temporary error.",
-            hint: body.error ? `${body.error} — press Retry in a moment.` : "Press Retry in a moment.",
+            hint: body.error
+              ? `${body.error} — press Retry in a moment.`
+              : "Press Retry in a moment.",
             retryable: true,
           });
         } else {
@@ -381,10 +387,9 @@ function ProfilePage() {
         <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Studio</p>
         <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Your voice</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Describe how you write. This is applied to every piece you compose — it is the
-          Voice section of the writing brief. Saved permanently to your profile; never
-          committed to any repo. A guided questionnaire will replace this free-text field
-          later.
+          Describe how you write. This is applied to every piece you compose — it is the Voice
+          section of the writing brief. Saved permanently to your profile; never committed to any
+          repo. A guided questionnaire will replace this free-text field later.
         </p>
       </div>
 
@@ -437,11 +442,7 @@ function ProfilePage() {
                         (recording ? "animate-pulse bg-destructive" : "bg-muted-foreground")
                       }
                     />
-                    {transcribing
-                      ? "Transcribing…"
-                      : recording
-                        ? "Stop recording"
-                        : "Dictate"}
+                    {transcribing ? "Transcribing…" : recording ? "Stop recording" : "Dictate"}
                   </button>
                 </div>
               </div>
@@ -526,9 +527,9 @@ function ProfilePage() {
                 </button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Describe the visual style for images generated with your pieces —
-                medium, palette, mood, references. Applied to every image the agent
-                creates for a post. Pick a preset below to start, then tweak.
+                Describe the visual style for images generated with your pieces — medium, palette,
+                mood, references. Applied to every image the agent creates for a post. Pick a preset
+                below to start, then tweak.
               </p>
               <PresetChips
                 presets={IMAGE_STYLE_PRESETS}
@@ -574,9 +575,7 @@ function ProfilePage() {
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={
-                  saving || !dirty || !styleText.trim() || !imageStyle.trim()
-                }
+                disabled={saving || !dirty || !styleText.trim() || !imageStyle.trim()}
                 className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
               >
                 {saving ? "Saving…" : "Save profile"}
@@ -603,8 +602,7 @@ function PresetChips({
   return (
     <div className="flex flex-wrap gap-1.5">
       {presets.map((p) => {
-        const active =
-          selectedPreset === p.label || current.trim() === p.value.trim();
+        const active = selectedPreset === p.label || current.trim() === p.value.trim();
         return (
           <button
             key={p.label}

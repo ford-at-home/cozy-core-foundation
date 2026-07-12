@@ -15,11 +15,7 @@
 
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import {
-  buildDraftPrompt,
-  buildResynthPrompt,
-  buildRevisionPrompt,
-} from "../_shared/prompt.ts";
+import { buildDraftPrompt, buildResynthPrompt, buildRevisionPrompt } from "../_shared/prompt.ts";
 import { buildImageCreds } from "../_shared/image-token.ts";
 import { dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
 import { ensureRunSession } from "../_shared/usage.ts";
@@ -91,9 +87,8 @@ async function handle(req: Request, rid: string): Promise<Response> {
   const pieceId = typeof body?.pieceId === "string" ? body.pieceId : "";
   const action = ACTIONS.includes(body?.action) ? (body.action as Action) : null;
   const feedback = typeof body?.feedback === "string" ? body.feedback.trim() : "";
-  const requestId = typeof body?.requestId === "string" && body.requestId
-    ? body.requestId
-    : crypto.randomUUID();
+  const requestId =
+    typeof body?.requestId === "string" && body.requestId ? body.requestId : crypto.randomUUID();
   logEvent(FN, "info", {
     requestId: rid,
     userId,
@@ -175,14 +170,34 @@ async function handle(req: Request, rid: string): Promise<Response> {
   // AFTER the run is inserted so the image token can be bound to runId.
   let priorResearch: { research: string; goal: string | null } | null = null;
   if (action === "resynth") {
-    const priorInput = (lastRun?.input ?? {}) as { research?: string; goal?: string };
-    if (!priorInput.research) {
+    const priorInput = (lastRun?.input ?? {}) as {
+      research?: string;
+      goal?: string;
+      from_research_run?: string;
+    };
+    let researchText = typeof priorInput.research === "string" ? priorInput.research : "";
+    // Deep-research-chained proposals historically omitted `research` and only
+    // stored `from_research_run`. Resolve the report from that parent run.
+    if (!researchText && priorInput.from_research_run) {
+      const { data: researchRun } = await admin
+        .from("agent_runs")
+        .select("result")
+        .eq("id", priorInput.from_research_run)
+        .eq("kind", "research")
+        .maybeSingle();
+      const result = researchRun?.result as {
+        channels?: Array<{ files?: Array<{ name?: string; content?: string }> }>;
+      } | null;
+      const file = result?.channels?.[0]?.files?.[0];
+      if (file && typeof file.content === "string") researchText = file.content;
+    }
+    if (!researchText) {
       return err(409, "No completed proposal run with research found for this piece", {
         requestId: rid,
         code: "no_prior_research",
       });
     }
-    priorResearch = { research: priorInput.research, goal: priorInput.goal ?? null };
+    priorResearch = { research: researchText, goal: priorInput.goal ?? null };
   }
 
   const { data: inserted, error: insertErr } = await admin
@@ -197,6 +212,8 @@ async function handle(req: Request, rid: string): Promise<Response> {
         action,
         feedback: feedback || null,
         ...(action === "resynth" ? (lastRun?.input ?? {}) : {}),
+        // Ensure research text is always stored (covers from_research_run fallback).
+        ...(priorResearch ? { research: priorResearch.research, goal: priorResearch.goal } : {}),
       },
     })
     .select("id")
@@ -214,7 +231,13 @@ async function handle(req: Request, rid: string): Promise<Response> {
       cause: insertErr,
     });
   }
-  logEvent(FN, "info", { requestId: rid, event: "run_created", runId: inserted.id, pieceId, action });
+  logEvent(FN, "info", {
+    requestId: rid,
+    event: "run_created",
+    runId: inserted.id,
+    pieceId,
+    action,
+  });
 
   await ensureRunSession(admin, {
     runId: inserted.id,
