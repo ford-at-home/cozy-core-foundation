@@ -38,7 +38,7 @@ export function useCreditBalance() {
 
   useEffect(() => {
     const channel = supabase
-      .channel("credit-balance")
+      .channel(`credit-balance-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "credit_accounts" }, () =>
         queryClient.invalidateQueries({ queryKey: ["credits", "balance"] }),
       )
