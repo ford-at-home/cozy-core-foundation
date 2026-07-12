@@ -7,11 +7,7 @@
 // can pipe curl --output straight to a file. Errors return JSON.
 
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  estimateTokens,
-  promptHash,
-  recordInferenceServer,
-} from "@/lib/record-inference.server";
+import { estimateTokens, promptHash, recordInferenceServer } from "@/lib/record-inference.server";
 
 export const Route = createFileRoute("/api/public/generate-image")({
   server: {
@@ -34,9 +30,10 @@ export const Route = createFileRoute("/api/public/generate-image")({
         if (!prompt) return jsonError(400, "prompt is required");
         if (prompt.length > 4000) return jsonError(400, "prompt too long (max 4000 chars)");
         const style = typeof body.style === "string" ? body.style.trim() : "";
-        const size = typeof body.size === "string" && /^\d{3,4}x\d{3,4}$/.test(body.size)
-          ? body.size
-          : "1024x1024";
+        const size =
+          typeof body.size === "string" && /^\d{3,4}x\d{3,4}$/.test(body.size)
+            ? body.size
+            : "1024x1024";
         const fullPrompt = style ? `${style}\n\nSubject: ${prompt}` : prompt;
 
         // Try Lovable AI Gateway first, then fall back to OpenAI direct.

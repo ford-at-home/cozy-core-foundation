@@ -16,11 +16,7 @@ export const RUN_STATES = [
 
 export type RunState = (typeof RUN_STATES)[number];
 
-export const TERMINAL_STATES: ReadonlySet<RunState> = new Set([
-  "completed",
-  "failed",
-  "cancelled",
-]);
+export const TERMINAL_STATES: ReadonlySet<RunState> = new Set(["completed", "failed", "cancelled"]);
 
 export function isTerminal(state: RunState): boolean {
   return TERMINAL_STATES.has(state);

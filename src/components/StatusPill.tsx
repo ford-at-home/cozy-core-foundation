@@ -15,13 +15,7 @@ const TONE: Record<string, string> = {
   cancelled: "bg-muted text-muted-foreground",
 };
 
-export function StatusPill({
-  status,
-  className,
-}: {
-  status: string;
-  className?: string;
-}) {
+export function StatusPill({ status, className }: { status: string; className?: string }) {
   return (
     <span
       className={cn(

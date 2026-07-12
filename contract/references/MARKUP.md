@@ -2,8 +2,8 @@
 
 A two-channel protocol for getting hand-marked paper edits into AI-readable form without typing.
 
-- **Paper** carries the *address* and the *intent type*. Marks are cheap — tiny symbols, short uppercase tokens, numbered handles.
-- **Voice** carries the *content*. The user dictates substance; AI resolves references against the source doc.
+- **Paper** carries the _address_ and the _intent type_. Marks are cheap — tiny symbols, short uppercase tokens, numbered handles.
+- **Voice** carries the _content_. The user dictates substance; AI resolves references against the source doc.
 
 This file is the source of truth for both the user's hand and the AI's interpretation. The `synthesize` skill reads it every invocation when running with the `personal` bundle (which covers the paper-markup workflow).
 
@@ -13,14 +13,14 @@ This file is the source of truth for both the user's hand and the AI's interpret
 
 ### Symbols
 
-| Mark | Means | Voice |
-|---|---|---|
-| ✓ | keep verbatim | none |
-| ✗ | cut | none |
-| ~ | rework | say how |
-| ★ | expand | say with what |
-| → | move | say where |
-| ? | weak / challenge | optional |
+| Mark | Means            | Voice         |
+| ---- | ---------------- | ------------- |
+| ✓    | keep verbatim    | none          |
+| ✗    | cut              | none          |
+| ~    | rework           | say how       |
+| ★    | expand           | say with what |
+| →    | move             | say where     |
+| ?    | weak / challenge | optional      |
 
 ### Numbered handles
 
@@ -32,30 +32,30 @@ One color = **"use this as-is."** (Preserve in Edit Mode. Pull into new post in 
 
 ### Directives
 
-| Token | Does | Backed by |
-|---|---|---|
-| **VISUALIZE** / VIZ | insert a visual | STYLE.md visuals |
-| **SLOP** | scrub AI tells, re-voice | ANTI-SLOP.md |
-| **DEEPEN** | expand with accent layer | STYLE.md accents |
-| **TIGHTEN** / TIGHT | compress | STYLE.md |
-| **KSP** | restructure Pulse / Catalyst / Context / Handoff | KSP.md |
-| **EXAMPLE** / EX | insert concrete example | STYLE.md |
-| **HOOK** | rework as opener | STYLE.md |
-| **LAND** | rework as closer / punchline | STYLE.md |
-| **PIVOT** | transitional bridge | STYLE.md |
-| **STAKES** | make stakes explicit | STYLE.md |
-| **CLAIM** | restate as one sharp line | STYLE.md |
-| **SCENE** | concretize into a moment | STYLE.md + Noonan |
-| **EVIDENCE** / EV | add citation / source | STYLE.md |
-| **CALLBACK** / CB | reference earlier in the doc | STYLE.md |
-| **ASIDE** | Holmberg-style parenthetical | STYLE.md |
+| Token               | Does                                             | Backed by         |
+| ------------------- | ------------------------------------------------ | ----------------- |
+| **VISUALIZE** / VIZ | insert a visual                                  | STYLE.md visuals  |
+| **SLOP**            | scrub AI tells, re-voice                         | ANTI-SLOP.md      |
+| **DEEPEN**          | expand with accent layer                         | STYLE.md accents  |
+| **TIGHTEN** / TIGHT | compress                                         | STYLE.md          |
+| **KSP**             | restructure Pulse / Catalyst / Context / Handoff | KSP.md            |
+| **EXAMPLE** / EX    | insert concrete example                          | STYLE.md          |
+| **HOOK**            | rework as opener                                 | STYLE.md          |
+| **LAND**            | rework as closer / punchline                     | STYLE.md          |
+| **PIVOT**           | transitional bridge                              | STYLE.md          |
+| **STAKES**          | make stakes explicit                             | STYLE.md          |
+| **CLAIM**           | restate as one sharp line                        | STYLE.md          |
+| **SCENE**           | concretize into a moment                         | STYLE.md + Noonan |
+| **EVIDENCE** / EV   | add citation / source                            | STYLE.md          |
+| **CALLBACK** / CB   | reference earlier in the doc                     | STYLE.md          |
+| **ASIDE**           | Holmberg-style parenthetical                     | STYLE.md          |
 
 ### Voice grammar — four ways to point at something
 
-1. By **block anchor**: *"Section four paragraph three: …"* / *"S4P3: …"* — uses pre-printed `S{n}P{m}` labels.
-2. By **hand-numbered handle**: *"Mark three: …"* — uses `① ② ③` you wrote on the page.
-3. By **symbol class**: *"All the strikethroughs: …"*
-4. By **content**: *"The bit about X: …"*
+1. By **block anchor**: _"Section four paragraph three: …"_ / _"S4P3: …"_ — uses pre-printed `S{n}P{m}` labels.
+2. By **hand-numbered handle**: _"Mark three: …"_ — uses `① ② ③` you wrote on the page.
+3. By **symbol class**: _"All the strikethroughs: …"_
+4. By **content**: _"The bit about X: …"_
 
 Block anchors are the cheapest reference mode because they're already on the page.
 Use hand-numbered handles when block anchors are too coarse (e.g. you want to point at one
@@ -66,7 +66,7 @@ sentence inside a long paragraph) or when anchors are off.
 **Paper carries the directive. Voice carries the parameter.**
 
 Paper: `DEEPEN`
-Voice: *"the deepen on page two — yegge"*
+Voice: _"the deepen on page two — yegge"_
 
 - DEEPEN parameters: `hightower` / `yegge` / `bukowski` / `noonan` / `holmberg`
 - VISUALIZE parameters: `diagram` / `infographic` / `sketch`
@@ -85,14 +85,14 @@ Anything that requires more than one or two words of writing belongs in voice, n
 
 ### Symbols (6 primitives)
 
-| Symbol | Meaning | Voice needed? |
-|---|---|---|
-| **✓** | Keep verbatim | No |
-| **✗** | Cut | No |
-| **~** | Rework / rephrase | Yes (how) |
-| **★** | Expand here | Yes (with what) |
-| **→** | Move | Yes (where to) |
-| **?** | Weak / challenge / suspect | Optional (why) |
+| Symbol | Meaning                    | Voice needed?   |
+| ------ | -------------------------- | --------------- |
+| **✓**  | Keep verbatim              | No              |
+| **✗**  | Cut                        | No              |
+| **~**  | Rework / rephrase          | Yes (how)       |
+| **★**  | Expand here                | Yes (with what) |
+| **→**  | Move                       | Yes (where to)  |
+| **?**  | Weak / challenge / suspect | Optional (why)  |
 
 Write symbols in the margin pointing at the affected text, or directly on it (e.g. strike-through for ✗).
 
@@ -105,7 +105,7 @@ anything on the page to use these — they're already there.
 Two nested counters:
 
 - **Section (`S{n}`)** — increments on every heading (any level, `h1`–`h6`). The heading
-  itself is labeled `S{n}` alone; it *is* the section, not a paragraph inside it.
+  itself is labeled `S{n}` alone; it _is_ the section, not a paragraph inside it.
 - **Paragraph (`P{m}`)** — increments on every non-heading block within the current
   section and resets to 1 at each new heading. Labeled `S{n}P{m}`.
 
@@ -140,7 +140,7 @@ In voice, refer to these as `section 4 paragraph 3`, `S4P3`, or (for a heading i
   long paragraph), or when you printed with `--no-anchors`.
 
 You can mix both. A page can have `S3P2` (pre-printed) and `①` (hand-written) on the same
-paragraph if you want to address the paragraph as a whole *and* a specific line inside it.
+paragraph if you want to address the paragraph as a whole _and_ a specific line inside it.
 
 ### Numbered Handles (hand-written)
 
@@ -164,23 +164,23 @@ A second color is reserved for future use. Do not invent meaning until a real ne
 
 Write as short uppercase tokens, in the margin or inline-circled. Each directive triggers a specific operation backed by a reference file.
 
-| Directive | Operation | Backed by |
-|---|---|---|
-| **VISUALIZE** (`VIZ`) | Insert a visual marker. Voice picks type. | STYLE.md "Visual Instinct" → `[Diagram: …]` / `[Infographic: …]` / `[Sketch: …]` |
-| **SLOP** | Scrub AI tells, re-voice per STYLE.md. | ANTI-SLOP.md |
-| **DEEPEN** | Expand with an accent layer. Voice picks which. | STYLE.md accent layers |
-| **TIGHTEN** (`TIGHT`) | Compress. Cut filler. Bukowski-default. | STYLE.md compression patterns |
-| **KSP** | Restructure to Pulse / Catalyst / Context / Handoff. | KSP.md |
-| **EXAMPLE** (`EX`) | Insert a concrete example. Voice can hint at flavor. | STYLE.md "concrete > abstract" |
-| **HOOK** | Rework as opener. | STYLE.md "Paragraph Openings" |
-| **LAND** | Rework as closer / punchline. | STYLE.md "Final Output Standard" |
-| **PIVOT** | Transitional bridge between sections. | STYLE.md "Argumentation Style" |
-| **STAKES** | Make the stakes explicit. | STYLE.md "Argumentation Style" |
-| **CLAIM** | Restate as one sharp declarative line. | STYLE.md "Argumentation Style" |
-| **SCENE** | Concretize abstract argument into a moment. | STYLE.md "Visual Instinct" + Noonan accent |
-| **EVIDENCE** (`EV`) | Add citation / link / source. Flag `[Source needed: …]` if research required. | STYLE.md "Argumentation Style" |
-| **CALLBACK** (`CB`) | Reference something earlier in the doc. | STYLE.md "Dual Voice Mechanism" |
-| **ASIDE** | Holmberg-style parenthetical. | STYLE.md "Mark Holmberg" accent |
+| Directive             | Operation                                                                     | Backed by                                                                        |
+| --------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **VISUALIZE** (`VIZ`) | Insert a visual marker. Voice picks type.                                     | STYLE.md "Visual Instinct" → `[Diagram: …]` / `[Infographic: …]` / `[Sketch: …]` |
+| **SLOP**              | Scrub AI tells, re-voice per STYLE.md.                                        | ANTI-SLOP.md                                                                     |
+| **DEEPEN**            | Expand with an accent layer. Voice picks which.                               | STYLE.md accent layers                                                           |
+| **TIGHTEN** (`TIGHT`) | Compress. Cut filler. Bukowski-default.                                       | STYLE.md compression patterns                                                    |
+| **KSP**               | Restructure to Pulse / Catalyst / Context / Handoff.                          | KSP.md                                                                           |
+| **EXAMPLE** (`EX`)    | Insert a concrete example. Voice can hint at flavor.                          | STYLE.md "concrete > abstract"                                                   |
+| **HOOK**              | Rework as opener.                                                             | STYLE.md "Paragraph Openings"                                                    |
+| **LAND**              | Rework as closer / punchline.                                                 | STYLE.md "Final Output Standard"                                                 |
+| **PIVOT**             | Transitional bridge between sections.                                         | STYLE.md "Argumentation Style"                                                   |
+| **STAKES**            | Make the stakes explicit.                                                     | STYLE.md "Argumentation Style"                                                   |
+| **CLAIM**             | Restate as one sharp declarative line.                                        | STYLE.md "Argumentation Style"                                                   |
+| **SCENE**             | Concretize abstract argument into a moment.                                   | STYLE.md "Visual Instinct" + Noonan accent                                       |
+| **EVIDENCE** (`EV`)   | Add citation / link / source. Flag `[Source needed: …]` if research required. | STYLE.md "Argumentation Style"                                                   |
+| **CALLBACK** (`CB`)   | Reference something earlier in the doc.                                       | STYLE.md "Dual Voice Mechanism"                                                  |
+| **ASIDE**             | Holmberg-style parenthetical.                                                 | STYLE.md "Mark Holmberg" accent                                                  |
 
 Abbreviations in parentheses are accepted shorthand. Use whichever fits your remaining pen-stroke budget.
 

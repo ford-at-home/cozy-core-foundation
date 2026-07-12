@@ -5,8 +5,8 @@ mode: edit-or-synthesis
 reads:
   - references/MARKUP.md
   - references/STORYTELLING.md
-  - references/KSP.md   # only when the KSP directive appears
-voice: required  # synthesize resolves from brief.md's Voice field; ~/.me/voices/<name>.md + <name>.anti.md
+  - references/KSP.md # only when the KSP directive appears
+voice: required # synthesize resolves from brief.md's Voice field; ~/.me/voices/<name>.md + <name>.anti.md
 triggers:
   - "apply my edits"
   - "merge my dictated changes"
@@ -54,13 +54,13 @@ Two operations, auto-detected from inputs:
 
 > Paths below are relative to the composed plugin (`dist/plugin/`) where all sibling-package references live in a single `references/` directory. In monorepo source, `STORYTELLING.md` ships with `markdown-soul` and `KSP.md` ships with `ksp`; `make plugin` is how they become co-resident with this bundle's references.
 
-| File | Role |
-|---|---|
-| [`references/MARKUP.md`](../../references/MARKUP.md) | Source of truth for the markup protocol — symbols, numbered handles, all named directives. Read every invocation. Ships with this package. |
-| [`references/STORYTELLING.md`](../../references/STORYTELLING.md) | Piece-architecture philosophy (translated Chappelle). Governs *how the whole piece is built* — casual entry, named gap between public posture and private knowledge, implicated narrator, reframing closer. Edit mode honors existing architecture; synthesis mode uses this to construct it. Read every invocation. Ships with `markdown-soul`. |
-| `~/.me/voices/<name>.md` | Voice texture for any connective writing or directive-driven expansion (DEEPEN, HOOK, LAND, etc.). Resolved from `brief.md`'s `Voice:` field. Loaded every invocation. |
-| `~/.me/voices/<name>.anti.md` | Catalog of AI tells scrubbed by the SLOP directive. Resolved alongside the voice file. Loaded when SLOP appears in dictation. |
-| [`references/KSP.md`](../../references/KSP.md) | Friction rubric. Read only when the KSP directive appears in markup (restructures the passage to Pulse / Catalyst / Context / Handoff). Ships with `ksp`. |
+| File                                                             | Role                                                                                                                                                                                                                                                                                                                                             |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`references/MARKUP.md`](../../references/MARKUP.md)             | Source of truth for the markup protocol — symbols, numbered handles, all named directives. Read every invocation. Ships with this package.                                                                                                                                                                                                       |
+| [`references/STORYTELLING.md`](../../references/STORYTELLING.md) | Piece-architecture philosophy (translated Chappelle). Governs _how the whole piece is built_ — casual entry, named gap between public posture and private knowledge, implicated narrator, reframing closer. Edit mode honors existing architecture; synthesis mode uses this to construct it. Read every invocation. Ships with `markdown-soul`. |
+| `~/.me/voices/<name>.md`                                         | Voice texture for any connective writing or directive-driven expansion (DEEPEN, HOOK, LAND, etc.). Resolved from `brief.md`'s `Voice:` field. Loaded every invocation.                                                                                                                                                                           |
+| `~/.me/voices/<name>.anti.md`                                    | Catalog of AI tells scrubbed by the SLOP directive. Resolved alongside the voice file. Loaded when SLOP appears in dictation.                                                                                                                                                                                                                    |
+| [`references/KSP.md`](../../references/KSP.md)                   | Friction rubric. Read only when the KSP directive appears in markup (restructures the passage to Pulse / Catalyst / Context / Handoff). Ships with `ksp`.                                                                                                                                                                                        |
 
 ## Output format
 

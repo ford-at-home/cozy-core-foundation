@@ -1,9 +1,5 @@
 import { assert, assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import {
-  buildResearchQuery,
-  buildResearchReport,
-  mapParallelStatus,
-} from "../_shared/parallel.ts";
+import { buildResearchQuery, buildResearchReport, mapParallelStatus } from "../_shared/parallel.ts";
 
 Deno.test("parallel status maps onto the run state machine", () => {
   assertEquals(mapParallelStatus("queued"), "queued");

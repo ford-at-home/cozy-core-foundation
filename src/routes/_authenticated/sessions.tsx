@@ -9,10 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/sessions")({
   head: () => ({
-    meta: [
-      { title: "Cost — Sessions" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Cost — Sessions" }, { name: "robots", content: "noindex" }],
   }),
   component: SessionsPage,
 });
@@ -226,9 +223,7 @@ function SessionRowView({ s }: { s: SessionRow }) {
       <td className="px-4 py-3">
         <StatusPill status={s.status} />
       </td>
-      <td className="px-4 py-3 text-right font-mono tabular-nums">
-        {formatUsd(s.total_cost_usd)}
-      </td>
+      <td className="px-4 py-3 text-right font-mono tabular-nums">{formatUsd(s.total_cost_usd)}</td>
       <td className="px-4 py-3 text-right text-xs text-muted-foreground tabular-nums">
         {formatDuration(s.total_duration_ms)}
       </td>

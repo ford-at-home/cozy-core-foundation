@@ -6,7 +6,13 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-background px-4 py-12" style={{ paddingTop: "max(3rem, env(safe-area-inset-top))", paddingBottom: "max(3rem, env(safe-area-inset-bottom))" }}>
+    <div
+      className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-background px-4 py-12"
+      style={{
+        paddingTop: "max(3rem, env(safe-area-inset-top))",
+        paddingBottom: "max(3rem, env(safe-area-inset-bottom))",
+      }}
+    >
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-60"

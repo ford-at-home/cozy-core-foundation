@@ -17,27 +17,27 @@ Every run requires a `brief.md` in the work directory. **No brief, no run.** Thi
 
 The brief is a five-field structured input — see [`references/BRIEF.template.md`](../../references/BRIEF.template.md) for the template and field semantics. The fields are:
 
-| Field | Required | Purpose |
-|---|---|---|
-| `## Voice` | yes | Names a voice file under `~/.me/voices/<name>.md` (or `<repo>/.me/voices/<name>.md` for per-repo override). The matching `<name>.anti.md` is loaded too if present. |
-| `## Persona` | yes | One named persona or inline paragraph. Who is reading this piece — *the* human, not a segment. |
-| `## Throughline` | yes | One sentence: what does the persona walk away with? |
-| `## Channels` | yes | List of output formats to produce (one or more). Each named channel must have a definition at `~/.me/channels/<name>.md`. |
-| `## Why this persona, why now` | yes | One paragraph of stakes. The field that does the most work — it forces articulation of why this piece needs to exist. |
+| Field                          | Required | Purpose                                                                                                                                                             |
+| ------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `## Voice`                     | yes      | Names a voice file under `~/.me/voices/<name>.md` (or `<repo>/.me/voices/<name>.md` for per-repo override). The matching `<name>.anti.md` is loaded too if present. |
+| `## Persona`                   | yes      | One named persona or inline paragraph. Who is reading this piece — _the_ human, not a segment.                                                                      |
+| `## Throughline`               | yes      | One sentence: what does the persona walk away with?                                                                                                                 |
+| `## Channels`                  | yes      | List of output formats to produce (one or more). Each named channel must have a definition at `~/.me/channels/<name>.md`.                                           |
+| `## Why this persona, why now` | yes      | One paragraph of stakes. The field that does the most work — it forces articulation of why this piece needs to exist.                                               |
 
 The brief lives at `.input/<bundle-name>/brief.md` in the user's work repo. The same directory contains the source materials (other `.md` files). See "Workflow" step 2 for resolution rules and "Failure handling" for refusal modes.
 
-**Bullshit, operationally defined.** Any sentence in the output that does not move *this persona* toward *this throughline* is bullshit. The brief is what makes that judgement testable. Without it, "tighten" and "scrub" are vibes; with it, they're rules.
+**Bullshit, operationally defined.** Any sentence in the output that does not move _this persona_ toward _this throughline_ is bullshit. The brief is what makes that judgement testable. Without it, "tighten" and "scrub" are vibes; with it, they're rules.
 
 ## Default bundles in the composed plugin
 
-| Bundle | Ships in package | Mode | What it does |
-|---|---|---|---|
-| **`voice-only`** | `markdown-soul` (this package) | polish | Refactor a long-form draft in the brief-named voice. Restructure top-down, scrub AI tells. |
-| **`personal`** | `paper-markup` | edit or synthesis | Apply dictated edits to a marked-up paper draft, OR weave a new post from marked-up source materials. |
-| **`ksp-compress`** | `ksp` | compress | Compress an operational message to KSP structure (Pulse / Catalyst / Context / Handoff) and channel-appropriate length. |
+| Bundle             | Ships in package               | Mode              | What it does                                                                                                            |
+| ------------------ | ------------------------------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **`voice-only`**   | `markdown-soul` (this package) | polish            | Refactor a long-form draft in the brief-named voice. Restructure top-down, scrub AI tells.                              |
+| **`personal`**     | `paper-markup`                 | edit or synthesis | Apply dictated edits to a marked-up paper draft, OR weave a new post from marked-up source materials.                   |
+| **`ksp-compress`** | `ksp`                          | compress          | Compress an operational message to KSP structure (Pulse / Catalyst / Context / Handoff) and channel-appropriate length. |
 
-Voice (and its paired anti-slop catalog) is no longer part of any bundle's `reads:` — it's resolved per-run from the brief. See "Required input: brief.md" above. Each bundle's `reads:` now lists only the *non-voice* references it needs (e.g., `STORYTELLING.md`, `MARKUP.md`, `KSP.md`).
+Voice (and its paired anti-slop catalog) is no longer part of any bundle's `reads:` — it's resolved per-run from the brief. See "Required input: brief.md" above. Each bundle's `reads:` now lists only the _non-voice_ references it needs (e.g., `STORYTELLING.md`, `MARKUP.md`, `KSP.md`).
 
 See `bundles/<name>/BUNDLE.md` for the full description of each bundle's behavior, triggers, references, and output format. If a bundle from a sibling package isn't installed, the related triggers below won't apply — install the package or use the composed plugin under `dist/plugin/`.
 
@@ -150,17 +150,17 @@ Follow the bundle's "What this bundle does" workflow. Common rules across bundle
 - Read references on every invocation. Do not work from memory.
 - For markup directives (personal bundle): each directive looks up its backing reference (SLOP → the brief-named voice's `<name>.anti.md`, DEEPEN → the voice's accent layers, KSP → `references/KSP.md`, etc.).
 - For voice work: apply the brief-named voice's accent layers sparingly; never stack more than two; default to clarity over flourish.
-- For compression: respect channel-length targets from KSP.md's Channel Heuristics *and* any channel-specific overrides in the brief-named channel definition.
+- For compression: respect channel-length targets from KSP.md's Channel Heuristics _and_ any channel-specific overrides in the brief-named channel definition.
 - **Throughline test.** For every paragraph (and every closing line of every paragraph), ask: does this move the persona toward the throughline? If no, it goes in `tighten.md` as a question for the writer ("This paragraph reads like context-setting — is it earning its place?") or gets cut.
 
 **Resolving voice references (personal bundle).** When dictation points at a location, try resolution methods in this order, stopping at the first match:
 
-1. **Block anchor** — *"section 4 paragraph 3"*, *"S4P3"*, *"section 4"* (for a heading itself). Count addressable blocks in the source document in document order: paragraphs, headings (h1–h6), blockquotes (whole quote = one block), code blocks, tables. Skip list items, images, horizontal rules, and any auto-generated title block. Every heading increments the section counter (`S{n}`) and resets the paragraph counter; every non-heading block increments the paragraph counter within the current section (`S{n}P{m}`). The section counter starts at 0, so the document's first heading is `S1`; any content before that first heading (rare) is `S0P1`, `S0P2`, …. This rule must match `scripts/print.css` exactly; if you find a discrepancy, stop and report it.
-2. **Hand-numbered handle** — *"mark three"*, *"item 3"*. Match against numbered handles the user wrote on paper.
-3. **Symbol class** — *"all the strikethroughs"*, *"the question marks"*. Match against the symbol type from MARKUP.md.
-4. **Content** — *"the bit about ownership"*. Fuzzy-match against the prose.
+1. **Block anchor** — _"section 4 paragraph 3"_, _"S4P3"_, _"section 4"_ (for a heading itself). Count addressable blocks in the source document in document order: paragraphs, headings (h1–h6), blockquotes (whole quote = one block), code blocks, tables. Skip list items, images, horizontal rules, and any auto-generated title block. Every heading increments the section counter (`S{n}`) and resets the paragraph counter; every non-heading block increments the paragraph counter within the current section (`S{n}P{m}`). The section counter starts at 0, so the document's first heading is `S1`; any content before that first heading (rare) is `S0P1`, `S0P2`, …. This rule must match `scripts/print.css` exactly; if you find a discrepancy, stop and report it.
+2. **Hand-numbered handle** — _"mark three"_, _"item 3"_. Match against numbered handles the user wrote on paper.
+3. **Symbol class** — _"all the strikethroughs"_, _"the question marks"_. Match against the symbol type from MARKUP.md.
+4. **Content** — _"the bit about ownership"_. Fuzzy-match against the prose.
 
-If a reference resolves under multiple methods (e.g. "mark three" could be block S2P3 or hand-mark ③), prefer block-anchor resolution and note the ambiguity in *What I Changed*.
+If a reference resolves under multiple methods (e.g. "mark three" could be block S2P3 or hand-mark ③), prefer block-anchor resolution and note the ambiguity in _What I Changed_.
 
 ### 5. Write outputs to `.output/<bundle-name>/<channel>/`
 
@@ -184,8 +184,8 @@ Outputs go to a structured directory per the persona-first contract. **One run, 
 
 **Voice overrides** (kept from prior contract, still respected when expressed):
 
-- *"Just show me"* / *"preview only"* / *"don't save"* — emit inline only, no files written. Useful for one-off experiments.
-- *"Save to `<path>`"* — single-file override. Only valid for single-channel briefs.
+- _"Just show me"_ / _"preview only"_ / _"don't save"_ — emit inline only, no files written. Useful for one-off experiments.
+- _"Save to `<path>`"_ — single-file override. Only valid for single-channel briefs.
 - For single-channel briefs in inline mode, the auxiliary files (`to-research`, `tighten`, etc.) appear as labeled sections after the main output instead of as separate files.
 
 ### 6. Return the verification structure
@@ -322,7 +322,7 @@ Refuse first; never substitute defaults for missing structured inputs. The bulls
 
 - **`brief.md` not found** at `.input/<bundle>/brief.md` → stop. Point the user at [`references/BRIEF.template.md`](../../references/BRIEF.template.md). Do not run with a synthesized brief; do not infer fields from the source materials.
 - **`brief.md` has empty required fields** (Voice, Persona, Throughline, Channels, Why this persona why now) → stop and name every empty field. Do not fill in defaults. Especially: do not invent a persona or throughline from the source materials — that defeats the purpose of the brief.
-- **Voice named in brief not found** at `<repo>/.me/voices/<name>.md` or `~/.me/voices/<name>.md` → stop. Tell the user where the file should live and offer two options: (a) create it from [`references/STYLE.template.md`](../../references/STYLE.template.md), (b) change the brief's `Voice:` to an existing voice. List the voices that *do* exist at both paths.
+- **Voice named in brief not found** at `<repo>/.me/voices/<name>.md` or `~/.me/voices/<name>.md` → stop. Tell the user where the file should live and offer two options: (a) create it from [`references/STYLE.template.md`](../../references/STYLE.template.md), (b) change the brief's `Voice:` to an existing voice. List the voices that _do_ exist at both paths.
 - **Channel named in brief not found** at `<repo>/.me/channels/<name>.md` or `~/.me/channels/<name>.md` → stop. Same shape as voice failure: list available channels, offer to create or change.
 - **Bundle file not found** → stop and ask which bundle to use, listing the available bundles in `bundles/`.
 - **Bundle declares a reference that doesn't exist** → stop and report the missing file. Do not fall back to a heuristic.
@@ -337,9 +337,9 @@ Refuse first; never substitute defaults for missing structured inputs. The bulls
 
 **Inputs:**
 
-- `.input/internal-tools/brief.md` with: `Voice: ford`, persona `skeptical-staff-eng`, throughline *"Internal tools rot from a handoff problem, not a documentation problem."*, channel `longform`, stakes paragraph on why this matters to engineers inheriting load-bearing legacy.
+- `.input/internal-tools/brief.md` with: `Voice: ford`, persona `skeptical-staff-eng`, throughline _"Internal tools rot from a handoff problem, not a documentation problem."_, channel `longform`, stakes paragraph on why this matters to engineers inheriting load-bearing legacy.
 - `.input/internal-tools/draft.md` (single paragraph about internal tools dying from neglect).
-- Dictation: *"Apply my edits. Mark one: tighten to 'reorgs blur ownership.' The slop just gets cut. The deepen: holmberg, Richmond newsroom analogy. The viz: a sketch of the handoff gap."*
+- Dictation: _"Apply my edits. Mark one: tighten to 'reorgs blur ownership.' The slop just gets cut. The deepen: holmberg, Richmond newsroom analogy. The viz: a sketch of the handoff gap."_
 - Paper marks on the printed draft: SLOP on "well-documented", DEEPEN at paragraph end, VIZ in margin, ① on "ownership becomes ambiguous".
 
 **Output (abbreviated):**

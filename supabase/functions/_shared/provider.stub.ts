@@ -32,7 +32,11 @@ export class StubProvider implements AgentProvider {
     if (!agent) return Promise.reject(new Error(`stub: unknown agent ${externalAgentId}`));
     const elapsed = Date.now() - agent.createdAt;
     const rawStatus = elapsed >= this.runMs ? "FINISHED" : "RUNNING";
-    return Promise.resolve({ ...agent, rawStatus, summary: rawStatus === "FINISHED" ? "stub run complete" : null });
+    return Promise.resolve({
+      ...agent,
+      rawStatus,
+      summary: rawStatus === "FINISHED" ? "stub run complete" : null,
+    });
   }
 
   stopAgent(externalAgentId: string): Promise<void> {

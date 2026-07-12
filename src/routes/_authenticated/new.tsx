@@ -178,7 +178,11 @@ function NewPiecePage() {
         onSubmit={handleSubmit}
         className="space-y-6 rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm sm:p-7"
       >
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="tablist" aria-label="Research source">
+        <div
+          className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+          role="tablist"
+          aria-label="Research source"
+        >
           <ModeButton
             label="I have research"
             active={mode === "paste"}

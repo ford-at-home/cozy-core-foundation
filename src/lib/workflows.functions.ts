@@ -68,8 +68,8 @@ export type StartWorkflowInput = {
   goal?: string;
   requestId?: string;
   attachments?: Array<{
-    path: string;      // storage path within research-attachments bucket
-    name: string;      // display filename
+    path: string; // storage path within research-attachments bucket
+    name: string; // display filename
     contentType?: string;
     size?: number;
   }>;
@@ -80,10 +80,9 @@ export const startWorkflow = createServerFn({ method: "POST" })
   .inputValidator((data: StartWorkflowInput) => data ?? {})
   .handler(async ({ data, context }): Promise<{ runId: string }> => {
     // Invoke the start-workflow edge function as the signed-in user.
-    const { data: result, error } = await context.supabase.functions.invoke(
-      "start-workflow",
-      { body: data },
-    );
+    const { data: result, error } = await context.supabase.functions.invoke("start-workflow", {
+      body: data,
+    });
     if (error) throw new Error(await extractEdgeError(error, "start-workflow"));
     return result as { runId: string };
   });

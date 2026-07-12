@@ -31,8 +31,8 @@ export interface DispatchArgs {
 
 export async function dispatchRun(args: DispatchArgs): Promise<void> {
   const { admin, provider, runId } = args;
-  const repository = Deno.env.get("AGENT_REPO_URL") ??
-    "https://github.com/ford-at-home/cozy-core-foundation";
+  const repository =
+    Deno.env.get("AGENT_REPO_URL") ?? "https://github.com/ford-at-home/cozy-core-foundation";
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const webhookSecret = Deno.env.get("CURSOR_WEBHOOK_SECRET")?.trim();
 

@@ -19,17 +19,14 @@ export interface RunRow {
 }
 
 function githubApiBase(): { owner: string; repo: string } {
-  const url = Deno.env.get("AGENT_REPO_URL") ??
-    "https://github.com/ford-at-home/cozy-core-foundation";
+  const url =
+    Deno.env.get("AGENT_REPO_URL") ?? "https://github.com/ford-at-home/cozy-core-foundation";
   const m = url.match(/github\.com\/([^/]+)\/([^/.]+)/);
   if (!m) throw new Error(`Cannot parse AGENT_REPO_URL: ${url}`);
   return { owner: m[1], repo: m[2] };
 }
 
-async function fetchFileFromBranch(
-  path: string,
-  branch: string,
-): Promise<string | null> {
+async function fetchFileFromBranch(path: string, branch: string): Promise<string | null> {
   const { owner, repo } = githubApiBase();
   const headers: Record<string, string> = {
     Accept: "application/vnd.github.raw+json",

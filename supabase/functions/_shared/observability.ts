@@ -13,7 +13,8 @@
 
 export type LogFields = Record<string, unknown>;
 
-const SENSITIVE_KEY_RE = /(authorization|api[_-]?key|secret|token|password|cookie|session|bearer|jwt|service[_-]?role|style[_-]?text)/i;
+const SENSITIVE_KEY_RE =
+  /(authorization|api[_-]?key|secret|token|password|cookie|session|bearer|jwt|service[_-]?role|style[_-]?text)/i;
 // Values that are almost certainly credentials even when the key name is bland.
 const OPAQUE_TOKEN_RE = /^(eyJ[\w-]{20,}|sk-[\w-]{20,}|sb[a-z]*_[\w-]{20,})/i;
 
@@ -74,8 +75,7 @@ export type ErrorEnvelope = {
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 /** Return a JSON response with CORS + a stable request id header. */
@@ -113,7 +113,11 @@ export function errorResponse(
 
 function serializeCause(cause: unknown): unknown {
   if (cause instanceof Error) {
-    return { name: cause.name, message: cause.message, stack: cause.stack?.split("\n").slice(0, 5).join("\n") };
+    return {
+      name: cause.name,
+      message: cause.message,
+      stack: cause.stack?.split("\n").slice(0, 5).join("\n"),
+    };
   }
   return redactForLog(cause);
 }

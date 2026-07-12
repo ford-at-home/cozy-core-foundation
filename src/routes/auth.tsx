@@ -100,7 +100,13 @@ function AuthPage() {
   }
 
   return (
-    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-background px-4 py-10" style={{ paddingTop: "max(2.5rem, env(safe-area-inset-top))", paddingBottom: "max(2.5rem, env(safe-area-inset-bottom))" }}>
+    <div
+      className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-background px-4 py-10"
+      style={{
+        paddingTop: "max(2.5rem, env(safe-area-inset-top))",
+        paddingBottom: "max(2.5rem, env(safe-area-inset-bottom))",
+      }}
+    >
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"

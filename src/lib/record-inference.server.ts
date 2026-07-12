@@ -5,11 +5,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { estimateTokens } from "@/lib/token-estimate";
 
 type PricingSource =
-  | "provider_reported"
-  | "calculated"
-  | "fixed_task_price"
-  | "estimated"
-  | "manual";
+  "provider_reported" | "calculated" | "fixed_task_price" | "estimated" | "manual";
 
 export type ServerRecordInferenceInput = {
   runId: string;

@@ -138,9 +138,7 @@ function DashboardPage() {
                       <StatusPill status={r.status} />
                     </div>
                     <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                      <time dateTime={r.created_at}>
-                        {new Date(r.created_at).toLocaleString()}
-                      </time>
+                      <time dateTime={r.created_at}>{new Date(r.created_at).toLocaleString()}</time>
                       <span className="font-mono">{r.id.slice(0, 8)}</span>
                     </div>
                   </button>

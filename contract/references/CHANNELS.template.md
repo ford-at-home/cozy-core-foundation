@@ -59,8 +59,8 @@ Examples:
 - Cold opening — no "Hi all," no warmup.
 -->
 
-- 
-- 
+-
+-
 
 ## Format constraints
 
@@ -72,8 +72,8 @@ What the format physically allows and disallows. Examples:
 - "Each post stands alone; no '1/n' prefix."
 -->
 
-- 
-- 
+-
+-
 
 ## Failure modes
 
@@ -86,8 +86,8 @@ Specific ways drafts fail on this channel. Two or three bullets. Examples:
   not the cultural default."
 -->
 
-- 
-- 
+-
+-
 
 ## Notes
 
@@ -98,4 +98,4 @@ Anything else the synthesizer needs to know. Common additions:
 - The piece's afterlife on this channel (does it get quoted? linked? buried?).
 -->
 
-- 
+-

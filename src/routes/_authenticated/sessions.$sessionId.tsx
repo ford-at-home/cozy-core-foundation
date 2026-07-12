@@ -8,10 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/sessions/$sessionId")({
   head: () => ({
-    meta: [
-      { title: "Session detail — Cost" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Session detail — Cost" }, { name: "robots", content: "noindex" }],
   }),
   component: SessionDetailPage,
 });
