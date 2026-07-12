@@ -7,10 +7,11 @@ import type { Json } from "@/integrations/supabase/types";
 // Vendored paper-markup stylesheet; its S{n}P{m} block-anchor counting rule
 // must stay in sync with contract/references/MARKUP.md.
 import printCss from "@/styles/print.css?raw";
+import { brand, pageTitle } from "@/config/brand";
 
 export const Route = createFileRoute("/_authenticated/print/$runId")({
   head: () => ({
-    meta: [{ title: "Print — Compose" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: pageTitle("Print") }, { name: "robots", content: "noindex" }],
   }),
   component: PrintPage,
 });
@@ -225,7 +226,7 @@ function PrintPage() {
       await worker
         .from(doc.body)
         .set({
-          filename: `compose-run-${runId}.pdf`,
+          filename: `hardcopy-draft-${runId}.pdf`,
           margin: [1.5, 2, 1.5, 1.5], // top, right, bottom, left (inches)
           image: { type: "jpeg", quality: 0.95 },
           html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
@@ -258,7 +259,9 @@ function PrintPage() {
     <div className="space-y-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Studio</p>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            {brand.product.name}
+          </p>
           <h1 className="mt-1 font-serif text-4xl tracking-tight">Print for markup</h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Wide margins for pen work, with S{"{n}"}P{"{m}"} anchors in the left margin so you can

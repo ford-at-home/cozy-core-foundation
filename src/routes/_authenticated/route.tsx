@@ -2,6 +2,8 @@ import { Link, Outlet, createFileRoute, redirect, useNavigate } from "@tanstack/
 import { LayoutDashboard, PenLine, CircleDollarSign, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { brand } from "@/config/brand";
+import { PageMark } from "@/components/PageMark";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -15,7 +17,7 @@ export const Route = createFileRoute("/_authenticated")({
 
 const NAV_LINKS = [
   { to: "/dashboard" as const, label: "Dashboard", short: "Home", icon: LayoutDashboard },
-  { to: "/new" as const, label: "New piece", short: "New", icon: PenLine },
+  { to: "/new" as const, label: "New draft", short: "New", icon: PenLine },
   { to: "/sessions" as const, label: "Cost", short: "Cost", icon: CircleDollarSign },
   { to: "/profile" as const, label: "Profile", short: "Profile", icon: User },
 ];
@@ -49,10 +51,10 @@ function AuthenticatedLayout() {
             to="/dashboard"
             className="flex min-h-11 items-center gap-2 rounded-md text-sm focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-primary font-serif text-base leading-none text-primary-foreground">
-              C
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-primary text-primary-foreground">
+              <PageMark className="h-5 w-5" />
             </span>
-            <span className="truncate font-serif text-lg tracking-tight">Compose</span>
+            <span className="truncate font-serif text-lg tracking-tight">{brand.company.name}</span>
           </Link>
 
           <nav className="hidden items-center gap-1 text-sm sm:flex" aria-label="Primary">

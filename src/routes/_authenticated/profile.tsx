@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { getMyProfile, saveMyProfile } from "@/lib/profile.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { brand, pageTitle } from "@/config/brand";
 
 const TEXT_STYLE_PRESETS: { label: string; value: string }[] = [
   {
@@ -65,7 +66,7 @@ const IMAGE_STYLE_PRESETS: { label: string; value: string }[] = [
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
     meta: [
-      { title: "Profile — Compose" },
+      { title: pageTitle("Profile") },
       { name: "description", content: "Your voice and style profile." },
       { name: "robots", content: "noindex" },
     ],
@@ -384,10 +385,12 @@ function ProfilePage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Studio</p>
+        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          {brand.product.name}
+        </p>
         <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Your voice</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Describe how you write. This is applied to every piece you compose — it is the Voice
+          Describe how you write. This is applied to every draft you prepare — it is the Voice
           section of the writing brief. Saved permanently to your profile; never committed to any
           repo. A guided questionnaire will replace this free-text field later.
         </p>
@@ -535,7 +538,7 @@ function ProfilePage() {
                 </button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Describe the visual style for images generated with your pieces — medium, palette,
+                Describe the visual style for images generated with your drafts — medium, palette,
                 mood, references. Applied to every image the agent creates for a post. Pick a preset
                 below to start, then tweak.
               </p>

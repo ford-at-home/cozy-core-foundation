@@ -9,10 +9,11 @@ import MarkdownView from "@/components/MarkdownView";
 import { RunCostCard } from "@/components/RunCostCard";
 import { StatusPill } from "@/components/StatusPill";
 import { Skeleton } from "@/components/ui/skeleton";
+import { brand, pageTitle } from "@/config/brand";
 
 export const Route = createFileRoute("/_authenticated/runs/$runId")({
   head: () => ({
-    meta: [{ title: "Run — Compose" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: pageTitle("Run") }, { name: "robots", content: "noindex" }],
   }),
   component: RunDetailPage,
 });
@@ -133,7 +134,9 @@ function RunDetailPage() {
     <div className="space-y-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Studio</p>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            {brand.product.name}
+          </p>
           <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Run</h1>
           <p className="mt-1 truncate font-mono text-xs text-muted-foreground" title={runId}>
             {runId}
@@ -155,7 +158,10 @@ function RunDetailPage() {
         </div>
       )}
       {loadError && (
-        <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <p
+          role="alert"
+          className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
           {loadError}
         </p>
       )}
@@ -341,8 +347,8 @@ function ActionsPanel({ run }: { run: AgentRun }) {
             >
               Print this draft
             </Link>{" "}
-            for pen markup, then type your annotations back here (block anchors like “S4P3:
-            tighten”, marks like “mark three: cut”). <strong>Revise</strong> produces the final
+            for pen markup, then return your annotations here (block anchors like “S4P3: tighten”,
+            marks like “mark three: cut”). <strong>Revise</strong> reconciles them into the final
             version as a pull request.
           </p>
           <textarea
@@ -418,9 +424,9 @@ function activeStatusMessage(status: RunStatus, kind: string): string {
     case "queued":
       return "Queued — the agent's workspace is being prepared.";
     case "running":
-      return "Working — the agent is authoring the brief and synthesizing the piece. This page updates live.";
+      return "Working — the agent is preparing the brief and drafting the piece. This page updates live.";
     case "awaiting_fetch":
-      return "Almost done — the piece is written; fetching it back now.";
+      return "Almost done — the draft is written; fetching it back now.";
     case "cancel_requested":
       return "Cancelling — waiting for the agent to confirm.";
     default:

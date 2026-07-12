@@ -2,12 +2,14 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useId, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
+import { brand } from "@/config/brand";
+import { PageMark } from "@/components/PageMark";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Compose" },
-      { name: "description", content: "Sign in or create a Compose account." },
+      { title: `Sign in — ${brand.company.name}` },
+      { name: "description", content: `Sign in or create a ${brand.company.name} account.` },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -100,7 +102,13 @@ function AuthPage() {
   }
 
   return (
-    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-background px-4 py-10" style={{ paddingTop: "max(2.5rem, env(safe-area-inset-top))", paddingBottom: "max(2.5rem, env(safe-area-inset-bottom))" }}>
+    <div
+      className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-background px-4 py-10"
+      style={{
+        paddingTop: "max(2.5rem, env(safe-area-inset-top))",
+        paddingBottom: "max(2.5rem, env(safe-area-inset-bottom))",
+      }}
+    >
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
@@ -112,17 +120,17 @@ function AuthPage() {
       <div className="relative z-10 w-full max-w-sm space-y-7 rounded-xl border border-border bg-card/70 p-6 text-card-foreground shadow-2xl shadow-black/30 backdrop-blur sm:p-7">
         <div className="space-y-2 text-center">
           <div
-            className="mx-auto grid h-10 w-10 place-items-center rounded-md bg-primary font-serif text-xl text-primary-foreground"
+            className="mx-auto grid h-10 w-10 place-items-center rounded-md bg-primary text-primary-foreground"
             aria-hidden
           >
-            C
+            <PageMark className="h-6 w-6" />
           </div>
           <h1 className="font-serif text-3xl tracking-tight">
             {mode === "signin" ? "Welcome back" : "Create account"}
           </h1>
           <p className="text-sm text-muted-foreground">
             {mode === "signin"
-              ? "Sign in to access your workflow runs."
+              ? "Sign in to pick up your working drafts."
               : "Sign up with an email and password."}
           </p>
         </div>

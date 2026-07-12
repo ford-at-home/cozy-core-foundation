@@ -5,13 +5,11 @@ import { getSessionDetail, type PricingSource } from "@/lib/costs.functions";
 import { CostBadge, formatDuration, formatUsd } from "@/components/CostBadge";
 import { StatusPill } from "@/components/StatusPill";
 import { Skeleton } from "@/components/ui/skeleton";
+import { pageTitle } from "@/config/brand";
 
 export const Route = createFileRoute("/_authenticated/sessions/$sessionId")({
   head: () => ({
-    meta: [
-      { title: "Session detail — Cost" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: pageTitle("Session detail") }, { name: "robots", content: "noindex" }],
   }),
   component: SessionDetailPage,
 });

@@ -6,13 +6,11 @@ import { listSessions, type SessionRow } from "@/lib/costs.functions";
 import { formatDuration, formatUsd } from "@/components/CostBadge";
 import { StatusPill } from "@/components/StatusPill";
 import { Skeleton } from "@/components/ui/skeleton";
+import { brand, pageTitle } from "@/config/brand";
 
 export const Route = createFileRoute("/_authenticated/sessions")({
   head: () => ({
-    meta: [
-      { title: "Cost — Sessions" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: pageTitle("Cost") }, { name: "robots", content: "noindex" }],
   }),
   component: SessionsPage,
 });
@@ -56,7 +54,9 @@ function SessionsPage() {
     <div className="space-y-6 sm:space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Studio</p>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            {brand.product.name}
+          </p>
           <h1 className="mt-1 font-serif text-3xl tracking-tight sm:text-5xl">Cost</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Total across shown sessions:{" "}
@@ -226,9 +226,7 @@ function SessionRowView({ s }: { s: SessionRow }) {
       <td className="px-4 py-3">
         <StatusPill status={s.status} />
       </td>
-      <td className="px-4 py-3 text-right font-mono tabular-nums">
-        {formatUsd(s.total_cost_usd)}
-      </td>
+      <td className="px-4 py-3 text-right font-mono tabular-nums">{formatUsd(s.total_cost_usd)}</td>
       <td className="px-4 py-3 text-right text-xs text-muted-foreground tabular-nums">
         {formatDuration(s.total_duration_ms)}
       </td>
