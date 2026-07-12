@@ -31,8 +31,19 @@ everything that lives outside the repo.
 
 - `docs/ARCHITECTURE.md` → Backend section (tables, RLS posture, functions).
 - `supabase/migrations/` — read the most recent migrations touching your
-  tables; `20260712121000_bugbash_hardening.sql` shows the current RLS
-  posture (client UPDATE revoked on `pieces`/`agent_runs`).
+  tables; `20260712121000_bugbash_hardening.sql` and
+  `20260712170000_revoke_client_run_insert.sql` show the current RLS posture
+  (client UPDATE/DELETE **and INSERT** revoked on `pieces`/`agent_runs` —
+  runs are created only by Edge Functions so credit reservation precedes
+  dispatch).
+- **Billing schema** (`20260712140000_credit_ledger.sql`): `credit_accounts`,
+  `credit_ledger`, `credit_reservations`, `billing_customers`, `purchases`,
+  `stripe_events`, `credit_products`, `subscriptions`. Patterns to preserve:
+  clients get SELECT-own-rows at most; `stripe_events` is RLS-on with **no
+  policies** (deny-all, service-role only — declare `-- No policies:` so
+  `check-migrations.sh` accepts it); all money movement is in SECURITY
+  DEFINER functions with EXECUTE revoked from `PUBLIC/anon/authenticated`.
+  Any change here also requires the `billing-and-credits` skill.
 - For Edge Function work: the closest existing function as a template
   (`piece-action` for JWT-authenticated user actions, `cursor-webhook` or
   `stripe-webhook` for unauthenticated signed callbacks, `reconcile-runs` for
@@ -104,7 +115,11 @@ For independent review of RLS/authorization changes, use the
 - Setting `verify_jwt = false` without an HMAC/token guard and a comment.
 - Claiming "migration applied / function deployed / secret set" — none of
   that is possible from this repository. Report manual steps.
-- Restoring client UPDATE on `pieces`/`agent_runs` (revoked deliberately).
+- Restoring client UPDATE/DELETE/INSERT on `pieces`/`agent_runs` (revoked
+  deliberately — inserts must go through Edge Functions so credits are
+  reserved).
+- Adding client write access to any billing table, adding policies to
+  `stripe_events`, or granting EXECUTE on the money functions.
 
 ## Output contract
 
@@ -119,4 +134,7 @@ For independent review of RLS/authorization changes, use the
 
 - `docs/RUNBOOK.md` (secrets checklist, cron verification, kill switch)
 - `docs/ARCHITECTURE.md` → Backend, Auth and secrets
-- `docs/cloud-agents-architecture-plan.md` (design rationale)
+- `docs/BILLING.md` and `.cursor/skills/billing-and-credits/SKILL.md` —
+  required alongside this skill for billing-table or Stripe-secret work
+- `docs/cloud-agents-architecture-plan.md` (historical design rationale —
+  predates the credit system; `docs/ARCHITECTURE.md` is current)
