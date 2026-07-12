@@ -27,6 +27,9 @@ import {
   type RunRow,
 } from "../_shared/complete.ts";
 import { reconcileResearch } from "../_shared/research.ts";
+import { errorResponse, jsonResponse, logEvent, newRequestId } from "../_shared/observability.ts";
+
+const FN = "reconcile-runs";
 
 const RELEASE_AFTER_MIN = 30;
 
@@ -38,19 +41,22 @@ function resolveProvider(): AgentProvider {
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== "POST") return new Response("method not allowed", { status: 405 });
+  const rid = newRequestId();
+  if (req.method !== "POST") {
+    return errorResponse(FN, 405, "method not allowed", { requestId: rid });
+  }
 
   // Optional shared-secret gate (JWT verification is off so pg_cron can call
   // this without a user token). If RECONCILE_TOKEN is set, require it.
   const gate = Deno.env.get("RECONCILE_TOKEN")?.trim();
   if (gate && req.headers.get("authorization") !== `Bearer ${gate}`) {
-    return new Response("unauthorized", { status: 401 });
+    return errorResponse(FN, 401, "unauthorized", { requestId: rid, code: "bad_token" });
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!SUPABASE_URL || !SERVICE_KEY) {
-    return new Response("server misconfigured", { status: 500 });
+    return errorResponse(FN, 500, "server misconfigured", { requestId: rid, code: "env_missing" });
   }
   const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -65,7 +71,13 @@ Deno.serve(async (req) => {
     .not("status", "in", "(completed,failed,cancelled)")
     .order("created_at", { ascending: true })
     .limit(25);
-  if (error) return new Response(error.message, { status: 500 });
+  if (error) {
+    return errorResponse(FN, 500, error.message, {
+      requestId: rid,
+      code: "query_failed",
+      cause: error,
+    });
+  }
 
   const summary: Record<string, number> = {};
   const bump = (k: string) => (summary[k] = (summary[k] ?? 0) + 1);
@@ -76,6 +88,13 @@ Deno.serve(async (req) => {
       bump(run.status);
     } catch (err) {
       bump("error");
+      logEvent(FN, "error", {
+        requestId: rid,
+        runId: run.id,
+        status: run.status,
+        kind: run.kind,
+        message: err instanceof Error ? err.message : String(err),
+      });
       await admin.from("agent_run_events").insert({
         run_id: run.id,
         source: "reconciler",
@@ -85,10 +104,8 @@ Deno.serve(async (req) => {
     }
   }
 
-  return new Response(JSON.stringify({ scanned: open?.length ?? 0, summary }), {
-    status: 200,
-    headers: { "content-type": "application/json" },
-  });
+  logEvent(FN, "info", { requestId: rid, event: "swept", scanned: open?.length ?? 0, summary });
+  return jsonResponse({ scanned: open?.length ?? 0, summary }, 200, rid);
 });
 
 async function reconcileOne(admin: any, provider: AgentProvider, run: any) {

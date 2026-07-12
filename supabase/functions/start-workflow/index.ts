@@ -24,43 +24,55 @@ import { dispatchResearchRun, dispatchRun, resolveProvider } from "../_shared/di
 import { resolveProcessor } from "../_shared/parallel.ts";
 import { buildImageCreds } from "../_shared/image-token.ts";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
+import {
+  corsHeaders,
+  errorResponse,
+  jsonResponse,
+  logEvent,
+  newRequestId,
+  redactForLog,
+} from "../_shared/observability.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json", ...corsHeaders },
-  });
-}
+const FN = "start-workflow";
+const json = (body: unknown, status = 200, rid?: string) => jsonResponse(body, status, rid);
+const err = (
+  status: number,
+  message: string,
+  opts: { requestId?: string; code?: string; details?: unknown; cause?: unknown } = {},
+) => errorResponse(FN, status, message, opts);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  const rid = newRequestId();
+  if (req.method !== "POST") return err(405, "Method not allowed", { requestId: rid });
+  try {
+    return await handle(req, rid);
+  } catch (e) {
+    return err(500, "Unhandled server error", { requestId: rid, code: "unhandled", cause: e });
+  }
+});
 
+async function handle(req: Request, rid: string): Promise<Response> {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
-    return json({ error: "Server misconfigured" }, 500);
+    return err(500, "Server misconfigured", { requestId: rid, code: "env_missing" });
   }
 
   // --- 1. Authenticate the caller -----------------------------------------
   const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (!token) return json({ error: "Unauthorized" }, 401);
+  if (!token) return err(401, "Unauthorized", { requestId: rid, code: "no_token" });
   const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data: userData, error: userErr } = await authClient.auth.getUser(token);
-  if (userErr || !userData.user) return json({ error: "Unauthorized" }, 401);
+  if (userErr || !userData.user) {
+    return err(401, "Unauthorized", { requestId: rid, code: "invalid_token", cause: userErr });
+  }
   const userId = userData.user.id;
 
   // --- 2. Validate safe inputs ---------------------------------------------
@@ -79,13 +91,28 @@ Deno.serve(async (req) => {
   const rawAttachments = Array.isArray(body?.attachments) ? body.attachments : [];
   // Two entry points: bring research (paste/attach) or a topic to deep-research.
   const researchMode = !research && rawAttachments.length === 0 && topic !== "";
+  logEvent(FN, "info", {
+    requestId: rid,
+    userId,
+    mode: researchMode ? "research" : "compose",
+    hasResearch: research.length > 0,
+    researchChars: research.length,
+    hasTopic: topic.length > 0,
+    goal: redactForLog(goal),
+    clientRequestId: requestId,
+    attachmentCount: rawAttachments.length,
+  });
   if (!research && rawAttachments.length === 0 && !topic) {
-    return json({ error: "research, an attachment, or a topic is required" }, 400);
+    return err(400, "research, an attachment, or a topic is required", {
+      requestId: rid,
+      code: "no_input",
+    });
   }
   if (researchMode && !Deno.env.get("PARALLEL_API_KEY")?.trim()) {
-    return json(
-      { error: "Deep research is not configured (PARALLEL_API_KEY missing). Paste research instead." },
+    return err(
       422,
+      "Deep research is not configured (PARALLEL_API_KEY missing). Paste research instead.",
+      { requestId: rid, code: "research_disabled" },
     );
   }
 
@@ -101,7 +128,10 @@ Deno.serve(async (req) => {
       .select("id, piece_id")
       .eq("idempotency_key", idempotencyKey)
       .maybeSingle();
-    if (existing) return json({ runId: existing.id, pieceId: existing.piece_id }, 202);
+    if (existing) {
+      logEvent(FN, "info", { requestId: rid, event: "idempotent_hit", runId: existing.id });
+      return json({ runId: existing.id, pieceId: existing.piece_id }, 202, rid);
+    }
   }
 
   // --- 4. Resolve voice from the caller's profile (server-side only) -------
@@ -113,9 +143,10 @@ Deno.serve(async (req) => {
   const styleText = (profile?.style_text ?? "").trim();
   const imageStyle = (profile?.image_style ?? "").trim();
   if (!styleText) {
-    return json(
-      { error: "Your voice profile is empty. Describe your style at /profile first." },
+    return err(
       422,
+      "Your voice profile is empty. Describe your style at /profile first.",
+      { requestId: rid, code: "empty_voice" },
     );
   }
 
@@ -127,7 +158,13 @@ Deno.serve(async (req) => {
     .insert({ user_id: userId, slug, title: goal || topic || null, stage: "research" })
     .select("id")
     .single();
-  if (pieceErr || !piece) return json({ error: pieceErr?.message ?? "Insert failed" }, 500);
+  if (pieceErr || !piece) {
+    return err(500, pieceErr?.message ?? "Insert failed", {
+      requestId: rid,
+      code: "piece_insert_failed",
+      cause: pieceErr,
+    });
+  }
 
   const { data: inserted, error: insertErr } = await admin
     .from("agent_runs")
@@ -151,16 +188,21 @@ Deno.serve(async (req) => {
       .select("id, piece_id")
       .eq("idempotency_key", idempotencyKey)
       .maybeSingle();
-    if (existing) return json({ runId: existing.id, pieceId: existing.piece_id }, 202);
-    return json({ error: insertErr?.message ?? "Insert failed" }, 500);
+    if (existing) return json({ runId: existing.id, pieceId: existing.piece_id }, 202, rid);
+    return err(500, insertErr?.message ?? "Insert failed", {
+      requestId: rid,
+      code: "run_insert_failed",
+      cause: insertErr,
+    });
   }
   const runId = inserted.id as string;
+  logEvent(FN, "info", { requestId: rid, event: "run_created", runId, pieceId: piece.id, slug });
 
   // --- 6a. Research mode: submit to Parallel and return; the reconciler
   //          polls it and chains the compose run when the report lands.
   if (researchMode) {
     await dispatchResearchRun({ admin, runId, topic, processor });
-    return json({ runId, pieceId: piece.id }, 202);
+    return json({ runId, pieceId: piece.id }, 202, rid);
   }
 
   // Per-run image-gen credentials for the agent to call our public route.
@@ -188,8 +230,8 @@ Deno.serve(async (req) => {
     autoCreatePr: false, // proposal runs push a branch only; PRs come later via "ready"
   });
 
-  return json({ runId, pieceId: piece.id }, 202);
-});
+  return json({ runId, pieceId: piece.id }, 202, rid);
+}
 
 // Cap how much attachment text we inline into a single prompt to avoid
 // blowing past provider limits. Non-text and oversized files fall back to
