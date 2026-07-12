@@ -19,6 +19,7 @@ import {
   stageForCompletedKind,
   type RunRow,
 } from "../_shared/complete.ts";
+import { recordInference } from "../_shared/usage.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("method not allowed", { status: 405 });
@@ -56,7 +57,7 @@ Deno.serve(async (req) => {
 
   const { data: run } = await admin
     .from("agent_runs")
-    .select("id, piece_id, status, kind, branch, input")
+    .select("id, user_id, piece_id, status, kind, branch, input, dispatched_at, session_id")
     .eq("external_agent_id", externalAgentId)
     .maybeSingle();
   // Unknown agent: ack anyway (2xx) — nothing to apply, and retries won't help.
@@ -91,6 +92,35 @@ Deno.serve(async (req) => {
       .eq("id", run.id);
 
     if (update.status === "awaiting_fetch") {
+      // Record one calculated inference for this Cursor agent run.
+      try {
+        const dispatchedAt = (run as any).dispatched_at as string | null;
+        const now = new Date().toISOString();
+        const durationMs = dispatchedAt
+          ? new Date(now).getTime() - new Date(dispatchedAt).getTime()
+          : null;
+        await recordInference(admin, {
+          runId: run.id,
+          provider: "cursor",
+          model: "default",
+          operationType: "llm",
+          idempotencyKey: `cursor:${externalAgentId}:complete`,
+          externalRequestId: externalAgentId,
+          startedAt: dispatchedAt,
+          completedAt: now,
+          durationMs,
+          metadata: { rawStatus, kind: run.kind, source: "webhook" },
+          rawPayload: payload,
+        });
+      } catch (err) {
+        await admin.from("agent_run_events").insert({
+          run_id: run.id,
+          source: "usage",
+          event_type: "record_error",
+          payload: { message: err instanceof Error ? err.message : String(err) },
+        });
+      }
+
       // Fetch the deliverable now; on any failure the reconciler retries.
       try {
         const { data: piece } = run.piece_id
