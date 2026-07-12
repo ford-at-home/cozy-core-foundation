@@ -60,7 +60,13 @@ engine — and must agree with the annotation protocol.
    margin area, so the anchors must live inside the page content box while the
    text column still starts 1.5in from the paper edge. Don't "simplify" this
    back to a plain 1.5in page margin — the anchors disappear from PDF/paper.
-3. **Anchor counting rule**: `section` increments on every heading h1–h6
+3. **Margin boxes double as footer suppression.** The `@bottom-center` folio
+   and `@bottom-right` attribution ("hardcopy.tools") also suppress the
+   browser's own URL/page-number footers on those edges — removing one
+   reintroduces browser chrome on paper. Brand strings come from
+   `src/config/brand.ts` where they're set per document
+   (`print-document.ts`), not hardcoded.
+4. **Anchor counting rule**: `section` increments on every heading h1–h6
    (heading labeled `S{n}` alone, `counter-set: para 0`); `para` increments on
    addressable non-heading blocks; list items (and anything inside them),
    blockquote inners, image-only paragraphs are NOT counted; section counter
@@ -69,15 +75,15 @@ engine — and must agree with the annotation protocol.
    commit — `scripts/check-print-contract.sh` guards the markers,
    `tests/print-fidelity.test.ts` proves rendered anchors match the reference
    walker.
-4. **One renderer.** Preview, Save-as-PDF, and paper all come from the same
+5. **One renderer.** Preview, Save-as-PDF, and paper all come from the same
    paged-media engine via the iframe document. Never add a DOM-screenshot PDF
    path (html2pdf/html2canvas were removed deliberately).
-5. **Embedded fonts.** Fonts ship as data URIs because font metrics drive line
+6. **Embedded fonts.** Fonts ship as data URIs because font metrics drive line
    breaks and line breaks drive pagination; OS-fallback fonts would paginate
    differently per machine.
-6. **Iframe isolation**: print.css restyles global tags and is only safe
+7. **Iframe isolation**: print.css restyles global tags and is only safe
    inlined into the `srcDoc` document. Never import it into the app document.
-7. Keep the existing fallbacks: modal `contentWindow.print()` → new-window
+8. Keep the existing fallbacks: modal `contentWindow.print()` → new-window
    `document.write` fallback; iframe load watchdogs.
 
 ## Procedure

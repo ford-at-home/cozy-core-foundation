@@ -14,24 +14,27 @@ architecture, update this map in the same PR.
 
 ## What this application is
 
-**Compose** — a personal long-form writing pipeline. The signed-in author
-submits research (pasted text or a topic for deep research), cloud agents
-synthesize proposals/drafts/finals as markdown committed to a GitHub repo, and
-the author reviews on screen, prints a wide-margin US Letter copy for pen
-markup, then types the annotations back to trigger a revision run.
+**Compose** (internal codename; shipping as **Hardcopy Draft** by **Hardcopy
+Tools** — see Brand below) — a personal long-form writing pipeline. The
+signed-in author submits research (pasted text or a topic for deep research),
+cloud agents synthesize proposals/drafts/finals as markdown committed to a
+GitHub repo, and the author reviews on screen, prints a wide-margin US Letter
+copy for pen markup, then types the annotations back to trigger a revision
+run.
 
 ## Frontend (verified)
 
-| Concern          | Implementation                                                                                                                                                                            |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Framework        | TanStack Start (SSR) + React 19 + Vite 8. Not Next.js, not a plain SPA.                                                                                                                   |
-| Routing          | File-based under `src/routes/` (conventions: `src/routes/README.md`). `src/routeTree.gen.ts` is generated — never hand-edit.                                                              |
-| Server state     | TanStack Query + Supabase realtime (`agent_runs`, `pieces`). No Zustand/Redux.                                                                                                            |
-| Server functions | `createServerFn` in `src/lib/*.functions.ts`; server-only helpers in `src/lib/*.server.ts`.                                                                                               |
-| API routes       | `src/routes/api/transcribe.ts` (Lovable AI gateway proxy), `src/routes/api/public/generate-image.ts` (HMAC-token guarded, used by cloud agents).                                          |
-| Styling          | Tailwind v4 CSS-first. All tokens/theme in `src/styles.css` (`@theme inline`); **no `tailwind.config.*`**. Editorial dark theme: warm charcoal + amber primary, Inter + Instrument Serif. |
-| Components       | shadcn/ui (new-york) in `src/components/ui/`; app components `StatusPill`, `MarkdownView`, `RunCostCard`, `CostBadge` in `src/components/`.                                               |
-| Auth guard       | `src/routes/_authenticated/route.tsx` `beforeLoad` → `supabase.auth.getUser()` → redirect to `/auth`. `ssr: false` for the authenticated tree.                                            |
+| Concern          | Implementation                                                                                                                                                                                                                                                                                     |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework        | TanStack Start (SSR) + React 19 + Vite 8. Not Next.js, not a plain SPA.                                                                                                                                                                                                                            |
+| Routing          | File-based under `src/routes/` (conventions: `src/routes/README.md`). `src/routeTree.gen.ts` is generated — never hand-edit.                                                                                                                                                                       |
+| Server state     | TanStack Query + Supabase realtime (`agent_runs`, `pieces`). No Zustand/Redux.                                                                                                                                                                                                                     |
+| Server functions | `createServerFn` in `src/lib/*.functions.ts`; server-only helpers in `src/lib/*.server.ts`.                                                                                                                                                                                                        |
+| API routes       | `src/routes/api/transcribe.ts` (Lovable AI gateway proxy), `src/routes/api/public/generate-image.ts` (HMAC-token guarded, used by cloud agents).                                                                                                                                                   |
+| Styling          | Tailwind v4 CSS-first. All tokens/theme in `src/styles.css` (`@theme inline`); **no `tailwind.config.*`**. Editorial dark theme: warm charcoal + amber primary, Inter + Instrument Serif.                                                                                                          |
+| Components       | shadcn/ui (new-york) in `src/components/ui/`; app components `StatusPill`, `MarkdownView`, `RunCostCard`, `CostBadge` in `src/components/`.                                                                                                                                                        |
+| Auth guard       | `src/routes/_authenticated/route.tsx` `beforeLoad` → `supabase.auth.getUser()` → redirect to `/auth`. `ssr: false` for the authenticated tree.                                                                                                                                                     |
+| Brand            | All names/messaging come from `src/config/brand.ts` (company "Hardcopy Tools", product "Hardcopy Draft" — provisional). Never hardcode product names in UI copy; use `brand`/`pageTitle`. Voice and copy dispositions: `docs/brand/BRAND.md`, `docs/brand/UI-COPY-MAP.md`, `docs/brand/NAMING.md`. |
 
 ### Pages (verified)
 

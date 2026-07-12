@@ -24,9 +24,11 @@ rules that always apply and the router that selects skills.
    create a parallel second one.
 2. **Do not expand scope.** No new features, dependencies, or refactors beyond
    what the task explicitly asks for.
-3. **Preserve the visual identity.** Editorial dark theme, tokens in
-   `src/styles.css`, shadcn/ui components. Do not introduce new colors, fonts,
-   or a `tailwind.config.*` file (this is Tailwind v4 CSS-first).
+3. **Preserve the visual identity and brand voice.** Editorial dark theme,
+   tokens in `src/styles.css`, shadcn/ui components. Do not introduce new
+   colors, fonts, or a `tailwind.config.*` file (this is Tailwind v4
+   CSS-first). Product/company names come from `src/config/brand.ts` — never
+   hardcode them in UI copy; copy conventions live in `docs/brand/`.
 4. **Mobile is the primary interface.** Every UI change must work at 375px
    width first. Interactive elements keep `min-h-11` touch targets and
    safe-area padding conventions.

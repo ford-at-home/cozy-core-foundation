@@ -44,17 +44,18 @@ feature.
 
 ## Repository conventions (verified — follow these exactly)
 
-| Concern                  | Convention                                                                                                                                                           |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Breakpoints              | Base styles are mobile; add `sm:` (640px) / `md:` / `lg:` variants for larger screens. Never write desktop-first and subtract.                                       |
-| Touch targets            | `min-h-11` (44px) on all tappable elements; on desktop optionally reset with `sm:min-h-0`.                                                                           |
-| Bottom tab bar clearance | Page content inside the authenticated layout already gets `pb-[calc(5.5rem+env(safe-area-inset-bottom))]`; don't duplicate it, don't defeat it with `fixed` footers. |
-| Safe areas               | `env(safe-area-inset-top/bottom)` via inline style or arbitrary values, as in `route.tsx` and `index.tsx`.                                                           |
-| iOS zoom                 | Inputs get ≥16px font at <768px — already global in `src/styles.css`; don't override input font-size below 16px on mobile.                                           |
-| Height                   | `min-h-dvh`, never `100vh`.                                                                                                                                          |
-| Wide content             | Tables and wide data get a mobile card alternative (`md:hidden` cards + `hidden md:block` table), not horizontal page scroll.                                        |
-| Full-width buttons       | Mobile buttons `w-full`, then `sm:w-auto`.                                                                                                                           |
-| Colors/type              | Only semantic tokens (`bg-background`, `text-muted-foreground`, `border-border`, `bg-primary`, serif = `font-serif`). No hex values, no new fonts.                   |
+| Concern                  | Convention                                                                                                                                                                                       |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Breakpoints              | Base styles are mobile; add `sm:` (640px) / `md:` / `lg:` variants for larger screens. Never write desktop-first and subtract.                                                                   |
+| Touch targets            | `min-h-11` (44px) on all tappable elements; on desktop optionally reset with `sm:min-h-0`.                                                                                                       |
+| Bottom tab bar clearance | Page content inside the authenticated layout already gets `pb-[calc(5.5rem+env(safe-area-inset-bottom))]`; don't duplicate it, don't defeat it with `fixed` footers.                             |
+| Safe areas               | `env(safe-area-inset-top/bottom)` via inline style or arbitrary values, as in `route.tsx` and `index.tsx`.                                                                                       |
+| iOS zoom                 | Inputs get ≥16px font at <768px — already global in `src/styles.css`; don't override input font-size below 16px on mobile.                                                                       |
+| Height                   | `min-h-dvh`, never `100vh`.                                                                                                                                                                      |
+| Wide content             | Tables and wide data get a mobile card alternative (`md:hidden` cards + `hidden md:block` table), not horizontal page scroll.                                                                    |
+| UI copy / names          | Product and company names come from `src/config/brand.ts` (`brand`, `pageTitle()`), never hardcoded. Copy changes follow `docs/brand/BRAND.md` voice + `docs/brand/UI-COPY-MAP.md` dispositions. |
+| Full-width buttons       | Mobile buttons `w-full`, then `sm:w-auto`.                                                                                                                                                       |
+| Colors/type              | Only semantic tokens (`bg-background`, `text-muted-foreground`, `border-border`, `bg-primary`, serif = `font-serif`). No hex values, no new fonts.                                               |
 
 ## Procedure
 
