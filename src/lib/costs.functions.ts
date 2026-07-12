@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Json } from "@/integrations/supabase/types";
 
 export type PricingSource =
   | "provider_reported"
@@ -59,7 +60,7 @@ export type InferenceRow = {
   calculated_cost_usd: string | number | null;
   final_cost_usd: string | number;
   pricing_source: PricingSource;
-  metadata: Record<string, unknown> | null;
+  metadata: Json | null;
   created_at: string;
 };
 
