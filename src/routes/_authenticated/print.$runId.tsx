@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import MarkdownIt from "markdown-it";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 // Vendored paper-markup stylesheet; its S{n}P{m} block-anchor counting rule
@@ -38,10 +39,49 @@ function PrintPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [iframeReady, setIframeReady] = useState(false);
+  const [iframeError, setIframeError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalReady, setModalReady] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const modalIframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Watchdog: if a print iframe doesn't fire `load` within this many ms after
+  // its srcDoc is set, treat it as a load failure and surface a toast. srcDoc
+  // iframes usually load synchronously, so exceeding this budget almost
+  // always means a browser extension, CSP, or memory pressure blocked it.
+  const IFRAME_LOAD_TIMEOUT_MS = 8000;
+
+  // Main on-page preview iframe watchdog.
+  useEffect(() => {
+    if (!post || iframeReady) return;
+    const t = window.setTimeout(() => {
+      if (iframeReady) return;
+      const msg = "Print preview didn't load in time.";
+      setIframeError(msg);
+      console.error("[print] main iframe load timeout", { runId, timeoutMs: IFRAME_LOAD_TIMEOUT_MS });
+      toast.error(msg, {
+        description: "Try reloading the page, or use the fallback new-window print.",
+      });
+    }, IFRAME_LOAD_TIMEOUT_MS);
+    return () => window.clearTimeout(t);
+  }, [post, iframeReady, runId]);
+
+  // Modal iframe watchdog (re-armed each time the modal opens).
+  useEffect(() => {
+    if (!modalOpen) return;
+    if (modalReady) return;
+    const t = window.setTimeout(() => {
+      if (modalReady) return;
+      const msg = "Print preview didn't load in the modal.";
+      setModalError(msg);
+      console.error("[print] modal iframe load timeout", { runId, timeoutMs: IFRAME_LOAD_TIMEOUT_MS });
+      toast.error(msg, {
+        description: "Close the dialog and try again, or use Cmd/Ctrl+P from the page.",
+      });
+    }, IFRAME_LOAD_TIMEOUT_MS);
+    return () => window.clearTimeout(t);
+  }, [modalOpen, modalReady, runId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,6 +128,7 @@ function PrintPage() {
 
   function openPreview() {
     setModalReady(false);
+    setModalError(null);
     setModalOpen(true);
   }
 
@@ -102,10 +143,19 @@ function PrintPage() {
       win.focus();
       win.print();
     } catch {
+      console.error("[print] direct iframe print failed; falling back to new window", { runId });
+      toast.warning("Opening the print dialog in a new window instead.", {
+        description: "Your browser blocked printing from the embedded preview.",
+      });
       // Fallback: some browsers block print() on srcDoc iframes.
       // Open the rendered document in a new window and print from there.
       const w = window.open("", "_blank");
-      if (!w) return;
+      if (!w) {
+        const msg = "Popup blocked — allow popups to print this page.";
+        console.error("[print] popup blocked");
+        toast.error(msg);
+        return;
+      }
       w.document.open();
       w.document.write(srcDoc);
       w.document.close();
@@ -114,6 +164,10 @@ function PrintPage() {
         try {
           w.print();
         } catch {
+          console.error("[print] fallback window print failed");
+          toast.error("Couldn't open the print dialog automatically.", {
+            description: "Press Cmd/Ctrl+P in the new window to print.",
+          });
           /* user can Ctrl/Cmd+P in the opened window */
         }
       }, 250);
