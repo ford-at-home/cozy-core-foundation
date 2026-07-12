@@ -29,6 +29,7 @@ h1, h2, h3, h4, h5, h6 {
   font-family: Georgia, 'Times New Roman', serif;
   line-height: 1.3;
   page-break-after: avoid;
+  break-after: avoid;
   margin-top: 1.4em;
   margin-bottom: 0.4em;
 }
@@ -67,6 +68,7 @@ pre {
   padding: 0.6em 0.8em;
   border-radius: 3px;
   page-break-inside: avoid;
+  break-inside: avoid;
   white-space: pre-wrap;
   overflow-wrap: break-word;
 }
@@ -78,7 +80,11 @@ pre code {
 
 a { color: #1a1a1a; text-decoration: underline; }
 
-img { max-width: 100%; }
+img {
+  max-width: 100%;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
 
 hr {
   border: none;
@@ -91,6 +97,7 @@ table {
   width: 100%;
   margin: 1em 0;
   page-break-inside: avoid;
+  break-inside: avoid;
 }
 
 th, td {
@@ -144,7 +151,12 @@ body.with-anchors {
 
 body.with-anchors :is(h1, h2, h3, h4, h5, h6) {
   counter-increment: section;
-  counter-reset: para 0;
+  /* counter-set updates the existing `para` counter created on body so the
+   * following sibling blocks see para = 0. counter-reset here would instead
+   * create a new nested counter visible only to the heading's descendants,
+   * which is why paragraphs after S2 used to read S2P3, S2P4 instead of
+   * S2P1, S2P2. */
+  counter-set: para 0;
   position: relative;
 }
 
@@ -179,7 +191,7 @@ body.with-anchors :is(p, h1, h2, h3, h4, h5, h6, blockquote, pre, table)::before
  * starts at S1 instead of the document title. */
 body.with-anchors #title-block-header :is(h1, h2, h3, p) {
   counter-increment: none;
-  counter-reset: none;
+  counter-set: none;
 }
 body.with-anchors #title-block-header :is(h1, h2, h3, p)::before {
   content: none;
@@ -189,7 +201,7 @@ body.with-anchors #title-block-header :is(h1, h2, h3, p)::before {
  * block; suppress the inner <p> so each quote gets exactly one anchor. */
 body.with-anchors blockquote :is(p, h1, h2, h3, h4, h5, h6) {
   counter-increment: none;
-  counter-reset: none;
+  counter-set: none;
 }
 body.with-anchors blockquote :is(p, h1, h2, h3, h4, h5, h6)::before {
   content: none;
