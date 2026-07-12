@@ -222,13 +222,32 @@ function PrintPage() {
       )}
 
       {post && (
-        <iframe
-          ref={iframeRef}
-          title="Print preview"
-          srcDoc={srcDoc}
-          onLoad={() => setIframeReady(true)}
-          className="h-[75vh] w-full rounded-lg border border-border bg-white shadow-sm"
-        />
+        <>
+          {iframeError && (
+            <p
+              role="alert"
+              className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              {iframeError} Try reloading the page.
+            </p>
+          )}
+          <iframe
+            ref={iframeRef}
+            title="Print preview"
+            srcDoc={srcDoc}
+            onLoad={() => {
+              setIframeReady(true);
+              setIframeError(null);
+            }}
+            onError={() => {
+              const msg = "Failed to render the print preview.";
+              console.error("[print] main iframe onError", { runId });
+              setIframeError(msg);
+              toast.error(msg);
+            }}
+            className="h-[75vh] w-full rounded-lg border border-border bg-white shadow-sm"
+          />
+        </>
       )}
 
       {modalOpen && post && (
@@ -270,11 +289,28 @@ function PrintPage() {
               </div>
             </div>
             <div className="flex-1 overflow-hidden bg-neutral-200 p-3 sm:p-6">
+              {modalError && (
+                <p
+                  role="alert"
+                  className="mb-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                >
+                  {modalError} You can close this dialog and retry.
+                </p>
+              )}
               <iframe
                 ref={modalIframeRef}
                 title="Print preview (modal)"
                 srcDoc={srcDoc}
-                onLoad={() => setModalReady(true)}
+                onLoad={() => {
+                  setModalReady(true);
+                  setModalError(null);
+                }}
+                onError={() => {
+                  const msg = "Failed to render the print preview.";
+                  console.error("[print] modal iframe onError", { runId });
+                  setModalError(msg);
+                  toast.error(msg);
+                }}
                 className="h-full w-full rounded-md border border-border bg-white shadow-inner"
               />
             </div>
