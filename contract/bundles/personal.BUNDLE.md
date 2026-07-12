@@ -42,7 +42,7 @@ Two operations, auto-detected from inputs:
 - Input: one target `.md` / `.txt` doc + dictated edits.
 - Output: a new file at `<source>.v2.md` (auto-increments on subsequent passes) plus a "What I Changed" checklist (one bullet per dictated operation) plus an "Unresolved" list (anything that couldn't be matched — never silently skipped).
 - Applies the user's edits **surgically**. Does not restructure or re-voice beyond what was asked.
-- Resolves dictated references against the source in this order: by block anchor (`S{n}P{m}` / "section 4 paragraph 3" — the pre-printed margin labels from `print-markup`), by hand-numbered handle (① ② ③), by symbol class ("all the strikethroughs"), or by content fuzzy-match ("the bit about ownership"). See `skills/synthesize/SKILL.md` step 4 for the resolution rule and `references/MARKUP.md` for the block-counting definition.
+- Resolves dictated references against the source in this order: by block anchor (`S{n}P{m}` / "section 4 paragraph 3" — the pre-printed margin labels from the app's print view), by hand-numbered handle (① ② ③), by symbol class ("all the strikethroughs"), or by content fuzzy-match ("the bit about ownership"). See `skills/synthesize/SKILL.md` step 4 for the resolution rule and `references/MARKUP.md` for the block-counting definition.
 
 ### Synthesis mode
 
