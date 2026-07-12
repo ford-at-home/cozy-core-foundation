@@ -233,6 +233,7 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
         imageEndpoint: imageCreds?.endpoint,
         imageToken: imageCreds?.token,
       }),
+      researchChars: report.length,
       ref: Deno.env.get("AGENT_REPO_REF") ?? "main",
       autoCreatePr: false,
     });

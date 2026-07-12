@@ -7,6 +7,8 @@ import { runPieceAction, type PieceAction } from "@/lib/pieces.functions";
 import type { Json } from "@/integrations/supabase/types";
 import MarkdownView from "@/components/MarkdownView";
 import { RunCostCard } from "@/components/RunCostCard";
+import { SessionCostBanner } from "@/components/SessionCostBanner";
+import type { CostProxies } from "@/lib/costs.functions";
 
 export const Route = createFileRoute("/_authenticated/runs/$runId")({
   head: () => ({
@@ -25,7 +27,7 @@ type GeneratedBrief = { path?: string; content: string };
 const BRIEF_TAB = "__brief__";
 
 const RUN_COLUMNS =
-  "id, user_id, piece_id, session_id, provider, total_cost_usd, status, kind, input, result, error, branch, created_at, dispatched_at, completed_at";
+  "id, user_id, piece_id, session_id, provider, total_cost_usd, status, kind, input, input_summary, cost_proxies, result, error, branch, created_at, dispatched_at, completed_at, duration_ms, inference_count";
 
 function RunDetailPage() {
   const { runId } = Route.useParams();
@@ -107,6 +109,8 @@ function RunDetailPage() {
 
       {run && (
         <>
+          {run.session_id && <SessionCostBanner sessionId={run.session_id} />}
+
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <StatusBadge status={run.status} />
             <span className="text-muted-foreground">
@@ -120,6 +124,8 @@ function RunDetailPage() {
             runId={run.id}
             sessionId={run.session_id}
             runCostUsd={run.total_cost_usd}
+            inputSummary={run.input_summary}
+            costProxies={parseCostProxies(run.cost_proxies)}
           />
 
           {ACTIVE_RUN_STATUSES.includes(run.status) && (
@@ -668,4 +674,23 @@ function pickDefaultFile(channels: OutputChannel[], brief: GeneratedBrief | null
     if (post) return `${ch.channel}/${post.name}`;
   }
   return brief ? BRIEF_TAB : null;
+}
+
+function parseCostProxies(raw: unknown): CostProxies | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const num = (k: string) => {
+    const v = o[k];
+    return typeof v === "number" && Number.isFinite(v) ? v : undefined;
+  };
+  return {
+    prompt_est_tokens: num("prompt_est_tokens"),
+    prompt_chars: num("prompt_chars"),
+    research_chars: num("research_chars"),
+    duration_ms: num("duration_ms"),
+    image_count: num("image_count"),
+    ocr_count: num("ocr_count"),
+    cursor_inference_count: num("cursor_inference_count"),
+    gateway_cost_usd: num("gateway_cost_usd"),
+  };
 }

@@ -40,6 +40,26 @@ function SessionDetailPage() {
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total</p>
             <p className="font-mono text-3xl">{formatUsd(data.total_cost_usd)}</p>
           </div>
+          {data.budget && data.budget.targetUsd > 0 && (
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Target ({data.budget.targetUnit})
+              </p>
+              <p className="font-mono text-lg text-muted-foreground">
+                {formatUsd(data.budget.targetUsd)}
+                <span
+                  className={
+                    "ml-2 rounded-full px-2 py-0.5 text-[11px] " +
+                    (data.budget.overBudget
+                      ? "bg-amber-500/15 text-amber-700"
+                      : "bg-emerald-500/15 text-emerald-600")
+                  }
+                >
+                  {data.budget.overBudget ? "Over" : "OK"}
+                </span>
+              </p>
+            </div>
+          )}
           <Stat label="Status" value={data.status} />
           <Stat label="Duration" value={formatDuration(data.total_duration_ms)} />
           <Stat label="Runs" value={String(data.run_count)} />

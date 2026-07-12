@@ -236,6 +236,7 @@ async function handle(req: Request, rid: string): Promise<Response> {
       imageToken: imageCreds?.token,
       attachments,
     }),
+    researchChars: research.length,
     ref: Deno.env.get("AGENT_REPO_REF") ?? "main",
     autoCreatePr: false, // proposal runs push a branch only; PRs come later via "ready"
   });
