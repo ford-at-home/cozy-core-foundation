@@ -9,13 +9,13 @@ export const ADMIN_PASSWORD = "admin1234";
  */
 export const ensureAdminUser = createServerFn({ method: "POST" }).handler(
   async (): Promise<{ ok: true }> => {
-    const { supabaseAdmin } = await import(
-      "@/integrations/supabase/client.server"
-    );
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Check if the user already exists by listing (small demo scale).
-    const { data: list, error: listErr } =
-      await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
+    const { data: list, error: listErr } = await supabaseAdmin.auth.admin.listUsers({
+      page: 1,
+      perPage: 200,
+    });
     if (listErr) throw new Error(listErr.message);
     const existing = list.users.find((u) => u.email === ADMIN_EMAIL);
     if (existing) return { ok: true };

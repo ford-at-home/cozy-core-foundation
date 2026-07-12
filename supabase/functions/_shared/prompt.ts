@@ -44,9 +44,10 @@ function buildPreamble(opts: {
   imageEndpoint?: string;
   imageToken?: string;
 }): string {
-  const imgBlock = opts.imageEndpoint && opts.imageToken
-    ? renderImageRule(opts.imageEndpoint, opts.imageToken, opts.imageStyle ?? "")
-    : LEGACY_VISUALS_RULE;
+  const imgBlock =
+    opts.imageEndpoint && opts.imageToken
+      ? renderImageRule(opts.imageEndpoint, opts.imageToken, opts.imageStyle ?? "")
+      : LEGACY_VISUALS_RULE;
   return `You are running the synthesize contract of this repository.
 
 Read first, in order:
@@ -183,9 +184,11 @@ function renderAttachments(atts: PromptAttachment[] | undefined, dir: string): s
   ];
   for (const a of atts) {
     parts.push("");
-    parts.push(`--- ATTACHMENT: ${a.name}` +
-      (a.contentType ? ` (${a.contentType})` : "") +
-      (typeof a.size === "number" ? ` [${a.size} bytes]` : ""));
+    parts.push(
+      `--- ATTACHMENT: ${a.name}` +
+        (a.contentType ? ` (${a.contentType})` : "") +
+        (typeof a.size === "number" ? ` [${a.size} bytes]` : ""),
+    );
     if (a.url) {
       parts.push(`FETCH_URL: ${a.url}`);
       parts.push("(Signed URL; expires. Fetch immediately and save the bytes.)");
@@ -250,14 +253,17 @@ export interface ResynthPromptInput extends ComposePromptInput {
 /** Second (third, ...) attempt at the proposal, steered by owner feedback. */
 export function buildResynthPrompt(input: ResynthPromptInput): string {
   const dir = `pieces/${input.pieceSlug}`;
-  return buildComposePrompt(input) + `
+  return (
+    buildComposePrompt(input) +
+    `
 NOTE: this is a RE-SYNTHESIS. A prior attempt exists at ${dir}/proposal.md on
 your base branch. Read it, then produce a fresh attempt (overwrite the file) —
 do not lightly edit the old one. Address this feedback:
 <<<FEEDBACK
 ${input.feedback?.trim() || "(none provided — take a substantially different angle)"}
 FEEDBACK>>>
-`;
+`
+  );
 }
 
 export interface DraftPromptInput {

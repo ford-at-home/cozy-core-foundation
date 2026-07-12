@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    name: Lint, typecheck, build, guard scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # The print-fidelity suite drives a real Chromium (playwright).
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Vitest (markdown + print fidelity)
+        run: npm test
+
+      # Build env vars: publishable values only (see .env.example).
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://dlaojinagezrlbwyritd.supabase.co
+          VITE_SUPABASE_PROJECT_ID: dlaojinagezrlbwyritd
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY || 'ci-placeholder-publishable-key' }}
+
+      - name: Secret scan (source + built assets)
+        run: bash scripts/check-secrets.sh
+
+      - name: Migration RLS check
+        run: bash scripts/check-migrations.sh
+
+      - name: Print contract sync check
+        run: bash scripts/check-print-contract.sh
+
+  edge-function-tests:
+    name: Edge function tests (Deno)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Run tests
+        run: deno test --allow-env supabase/functions/_tests/

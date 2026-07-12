@@ -16,10 +16,9 @@ export const runPieceAction = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: PieceActionInput) => data ?? {})
   .handler(async ({ data, context }): Promise<{ runId: string; pieceId: string }> => {
-    const { data: result, error } = await context.supabase.functions.invoke(
-      "piece-action",
-      { body: data },
-    );
+    const { data: result, error } = await context.supabase.functions.invoke("piece-action", {
+      body: data,
+    });
     if (error) throw new Error(await extractEdgeError(error, "piece-action"));
     return result as { runId: string; pieceId: string };
   });

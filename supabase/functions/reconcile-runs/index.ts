@@ -29,11 +29,7 @@ import {
 import { reconcileResearch } from "../_shared/research.ts";
 import { errorResponse, jsonResponse, logEvent, newRequestId } from "../_shared/observability.ts";
 import { recordInference, cursorInferenceUsage } from "../_shared/usage.ts";
-import {
-  releaseRunCredits,
-  settleRunCredits,
-  sweepStaleReservations,
-} from "../_shared/credits.ts";
+import { releaseRunCredits, settleRunCredits, sweepStaleReservations } from "../_shared/credits.ts";
 import { reconcilePurchases } from "../_shared/stripe-reconcile.ts";
 
 const FN = "reconcile-runs";
@@ -207,7 +203,7 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
 
   const branch = agent.branch ?? run.branch;
   const update = applyExternalStatus(run as RunRow, agent.rawStatus);
-  let status = update?.status ?? run.status;
+  const status = update?.status ?? run.status;
   if (update) {
     await admin
       .from("agent_runs")

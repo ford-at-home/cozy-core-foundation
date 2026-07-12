@@ -17,6 +17,12 @@ dist-ssr
 .nitro
 *.local
 
+# Environment files. The tracked .env intentionally contains ONLY publishable
+# values (Supabase URL + anon key — see .env.example). Any env variant that
+# might hold real secrets must never be committed (AGENTS.md rule 6).
+.env.*
+!.env.example
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars

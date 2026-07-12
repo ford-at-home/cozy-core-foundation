@@ -1,10 +1,5 @@
 import { assert, assertEquals } from "jsr:@std/assert@1";
-import {
-  canTransition,
-  isTerminal,
-  mapExternalStatus,
-  RUN_STATES,
-} from "../_shared/state.ts";
+import { canTransition, isTerminal, mapExternalStatus, RUN_STATES } from "../_shared/state.ts";
 import { applyExternalStatus, type RunRow } from "../_shared/complete.ts";
 
 function run(status: RunRow["status"]): RunRow {

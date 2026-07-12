@@ -93,9 +93,8 @@ async function handle(req: Request, rid: string): Promise<Response> {
   const research = typeof body?.research === "string" ? body.research.trim() : "";
   const topic = typeof body?.topic === "string" ? body.topic.trim() : "";
   const goal = typeof body?.goal === "string" ? body.goal.trim() : "";
-  const requestId = typeof body?.requestId === "string" && body.requestId
-    ? body.requestId
-    : crypto.randomUUID();
+  const requestId =
+    typeof body?.requestId === "string" && body.requestId ? body.requestId : crypto.randomUUID();
   const rawAttachments = Array.isArray(body?.attachments) ? body.attachments : [];
   // Two entry points: bring research (paste/attach) or a topic to deep-research.
   const researchMode = !research && rawAttachments.length === 0 && topic !== "";
@@ -151,11 +150,10 @@ async function handle(req: Request, rid: string): Promise<Response> {
   const styleText = (profile?.style_text ?? "").trim();
   const imageStyle = (profile?.image_style ?? "").trim();
   if (!styleText) {
-    return err(
-      422,
-      "Your voice profile is empty. Describe your style at /profile first.",
-      { requestId: rid, code: "empty_voice" },
-    );
+    return err(422, "Your voice profile is empty. Describe your style at /profile first.", {
+      requestId: rid,
+      code: "empty_voice",
+    });
   }
 
   // --- 4b. Credits: cheap pre-check before creating any rows. The
@@ -319,8 +317,20 @@ function isTextLike(contentType: string | undefined, name: string): boolean {
   if (TEXT_MIME_EXACT.has(ct)) return true;
   const ext = name.toLowerCase().split(".").pop() ?? "";
   return [
-    "txt", "md", "markdown", "csv", "tsv", "json", "yaml", "yml",
-    "xml", "html", "htm", "log", "toml", "ini",
+    "txt",
+    "md",
+    "markdown",
+    "csv",
+    "tsv",
+    "json",
+    "yaml",
+    "yml",
+    "xml",
+    "html",
+    "htm",
+    "log",
+    "toml",
+    "ini",
   ].includes(ext);
 }
 
@@ -387,7 +397,7 @@ async function ocrPdf(buf: Uint8Array, name: string): Promise<string> {
     }),
   });
   if (!res.ok) return "";
-  const json = await res.json().catch(() => null) as any;
+  const json = (await res.json().catch(() => null)) as any;
   const text = json?.choices?.[0]?.message?.content;
   return typeof text === "string" ? text : "";
 }
@@ -401,19 +411,21 @@ async function resolveAttachments(
   userId: string,
   raw: any[],
   runId: string,
-): Promise<Array<{
-  name: string;
-  contentType?: string;
-  size?: number;
-  text?: string;
-  url?: string;
-  truncated?: boolean;
-}>> {
+): Promise<
+  Array<{
+    name: string;
+    contentType?: string;
+    size?: number;
+    text?: string;
+    url?: string;
+    truncated?: boolean;
+  }>
+> {
   const out: Array<any> = [];
   let inlinedTotal = 0;
   for (const item of raw.slice(0, 10)) {
     const path = typeof item?.path === "string" ? item.path : "";
-    const name = typeof item?.name === "string" ? item.name : path.split("/").pop() ?? "file";
+    const name = typeof item?.name === "string" ? item.name : (path.split("/").pop() ?? "file");
     const contentType = typeof item?.contentType === "string" ? item.contentType : undefined;
     const size = typeof item?.size === "number" ? item.size : undefined;
     if (!path) continue;
@@ -471,9 +483,9 @@ async function resolveAttachments(
                   model: "google/gemini-2.5-flash",
                   operationType: "llm",
                   idempotencyKey: `lovable:ocr:${runId}:${path}`,
-                  inputTokens: estimateTokens(
-                    "Transcribe ALL text from this PDF verbatim.",
-                  ) + Math.ceil(buf.length / 4),
+                  inputTokens:
+                    estimateTokens("Transcribe ALL text from this PDF verbatim.") +
+                    Math.ceil(buf.length / 4),
                   outputTokens: estimateTokens(ocr),
                   metadata: {
                     subtype: "pdf_ocr",
@@ -501,9 +513,10 @@ async function resolveAttachments(
             ? new TextDecoder("utf-8", { fatal: false }).decode(encoded.slice(0, cap))
             : full;
           inlinedTotal += truncated ? cap : encoded.length;
-          const prefix = source === "pdf-ocr"
-            ? "[OCR transcription — original PDF had no embedded text layer]\n\n"
-            : "";
+          const prefix =
+            source === "pdf-ocr"
+              ? "[OCR transcription — original PDF had no embedded text layer]\n\n"
+              : "";
           out.push({
             name,
             contentType: contentType ?? "application/pdf",

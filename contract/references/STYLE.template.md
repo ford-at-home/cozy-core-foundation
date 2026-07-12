@@ -37,9 +37,9 @@ If your architecture lives in a separate file, link it. Otherwise sketch
 it here. Three to five moves max.
 -->
 
-- 
-- 
-- 
+-
+-
+-
 
 ## Signature moves (sentence-level)
 
@@ -97,9 +97,9 @@ specific. "Varied sentence length" is useless; "two short, one long; never
 three lists in a row" is useful.
 -->
 
-- 
-- 
-- 
+-
+-
+-
 
 ## Lexicon
 
@@ -111,15 +111,15 @@ discipline file).
 
 ### Words that are yours
 
-- 
-- 
+-
+-
 
 ### Words you don't use
 
 <!-- Hard nos that aren't just AI tells. Personal preferences. -->
 
-- 
-- 
+-
+-
 
 ## Notes
 
@@ -129,4 +129,4 @@ additions: register (lowercase vs sentence case), punctuation preferences
 (em-dashes, ellipses), heading style, list discipline.
 -->
 
-- 
+-

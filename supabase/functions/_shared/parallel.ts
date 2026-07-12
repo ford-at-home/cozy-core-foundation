@@ -62,10 +62,7 @@ export function resolveProcessor(): string {
   return p && (PROCESSORS as readonly string[]).includes(p) ? p : DEFAULT_PROCESSOR;
 }
 
-export async function createResearchTask(
-  topic: string,
-  processor: string,
-): Promise<ParallelTask> {
+export async function createResearchTask(topic: string, processor: string): Promise<ParallelTask> {
   const res = await parallelFetch("", {
     method: "POST",
     body: JSON.stringify({
@@ -92,11 +89,12 @@ export async function getResearchResult(runId: string): Promise<ResearchResult> 
   const res = await parallelFetch(`/${encodeURIComponent(runId)}/result`);
   const json = await res.json();
   const output = json?.output;
-  const content = typeof output?.content === "string"
-    ? output.content
-    : typeof output === "string"
-    ? output
-    : JSON.stringify(output ?? json);
+  const content =
+    typeof output?.content === "string"
+      ? output.content
+      : typeof output === "string"
+        ? output
+        : JSON.stringify(output ?? json);
   return { content, sourceUrls: extractSourceUrls(output?.basis) };
 }
 
@@ -162,9 +160,9 @@ date: "${date}"
   // evidence from the result basis so downstream synthesis can still link.
   const missing = args.sourceUrls.filter((u) => !body.includes(u));
   if (missing.length > 0) {
-    body += `\n\n## Additional sources (from research evidence)\n${
-      missing.map((u) => `- <${u}>`).join("\n")
-    }`;
+    body += `\n\n## Additional sources (from research evidence)\n${missing
+      .map((u) => `- <${u}>`)
+      .join("\n")}`;
   }
   return header + body + "\n";
 }

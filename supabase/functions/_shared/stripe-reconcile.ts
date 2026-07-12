@@ -36,9 +36,7 @@ export async function reconcilePurchases(
 
   for (const purchase of stale ?? []) {
     try {
-      const session = await stripe.checkout.sessions.retrieve(
-        purchase.stripe_checkout_session_id,
-      );
+      const session = await stripe.checkout.sessions.retrieve(purchase.stripe_checkout_session_id);
       if (session.payment_status === "paid") {
         // Webhook never landed (or failed): grant with the same idempotent
         // key the webhook would have used.
@@ -56,9 +54,10 @@ export async function reconcilePurchases(
           .from("purchases")
           .update({
             status: "completed",
-            stripe_payment_intent_id: typeof session.payment_intent === "string"
-              ? session.payment_intent
-              : (session.payment_intent?.id ?? null),
+            stripe_payment_intent_id:
+              typeof session.payment_intent === "string"
+                ? session.payment_intent
+                : (session.payment_intent?.id ?? null),
             amount_total_cents: session.amount_total ?? null,
             currency: session.currency ?? null,
             updated_at: new Date().toISOString(),
@@ -99,9 +98,7 @@ export async function reconcilePurchases(
     .order("created_at", { ascending: false })
     .limit(50);
   if ((recent ?? []).length > 0) {
-    const keys = (recent ?? []).map(
-      (p: any) => `purchase:${p.stripe_checkout_session_id}`,
-    );
+    const keys = (recent ?? []).map((p: any) => `purchase:${p.stripe_checkout_session_id}`);
     const { data: entries } = await admin
       .from("credit_ledger")
       .select("idempotency_key")

@@ -31,12 +31,12 @@ cancelled, and stuck runs release the hold automatically.
 
 Set in **Supabase Edge Function secrets** (Lovable Cloud → backend secrets):
 
-| Secret | Purpose |
-| --- | --- |
-| `STRIPE_SECRET_KEY` | Server-side Stripe API calls (`sk_test_…` first, `sk_live_…` only after the full test-mode pass) |
-| `STRIPE_WEBHOOK_SECRET` | Signature verification in `stripe-webhook` (`whsec_…`, per endpoint per mode) |
-| `APP_PUBLIC_URL` | Deployed app origin for Checkout success/cancel URLs (e.g. `https://<app>.lovable.app`) |
-| `CREDITS_MODE` | Optional. `enforce` (default) blocks dispatch when credits run out; `log` observes without blocking — the incident rollback lever |
+| Secret                  | Purpose                                                                                                                           |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `STRIPE_SECRET_KEY`     | Server-side Stripe API calls (`sk_test_…` first, `sk_live_…` only after the full test-mode pass)                                  |
+| `STRIPE_WEBHOOK_SECRET` | Signature verification in `stripe-webhook` (`whsec_…`, per endpoint per mode)                                                     |
+| `APP_PUBLIC_URL`        | Deployed app origin for Checkout success/cancel URLs (e.g. `https://<app>.lovable.app`)                                           |
+| `CREDITS_MODE`          | Optional. `enforce` (default) blocks dispatch when credits run out; `log` observes without blocking — the incident rollback lever |
 
 The frontend needs **no Stripe key at all**: the browser is redirected to a
 server-created, Stripe-hosted Checkout URL. No card data ever touches the
