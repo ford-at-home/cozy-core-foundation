@@ -198,8 +198,10 @@ function PrintPage() {
           image: { type: "jpeg", quality: 0.95 },
           html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
           jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
-          pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-        })
+          // `pagebreak` is a valid html2pdf.js option but missing from the
+          // shipped .d.ts, so cast to keep strict TS happy.
+        } as Parameters<ReturnType<typeof html2pdf>["set"]>[0] & object)
+        .set({ pagebreak: { mode: ["avoid-all", "css", "legacy"] } } as never)
         .save();
       toast.success("PDF downloaded.");
     } catch (err) {
