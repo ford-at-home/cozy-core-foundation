@@ -37,6 +37,7 @@ function PrintPage() {
   const [post, setPost] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [iframeReady, setIframeReady] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -83,7 +84,29 @@ function PrintPage() {
   }, [post]);
 
   function handlePrint() {
-    iframeRef.current?.contentWindow?.print();
+    const win = iframeRef.current?.contentWindow;
+    try {
+      if (!win) throw new Error("iframe not ready");
+      win.focus();
+      win.print();
+    } catch {
+      // Fallback: some browsers block print() on srcDoc iframes.
+      // Open the rendered document in a new window and print from there.
+      const w = window.open("", "_blank");
+      if (!w) return;
+      w.document.open();
+      w.document.write(srcDoc);
+      w.document.close();
+      w.focus();
+      // Give the new document a tick to lay out before printing.
+      setTimeout(() => {
+        try {
+          w.print();
+        } catch {
+          /* user can Ctrl/Cmd+P in the opened window */
+        }
+      }, 250);
+    }
   }
 
   return (
@@ -108,7 +131,7 @@ function PrintPage() {
           <button
             type="button"
             onClick={handlePrint}
-            disabled={!post}
+            disabled={!post || !iframeReady}
             className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
             Print
@@ -128,6 +151,7 @@ function PrintPage() {
           ref={iframeRef}
           title="Print preview"
           srcDoc={srcDoc}
+          onLoad={() => setIframeReady(true)}
           className="h-[75vh] w-full rounded-lg border border-border bg-white shadow-sm"
         />
       )}
