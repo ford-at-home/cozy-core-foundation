@@ -177,7 +177,7 @@ async function handle(req: Request, rid: string): Promise<Response> {
       // style_text deliberately NOT stored here (sensitive profile data).
       input: researchMode
         ? { topic, goal: goal || null, processor }
-        : { research, goal: goal || null },
+        : { research, goal: goal || null, topic: topic || null },
     })
     .select("id")
     .single();
