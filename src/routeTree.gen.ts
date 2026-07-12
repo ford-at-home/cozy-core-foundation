@@ -18,6 +18,7 @@ import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/new'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as ApiPublicGenerateImageRouteImport } from './routes/api/public/generate-image'
+import { Route as AuthenticatedSessionsSessionIdRouteImport } from './routes/_authenticated/sessions.$sessionId'
 import { Route as AuthenticatedRunsRunIdRouteImport } from './routes/_authenticated/runs.$runId'
 import { Route as AuthenticatedPrintRunIdRouteImport } from './routes/_authenticated/print.$runId'
 
@@ -65,6 +66,12 @@ const ApiPublicGenerateImageRoute = ApiPublicGenerateImageRouteImport.update({
   path: '/api/public/generate-image',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedSessionsSessionIdRoute =
+  AuthenticatedSessionsSessionIdRouteImport.update({
+    id: '/$sessionId',
+    path: '/$sessionId',
+    getParentRoute: () => AuthenticatedSessionsRoute,
+  } as any)
 const AuthenticatedRunsRunIdRoute = AuthenticatedRunsRunIdRouteImport.update({
   id: '/runs/$runId',
   path: '/runs/$runId',
@@ -82,10 +89,11 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/new': typeof AuthenticatedNewRoute
   '/profile': typeof AuthenticatedProfileRoute
-  '/sessions': typeof AuthenticatedSessionsRoute
+  '/sessions': typeof AuthenticatedSessionsRouteWithChildren
   '/api/transcribe': typeof ApiTranscribeRoute
   '/print/$runId': typeof AuthenticatedPrintRunIdRoute
   '/runs/$runId': typeof AuthenticatedRunsRunIdRoute
+  '/sessions/$sessionId': typeof AuthenticatedSessionsSessionIdRoute
   '/api/public/generate-image': typeof ApiPublicGenerateImageRoute
 }
 export interface FileRoutesByTo {
@@ -94,10 +102,11 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/new': typeof AuthenticatedNewRoute
   '/profile': typeof AuthenticatedProfileRoute
-  '/sessions': typeof AuthenticatedSessionsRoute
+  '/sessions': typeof AuthenticatedSessionsRouteWithChildren
   '/api/transcribe': typeof ApiTranscribeRoute
   '/print/$runId': typeof AuthenticatedPrintRunIdRoute
   '/runs/$runId': typeof AuthenticatedRunsRunIdRoute
+  '/sessions/$sessionId': typeof AuthenticatedSessionsSessionIdRoute
   '/api/public/generate-image': typeof ApiPublicGenerateImageRoute
 }
 export interface FileRoutesById {
@@ -108,10 +117,11 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/new': typeof AuthenticatedNewRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
-  '/_authenticated/sessions': typeof AuthenticatedSessionsRoute
+  '/_authenticated/sessions': typeof AuthenticatedSessionsRouteWithChildren
   '/api/transcribe': typeof ApiTranscribeRoute
   '/_authenticated/print/$runId': typeof AuthenticatedPrintRunIdRoute
   '/_authenticated/runs/$runId': typeof AuthenticatedRunsRunIdRoute
+  '/_authenticated/sessions/$sessionId': typeof AuthenticatedSessionsSessionIdRoute
   '/api/public/generate-image': typeof ApiPublicGenerateImageRoute
 }
 export interface FileRouteTypes {
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/api/transcribe'
     | '/print/$runId'
     | '/runs/$runId'
+    | '/sessions/$sessionId'
     | '/api/public/generate-image'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/api/transcribe'
     | '/print/$runId'
     | '/runs/$runId'
+    | '/sessions/$sessionId'
     | '/api/public/generate-image'
   id:
     | '__root__'
@@ -151,6 +163,7 @@ export interface FileRouteTypes {
     | '/api/transcribe'
     | '/_authenticated/print/$runId'
     | '/_authenticated/runs/$runId'
+    | '/_authenticated/sessions/$sessionId'
     | '/api/public/generate-image'
   fileRoutesById: FileRoutesById
 }
@@ -227,6 +240,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicGenerateImageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/sessions/$sessionId': {
+      id: '/_authenticated/sessions/$sessionId'
+      path: '/$sessionId'
+      fullPath: '/sessions/$sessionId'
+      preLoaderRoute: typeof AuthenticatedSessionsSessionIdRouteImport
+      parentRoute: typeof AuthenticatedSessionsRoute
+    }
     '/_authenticated/runs/$runId': {
       id: '/_authenticated/runs/$runId'
       path: '/runs/$runId'
@@ -244,11 +264,24 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedSessionsRouteChildren {
+  AuthenticatedSessionsSessionIdRoute: typeof AuthenticatedSessionsSessionIdRoute
+}
+
+const AuthenticatedSessionsRouteChildren: AuthenticatedSessionsRouteChildren = {
+  AuthenticatedSessionsSessionIdRoute: AuthenticatedSessionsSessionIdRoute,
+}
+
+const AuthenticatedSessionsRouteWithChildren =
+  AuthenticatedSessionsRoute._addFileChildren(
+    AuthenticatedSessionsRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedNewRoute: typeof AuthenticatedNewRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
-  AuthenticatedSessionsRoute: typeof AuthenticatedSessionsRoute
+  AuthenticatedSessionsRoute: typeof AuthenticatedSessionsRouteWithChildren
   AuthenticatedPrintRunIdRoute: typeof AuthenticatedPrintRunIdRoute
   AuthenticatedRunsRunIdRoute: typeof AuthenticatedRunsRunIdRoute
 }
@@ -257,7 +290,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedNewRoute: AuthenticatedNewRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
-  AuthenticatedSessionsRoute: AuthenticatedSessionsRoute,
+  AuthenticatedSessionsRoute: AuthenticatedSessionsRouteWithChildren,
   AuthenticatedPrintRunIdRoute: AuthenticatedPrintRunIdRoute,
   AuthenticatedRunsRunIdRoute: AuthenticatedRunsRunIdRoute,
 }
