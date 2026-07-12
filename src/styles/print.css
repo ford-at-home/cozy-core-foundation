@@ -1,130 +1,306 @@
-/* print.css - Wide-margin, hand-markup-friendly print styling.
- * Used by scripts/print-markup. Tuned for marking up with pen + highlighter.
+/* print.css — the paper-markup document stylesheet.
+ *
+ * This is the layout engine for Compose's printable artifact: a US Letter,
+ * wide-margin draft designed for pen markup, rendered by the browser's paged
+ * media engine (print preview, Save as PDF, and paper all share it).
+ *
+ * Used by src/lib/print-document.ts, which inlines this file into a
+ * self-contained document together with embedded fonts and a per-document
+ * running header. The S{n}P{m} block-anchor counting rule at the bottom must
+ * stay in sync with contract/references/MARKUP.md "Pre-printed block anchors"
+ * — synthesize resolves "S4P3" voice references with the same rule.
+ *
+ * Geometry: Letter (8.5 × 11in), margins 1.5in top / 2in right / 1.5in bottom
+ * / 1.5in left → a 5in × 8in text block. The extra-wide right margin is pen
+ * space; anchors live in the left margin.
  */
 
+/* The left page margin is split between @page (0.5in) and body padding in
+ * print (1in): the print engine clips anything painted into the @page margin
+ * area, so the S{n}P{m} anchors — absolutely positioned to the left of the
+ * text column — must live inside the page's content box to reach PDF and
+ * paper. The text column still starts exactly 1.5in from the paper edge. */
 @page {
   size: letter;
-  margin: 1.5in 2in 1.5in 1.5in;
+  margin: 1.5in 2in 1.5in 0.5in;
+
+  /* Folio. Defining a margin box also suppresses the browser's own footer on
+   * this edge (URL, page number). The @top-center running header is injected
+   * per document by print-document.ts because it carries the title.
+   * padding-left re-centers the folio on the text column, whose left edge is
+   * 1in inside this page box (see the split-margin note above). */
+  @bottom-center {
+    content: "Page " counter(page) " of " counter(pages);
+    font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
+    font-size: 8.5pt;
+    letter-spacing: 0.05em;
+    color: #666666;
+    padding-left: 1in;
+  }
 }
 
-html, body {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 12pt;
-  line-height: 1.7;
-  color: #1a1a1a;
-  max-width: none;
+/* ============================================================
+ * Base typography
+ * ============================================================ */
+
+html {
+  color-scheme: light;
+}
+
+html,
+body {
   margin: 0;
   padding: 0;
 }
 
 body {
-  padding: 1in 1.25in 1in 1in;
+  font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
+  font-size: 12pt;
+  /* Generous leading is deliberate: it leaves room to write between lines. */
+  line-height: 1.7;
+  color: #1a1a1a;
+  font-kerning: normal;
+  text-rendering: optimizeLegibility;
+  overflow-wrap: break-word;
 }
 
+/* In print, the body carries the 1in inner half of the split left margin
+ * (see the note at @page): text column at 1.5in from the paper edge, anchors
+ * inside the printable content box. */
 @media print {
-  body { padding: 0; }
+  body {
+    padding-left: 1in;
+  }
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: Georgia, 'Times New Roman', serif;
-  line-height: 1.3;
-  page-break-after: avoid;
+/* On screen, present the document as a Letter sheet with the exact @page
+ * margins, so line wrapping on screen matches the printed page one-for-one.
+ * The sheet keeps its true width on small screens (scroll, don't reflow):
+ * reflowing would break screen/print parity. */
+@media screen {
+  html {
+    background: #ececea;
+    padding: 24px 12px;
+  }
+  body {
+    box-sizing: border-box;
+    width: 8.5in;
+    min-height: 11in;
+    margin: 0 auto;
+    padding: 1.5in 2in 1.5in 1.5in;
+    background: #ffffff;
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.14),
+      0 12px 32px rgba(0, 0, 0, 0.12);
+  }
+}
+
+/* The first block on page 1 sits flush at the top margin. */
+body > :first-child {
+  margin-top: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
+  font-weight: 700;
+  line-height: 1.25;
   break-after: avoid;
-  margin-top: 1.4em;
-  margin-bottom: 0.4em;
+  page-break-after: avoid;
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 
-h1 { font-size: 1.6em; }
-h2 { font-size: 1.3em; }
-h3 { font-size: 1.1em; }
+h1 {
+  font-size: 20pt;
+  margin: 24pt 0 8pt;
+}
+h2 {
+  font-size: 16pt;
+  margin: 20pt 0 7pt;
+}
+h3 {
+  font-size: 13.5pt;
+  margin: 16pt 0 6pt;
+}
+h4 {
+  font-size: 12pt;
+  margin: 14pt 0 5pt;
+}
+h5 {
+  font-size: 11pt;
+  margin: 12pt 0 4pt;
+}
+h6 {
+  font-size: 10.5pt;
+  margin: 12pt 0 4pt;
+  font-style: italic;
+}
 
-p, li {
-  margin: 0.6em 0;
+p,
+li,
+blockquote {
   orphans: 3;
   widows: 3;
 }
 
-li { margin: 0.3em 0; }
+p {
+  margin: 7pt 0;
+  hyphens: auto;
+}
+
+ul,
+ol {
+  margin: 7pt 0;
+  padding-left: 22pt;
+}
+
+li {
+  margin: 3.5pt 0;
+  hyphens: auto;
+}
+
+li > ul,
+li > ol {
+  margin: 3.5pt 0;
+}
 
 blockquote {
-  border-left: 3px solid #888;
-  margin-left: 0;
-  padding-left: 1em;
-  color: #333;
+  margin: 10pt 0 10pt 0;
+  border-left: 2pt solid #999999;
+  padding-left: 12pt;
+  color: #333333;
+}
+
+blockquote > :first-child {
+  margin-top: 0;
+}
+blockquote > :last-child {
+  margin-bottom: 0;
 }
 
 code {
-  font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace;
-  font-size: 0.9em;
-  background: #f3f3f3;
-  padding: 0.05em 0.25em;
-  border-radius: 2px;
+  font-family: "Source Code Pro", Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  background: #f3f3f2;
+  padding: 0.5pt 2.5pt;
+  border-radius: 2pt;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
 
 pre {
-  font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace;
-  font-size: 0.85em;
-  background: #f5f5f5;
-  padding: 0.6em 0.8em;
-  border-radius: 3px;
-  page-break-inside: avoid;
-  break-inside: avoid;
+  font-family: "Source Code Pro", Menlo, Consolas, monospace;
+  font-size: 9.5pt;
+  line-height: 1.5;
+  background: #f6f6f5;
+  border: 0.75pt solid #dddddd;
+  border-radius: 2pt;
+  margin: 10pt 0;
+  padding: 6pt 8pt;
+  /* Long lines wrap instead of overflowing the text block. */
   white-space: pre-wrap;
   overflow-wrap: break-word;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
 
 pre code {
   background: transparent;
   padding: 0;
+  font-size: inherit;
 }
 
-a { color: #1a1a1a; text-decoration: underline; }
+a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2pt;
+  /* Bare URLs (linkify) can be arbitrarily long; break anywhere. */
+  overflow-wrap: anywhere;
+}
 
 img {
+  display: block;
   max-width: 100%;
-  page-break-inside: avoid;
+  /* Never taller than the 8in page box, with headroom for the anchor of the
+   * block that follows. */
+  max-height: 7in;
+  margin: 10pt auto;
   break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Image-only paragraphs, tagged by the shared markdown renderer. Treated as
+ * figures: centered, kept on one page, and skipped by the anchor counters
+ * below (per MARKUP.md, images are not addressable blocks). */
+p.md-figure {
+  text-align: center;
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 hr {
   border: none;
-  border-top: 1px solid #aaa;
-  margin: 1.5em 0;
+  border-top: 0.75pt solid #bbbbbb;
+  margin: 18pt 0;
 }
 
+/* Tables: allow long tables to break across pages rather than overflowing —
+ * the header row repeats on every page and rows never split mid-row. */
 table {
   border-collapse: collapse;
   width: 100%;
-  margin: 1em 0;
-  page-break-inside: avoid;
+  margin: 10pt 0;
+  font-size: 10.5pt;
+  line-height: 1.5;
+}
+
+thead {
+  display: table-header-group;
   break-inside: avoid;
+  page-break-inside: avoid;
 }
 
-th, td {
-  border: 1px solid #aaa;
-  padding: 0.4em 0.6em;
+tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+th,
+td {
+  border: 0.75pt solid #999999;
+  padding: 4pt 6pt;
   text-align: left;
+  vertical-align: top;
+  overflow-wrap: break-word;
 }
 
-th { background: #efefef; }
+th {
+  background: #f0efed;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
 
-/* Footer page numbers when supported by the print engine */
+/* Hide on-screen affordances when printing (the document is self-contained,
+ * but keep this as a guard). */
 @media print {
-  @page {
-    @bottom-center { content: counter(page); }
+  nav,
+  footer,
+  .no-print {
+    display: none !important;
   }
-}
-
-/* Hide on-screen affordances when printing */
-@media print {
-  nav, footer, .no-print { display: none !important; }
 }
 
 /* ============================================================
  * Pre-printed block anchors (S{n}P{m} labels in the left margin)
  *
- * Active when <body class="with-anchors"> (default for print-markup).
- * Disabled by passing --no-anchors to print-markup.
+ * Active when <body class="with-anchors"> (the default).
  *
  * Two nested counters:
  *   - `section` increments on every heading (h1-h6). The heading itself
@@ -138,11 +314,16 @@ th { background: #efefef; }
  * labeled S0P1, S0P2, … rather than stealing the S1 slot from the real
  * first section.
  *
- * NOT counted: list items (skipped to avoid bullet conflicts).
+ * NOT counted (must match MARKUP.md "What does not count"):
+ *   - anything inside a list item (loose lists wrap item text in <p>)
+ *   - anything inside a blockquote (the quote itself is one anchor)
+ *   - image-only paragraphs (p.md-figure, tagged by the renderer)
+ *   - images, horizontal rules, inline elements
  *
- * The block-counting rule must stay in sync with references/MARKUP.md
- * "Pre-printed block anchors" — synthesize uses the same rule when
- * resolving "S4P3" / "section 4 paragraph 3" voice references.
+ * The block-counting rule must stay in sync with
+ * contract/references/MARKUP.md "Pre-printed block anchors" — synthesize
+ * uses the same rule when resolving "S4P3" / "section 4 paragraph 3"
+ * voice references.
  * ============================================================ */
 
 body.with-anchors {
@@ -175,16 +356,23 @@ body.with-anchors :is(p, blockquote, pre, table)::before {
 
 body.with-anchors :is(p, h1, h2, h3, h4, h5, h6, blockquote, pre, table)::before {
   position: absolute;
-  left: -4.5em;
-  top: 0.2em;
-  width: 4em;
+  /* Fixed pt offsets (not em) so anchors form one right-aligned column in the
+   * margin regardless of each block's own font size. */
+  left: -60pt;
+  top: 2pt;
+  width: 50pt;
   text-align: right;
-  font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace;
-  font-size: 8.5pt;
-  font-weight: normal;
-  color: #b45309;
+  font-family: "Source Code Pro", Menlo, Consolas, monospace;
+  font-size: 8pt;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1.6;
   letter-spacing: 0.02em;
-  user-select: none;          /* don't include in copy/paste */
+  color: #b45309;
+  text-transform: none;
+  user-select: none; /* don't include in copy/paste */
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
 
 /* Pandoc's standalone mode emits a title block; skip it so user content
@@ -197,30 +385,44 @@ body.with-anchors #title-block-header :is(h1, h2, h3, p)::before {
   content: none;
 }
 
-/* Blockquotes wrap paragraphs in <p>. Count the blockquote itself as one
- * block; suppress the inner <p> so each quote gets exactly one anchor. */
-body.with-anchors blockquote :is(p, h1, h2, h3, h4, h5, h6) {
+/* Blocks nested inside list items or blockquotes are not addressable.
+ * Blockquotes count as one block (the wrapper); loose lists wrap item text
+ * in <p>, which must not consume anchors — list items are addressed by
+ * surrounding paragraphs or by content, per MARKUP.md. */
+body.with-anchors :is(li, blockquote) :is(p, h1, h2, h3, h4, h5, h6, blockquote, pre, table) {
   counter-increment: none;
   counter-set: none;
 }
-body.with-anchors blockquote :is(p, h1, h2, h3, h4, h5, h6)::before {
+body.with-anchors
+  :is(li, blockquote)
+  :is(p, h1, h2, h3, h4, h5, h6, blockquote, pre, table)::before {
   content: none;
 }
 
-/* Slightly muted on paper to keep the prose dominant */
+/* Image-only paragraphs are figures, not addressable text blocks. */
+body.with-anchors p.md-figure {
+  counter-increment: none;
+}
+body.with-anchors p.md-figure::before {
+  content: none;
+}
+
+/* Slightly muted on paper to keep the prose dominant. */
 @media print {
   body.with-anchors :is(p, h1, h2, h3, h4, h5, h6, blockquote, pre, table)::before {
-    color: #888;
+    color: #888888;
   }
 }
 
-/* Code blocks have padding that pushes content right; pull the anchor
- * out a bit further so it lines up with prose anchors. */
+/* Code blocks establish their containing block at the padding box, which is
+ * inset by their border + padding; compensate so the anchor column stays
+ * aligned with prose anchors. */
 body.with-anchors pre::before {
-  top: 0.6em;
+  left: -68.75pt;
+  top: 6pt;
 }
 
 /* Table anchors sit at the top-left of the table grid. */
 body.with-anchors table::before {
-  top: 0.4em;
+  top: 3pt;
 }
