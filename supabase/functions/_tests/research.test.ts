@@ -121,10 +121,14 @@ Deno.test("research completion chains exactly one compose run and dispatches it"
         return null;
       },
       insertSingle: (table, payload) => {
+        // ensureRunSession creates the session for the chained compose run.
+        if (table === "sessions") return { data: { id: "session-1" }, error: null };
         assertEquals(table, "agent_runs");
         const p = payload as Record<string, unknown>;
         assertEquals(p.kind, "proposal");
         assertEquals(p.idempotency_key, "compose:user-1:research:run-research-1");
+        // The chained run points back to the research run that holds the credits.
+        assertEquals(p.parent_run_id, "run-research-1");
         return { data: { id: "run-compose-1" }, error: null };
       },
     });

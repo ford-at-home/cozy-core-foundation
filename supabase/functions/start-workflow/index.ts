@@ -24,6 +24,12 @@ import { dispatchResearchRun, dispatchRun, resolveProvider } from "../_shared/di
 import { resolveProcessor } from "../_shared/parallel.ts";
 import { buildImageCreds } from "../_shared/image-token.ts";
 import { ensureRunSession, recordInference } from "../_shared/usage.ts";
+import {
+  CREDIT_COST,
+  creditsEnforced,
+  getBalance,
+  reserveCreditsForRun,
+} from "../_shared/credits.ts";
 import { estimateTokens } from "../_shared/token-estimate.ts";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 import {
@@ -152,6 +158,20 @@ async function handle(req: Request, rid: string): Promise<Response> {
     );
   }
 
+  // --- 4b. Credits: cheap pre-check before creating any rows. The
+  //          authoritative, race-safe check is the reservation below.
+  const creditCost = researchMode ? CREDIT_COST.research : CREDIT_COST.compose;
+  if (creditsEnforced()) {
+    const balance = await getBalance(admin, userId);
+    if (balance < creditCost) {
+      return err(402, "Not enough credits for this generation.", {
+        requestId: rid,
+        code: "insufficient_credits",
+        details: { balance, required: creditCost },
+      });
+    }
+  }
+
   // --- 5. Insert piece + run BEFORE dispatching -----------------------------
   const processor = resolveProcessor();
   const slug = `${slugify(topic || goal || research.slice(0, 60))}-${crypto.randomUUID().slice(0, 6)}`;
@@ -199,6 +219,38 @@ async function handle(req: Request, rid: string): Promise<Response> {
   }
   const runId = inserted.id as string;
   logEvent(FN, "info", { requestId: rid, event: "run_created", runId, pieceId: piece.id, slug });
+
+  // --- 5a. Atomic credit hold (idempotent on runId) BEFORE dispatch --------
+  const reserved = await reserveCreditsForRun(admin, {
+    userId,
+    runId,
+    amount: creditCost,
+    reason: researchMode ? "deep-research start" : "compose",
+  });
+  if (!reserved.ok) {
+    await admin
+      .from("agent_runs")
+      .update({
+        status: "failed",
+        error:
+          reserved.code === "insufficient_credits"
+            ? "Not enough credits for this generation."
+            : "Credit reservation failed; you were not charged.",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", runId);
+    if (reserved.code === "insufficient_credits") {
+      return err(402, "Not enough credits for this generation.", {
+        requestId: rid,
+        code: "insufficient_credits",
+        details: { balance: reserved.balance, required: creditCost },
+      });
+    }
+    return err(500, "Credit reservation failed; you were not charged.", {
+      requestId: rid,
+      code: "reserve_failed",
+    });
+  }
 
   await ensureRunSession(admin, {
     runId,

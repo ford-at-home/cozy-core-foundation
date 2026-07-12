@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { ACTIVE_RUN_STATUSES, type AgentRun, type RunStatus } from "@/lib/workflows.functions";
 import { runPieceAction, type PieceAction } from "@/lib/pieces.functions";
+import { isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
 import type { Json } from "@/integrations/supabase/types";
 import MarkdownView from "@/components/MarkdownView";
 import { RunCostCard } from "@/components/RunCostCard";
@@ -204,6 +205,9 @@ function RunDetailPage() {
               {run.status === "cancelled"
                 ? "This run was cancelled."
                 : (run.error ?? "The run failed without an error message.")}
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Any credit held for this run was released — you were not charged.
+              </span>
             </div>
           )}
 
@@ -265,6 +269,8 @@ function ActionsPanel({ run }: { run: AgentRun }) {
   const [transcript, setTranscript] = useState("");
   const [pending, setPending] = useState<PieceAction | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { balance } = useCreditBalance();
+  const outOfCredits = balance !== null && balance < 1;
 
   const isProposal = run.kind === "proposal" || run.kind === "resynth";
   const isDraft = run.kind === "draft";
@@ -287,7 +293,12 @@ function ActionsPanel({ run }: { run: AgentRun }) {
       setFeedback("");
       setTranscript("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Action failed");
+      const message = err instanceof Error ? err.message : "Action failed";
+      setError(
+        isInsufficientCreditsError(message)
+          ? "Not enough credits for this generation. You were not charged."
+          : message,
+      );
       setPending(null);
     }
   }
@@ -295,6 +306,15 @@ function ActionsPanel({ run }: { run: AgentRun }) {
   return (
     <section className="space-y-4 rounded-xl border border-border bg-card p-4 sm:p-6">
       <h2 className="font-serif text-xl">Next step</h2>
+
+      {(isProposal || isDraft) && outOfCredits && (
+        <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
+          You're out of credits.{" "}
+          <Link to="/billing" className="font-medium underline">
+            Get credits →
+          </Link>
+        </p>
+      )}
 
       {isProposal && (
         <div className="space-y-3">
@@ -314,7 +334,7 @@ function ActionsPanel({ run }: { run: AgentRun }) {
             <button
               type="button"
               onClick={() => dispatch("ready")}
-              disabled={pending !== null}
+              disabled={pending !== null || outOfCredits}
               className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
             >
               {pending === "ready" ? "Starting…" : "Ready → final draft PR"}
@@ -322,12 +342,15 @@ function ActionsPanel({ run }: { run: AgentRun }) {
             <button
               type="button"
               onClick={() => dispatch("resynth")}
-              disabled={pending !== null}
+              disabled={pending !== null || outOfCredits}
               className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-5 text-sm font-medium text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
             >
               {pending === "resynth" ? "Starting…" : "Resynth"}
             </button>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Each uses 1 credit — charged only when the generation finishes.
+          </p>
         </div>
       )}
 
@@ -357,11 +380,14 @@ function ActionsPanel({ run }: { run: AgentRun }) {
           <button
             type="button"
             onClick={() => dispatch("revise")}
-            disabled={pending !== null || transcript.trim() === ""}
+            disabled={pending !== null || transcript.trim() === "" || outOfCredits}
             className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
           >
             {pending === "revise" ? "Starting…" : "Revise → final PR"}
           </button>
+          <p className="text-xs text-muted-foreground">
+            Uses 1 credit — charged only when the generation finishes.
+          </p>
         </div>
       )}
 
