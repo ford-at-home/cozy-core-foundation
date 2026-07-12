@@ -201,7 +201,7 @@ function NewPiecePage() {
               onChange={(e) => setTopic(e.target.value)}
               rows={4}
               placeholder="What should we research? Be specific: the question, the angle, the timeframe, any actors to focus on."
-              className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-3 text-sm leading-relaxed outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
+              className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-3 text-sm leading-relaxed outline-none transition-shadow focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
             />
             <p className="text-xs text-muted-foreground">
               Deep web research runs first (usually 2–10 minutes, with sources cited), then the
@@ -221,7 +221,7 @@ function NewPiecePage() {
               onChange={(e) => setResearch(e.target.value)}
               rows={12}
               placeholder="Paste notes, transcripts, links, a rough dump — whatever the piece is drawn from."
-              className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-3 font-mono text-sm leading-relaxed outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
+              className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-3 font-mono text-sm leading-relaxed outline-none transition-shadow focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
             />
           </label>
         )}
@@ -245,7 +245,7 @@ function NewPiecePage() {
               />
               <label
                 htmlFor="attachments-input"
-                className="cursor-pointer rounded-md border border-input bg-background/60 px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+                className="cursor-pointer inline-flex h-9 items-center rounded-md border border-input bg-background/60 px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring/50"
               >
                 + Add files
               </label>
@@ -290,7 +290,7 @@ function NewPiecePage() {
             value={goal}
             onChange={(e) => setGoal(e.target.value)}
             placeholder="What should the reader walk away with?"
-            className="w-full rounded-md border border-input bg-background/60 px-3.5 py-2.5 text-sm outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
+            className="w-full rounded-md border border-input bg-background/60 px-3.5 py-2.5 text-sm outline-none transition-shadow focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
           />
         </label>
 
@@ -301,19 +301,23 @@ function NewPiecePage() {
         )}
 
         {error && (
-          <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <p
+            role="alert"
+            className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
             {error}
           </p>
         )}
 
-        <div className="flex items-center justify-between border-t border-border/60 pt-5">
+        <div className="flex flex-col gap-3 border-t border-border/60 pt-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-muted-foreground">
             Voice: {profileLoading ? "loading…" : hasStyle ? "from your profile" : "not set"}
           </p>
           <button
             type="submit"
             disabled={!canSubmit}
-            className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+            aria-busy={submitting}
+            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
           >
             {submitting
               ? uploadProgress
@@ -345,7 +349,7 @@ function ModeButton({
       aria-selected={active}
       onClick={onClick}
       className={
-        "rounded-md border px-4 py-2 text-sm font-medium transition-colors " +
+        "rounded-md border px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring/60 " +
         (active
           ? "border-primary bg-primary/10 text-primary"
           : "border-border text-muted-foreground hover:text-foreground")
