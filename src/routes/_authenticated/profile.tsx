@@ -357,7 +357,14 @@ function ProfilePage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const { profile } = await save({ data: { styleText, imageStyle } });
+      const { profile } = await save({
+        data: {
+          styleText,
+          imageStyle,
+          textStylePreset,
+          imageStylePreset,
+        },
+      });
       queryClient.setQueryData(["profile", "me"], { profile });
       setDirty(false);
       setSavedAt(profile.updated_at);
