@@ -1,43 +1,39 @@
-## Remove demo login + add style presets, make both required
+# Apply credit/payment backend
 
-### 1. Remove the demo admin sign-in (`src/routes/auth.tsx`)
+Repo already contains the reviewed implementation. This plan only applies it to the connected backend — no code changes, no schema edits, no frontend work.
 
-- Delete the "Sign in as demo admin" button and the divider spacing it needed.
-- Remove `adminLoading`, `handleAdmin`, the `ensureAdmin`/`ADMIN_EMAIL`/`ADMIN_PASSWORD` imports, and drop `adminLoading` from `busy`.
-- Leave `src/lib/admin.functions.ts` untouched (server fn stays; only the UI entrypoint goes away).
+## 1. Apply the migration
 
-### 2. Style + Image-style presets (`src/routes/_authenticated/profile.tsx`)
+Run `supabase/migrations/20260712140000_credit_ledger.sql` exactly as written via the migration tool. It creates: `credit_accounts`, `credit_ledger`, `credit_reservations`, `billing_customers`, `purchases`, `stripe_events`, `credit_products`, `subscriptions`; adds `agent_runs.parent_run_id`; defines the SECURITY DEFINER functions (`grant_credits`, `reserve_credits`, `settle_reservation`, `release_reservation`, `admin_adjust_credits`) with EXECUTE revoked from anon+authenticated; installs the `on_auth_user_created` trigger (3-credit signup grant); enables RLS with owner-scoped SELECT-only policies; adds `credit_accounts` to `supabase_realtime`; and backfills grants for existing users.
 
-Add a horizontal row of preset "chips" above each textarea. Clicking a chip fills the corresponding textarea with a pre-written paragraph (overwrites current content after a confirm if the field is non-empty and different from a known preset; otherwise fills silently). A small "Custom" chip clears back to empty for dictation/free-typing.
+Post-migration verification (read-only SQL):
+- `on_auth_user_created` trigger exists on `auth.users`.
+- Every `auth.users` row has a `credit_accounts` row with `balance >= 3`.
+- New tables show RLS enabled.
 
-**Text-style presets (5):**
+## 2. Deploy edge functions
 
-- **Plainspoken essayist** — short sentences, concrete nouns, one idea per paragraph, no throat-clearing.
-- **Punchy operator** — first person, direct, opinionated, ends sections with a takeaway line.
-- **Warm storyteller** — scene-first openings, sensory detail, quiet endings, contractions welcome.
-- **Analytical explainer** — defines terms early, uses numbered structure, cites evidence inline.
-- **Dry wit** — understated, occasional aside, never sarcastic-for-its-own-sake, lands on a clean line.
+Deploy together so shared modules land in one bundle:
+- New: `create-checkout-session`, `stripe-webhook`
+- Redeploy (pick up updated `_shared/`): `start-workflow`, `piece-action`, `cursor-webhook`, `reconcile-runs`
 
-**Image-style presets (5):**
+`supabase/config.toml` already sets `verify_jwt = true` for `create-checkout-session` and `verify_jwt = false` for `stripe-webhook` (Stripe signature auth) — no changes.
 
-- **Ink & wash journal** — hand-drawn ink on off-white paper, loose linework, muted washes, never photoreal.
-- **Editorial photo** — 35mm color photo, natural light, shallow depth of field, documentary framing.
-- **Flat vector** — flat geometric shapes, 3–4 color palette, thick outlines, no gradients.
-- **Risograph print** — 2-color riso, visible grain and misregistration, warm paper stock.
-- **Minimal line art** — single-weight black line on white, generous whitespace, no shading.
+## 3. Request secrets (secure UI)
 
-The exact preset copy lives in a `PRESETS` constant at the top of the file so the AI reads the same string that populates the textarea. Selecting a chip also sets `dirty = true` so Save enables.
+Prompt via `add_secret` — never in chat/code:
+- `STRIPE_SECRET_KEY` (test-mode `sk_test_…` first)
+- `STRIPE_WEBHOOK_SECRET` (`whsec_…` from the Stripe dashboard webhook endpoint pointing at the deployed `stripe-webhook` URL)
+- `APP_PUBLIC_URL` = `https://hardcopy.tools`
 
-### 3. Make both fields required
+`CREDITS_MODE` stays unset (default: enforce).
 
-- The Save button is disabled unless `styleText.trim()` AND `imageStyle.trim()` are both non-empty (in addition to the existing `dirty` gate).
-- Show an inline hint under Save: "Both Style and Image style are required." when either is empty.
-- Update the image-style helper copy to drop "Leave blank to skip images." — images are no longer optional at profile-save time.
-- Server function `saveProfile` (`src/lib/profile.functions.ts`) also rejects empty strings so a stale client cannot bypass the check; returns a clear error message the UI surfaces via existing `saveError`.
-- `new.tsx`'s `hasStyle` gate stays as-is; a stronger `hasImageStyle` check is out of scope for this turn.
+Order: deploy `stripe-webhook` first so the URL is available to paste into Stripe, then request the secrets.
 
-### Out of scope
+## 4. Auth hardening
 
-- Redesigning the profile page layout.
-- Adding an admin-role gate elsewhere in the app.
-- Backfilling `image_style` for existing profiles (older rows keep whatever they have; users must fill it in on next edit).
+Via `configure_auth`: enable leaked-password protection (`password_hibp_enabled: true`), keep signup enabled, keep anonymous disabled, do not auto-confirm email. Note to user: email confirmation and captcha toggles that aren't exposed by the tool must be enabled manually in the Auth settings UI (I will call these out with exact locations).
+
+## Out of scope
+
+No frontend edits. No changes to migration SQL, function bodies, table/function definitions, or `credit_products` rows — user will paste real Stripe price ids after creating products in Stripe (see `docs/BILLING.md`).
