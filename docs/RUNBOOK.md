@@ -7,7 +7,8 @@
    smoke run (`bc-3bba400a…`) cloned this repo, wrote
    `pieces/smoke-test/proposal.md`, and pushed branch
    `cursor/smoke-test-proposal-d629` in ~80s.
-2. **Edge function secrets** (Lovable Cloud → backend secrets). Without
+2. **Edge function secrets** (Lovable Cloud → backend secrets; the complete
+   variable inventory is [docs/CONFIGURATION.md](CONFIGURATION.md)). Without
    `CURSOR_API_KEY` the app still works but uses the stub provider (runs are
    marked `bc_stub_…` and produce no content):
    - `CURSOR_API_KEY` — your `crsr_…` key (same one that passed the smoke test).
@@ -36,9 +37,12 @@
 - **GitHub issue thread + labels** (peer comments, `resynth`/`ready` labels
   mirroring the UI buttons) — requires a GitHub App the owner must register;
   the UI buttons already provide the same actions without it.
-- **Dictation** (Whisper) — v1 annotation read-back is typed text.
 - **Style questionnaire** — profile is a free-text `style_text` until the
   elicitation questions land.
+
+(Dictation shipped: `profile.tsx` records audio and transcribes via
+`/api/transcribe` → the Lovable AI gateway. It bills **workspace AI
+credits**, not the app's generation credits.)
 
 ## Deep research flow (kind: research)
 

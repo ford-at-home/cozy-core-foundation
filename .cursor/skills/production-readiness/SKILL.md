@@ -1,6 +1,6 @@
 ---
 name: production-readiness
-description: Pre-merge and pre-release review of Compose changes — run every required check, verify failure/loading/retry states, confirm no secret leakage, list unresolved risks and rollback options. Use for tasks mentioning release, ship, production, final review, hardening, resilience, error states, or "is this ready". Also the skill for reviewing failure behavior (loading, empty, timeout, retry, partial failure).
+description: Pre-merge and pre-release review of Hardcopy Draft changes — run every required check, verify failure/loading/retry states, confirm no secret leakage, list unresolved risks and rollback options. Use for tasks mentioning release, ship, production, final review, hardening, resilience, error states, or "is this ready". Also the skill for reviewing failure behavior (loading, empty, timeout, retry, partial failure).
 ---
 
 # production-readiness
@@ -76,7 +76,7 @@ degraded states:
   (`role="alert"`, sonner toasts), not silent console noise.
 - Realtime disconnect: pages still work by refetch, realtime is enhancement.
 
-**Credits / billing (`docs/BILLING.md`)**
+**Credits / billing (`docs/BILLING.md` + `billing-and-credits` skill)**
 
 - A run that fails, is cancelled, or gets stuck must release its credit
   reservation (reconciler sweep); a system failure must never consume a
@@ -87,6 +87,15 @@ degraded states:
 - Duplicate Stripe webhook delivery is a no-op (`stripe_events` inbox); the
   success redirect grants nothing.
 - `CREDITS_MODE=log` remains a working rollback lever if enforcement breaks.
+- Financial invariants hold: ledger append-only, balance = projection,
+  refunds/chargebacks are reversal entries (the consistency SQL in
+  `docs/BILLING.md` → Operations is the check).
+- **Before any release involving live Stripe keys**: the full Stripe CLI
+  test-mode plan in `docs/BILLING.md` → Test plan must have passed —
+  including the duplicate-event replay, the invalid-signature rejection,
+  refund/dispute triggers, and the **mobile checkout smoke test**
+  (checkout from a phone → `/billing?status=success` → balance updates;
+  canceled checkout preserves prior state). Test mode first, always.
 
 **External providers**
 

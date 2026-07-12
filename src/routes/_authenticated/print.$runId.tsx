@@ -303,7 +303,7 @@ function PrintPage() {
                 <button
                   type="button"
                   onClick={closePreview}
-                  className="rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
+                  className="inline-flex min-h-11 items-center rounded-md border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-muted"
                 >
                   Cancel
                 </button>
@@ -311,7 +311,7 @@ function PrintPage() {
                   type="button"
                   onClick={confirmPrint}
                   disabled={!modalReady}
-                  className="rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
                   {modalReady ? "Confirm & print" : "Preparing…"}
                 </button>

@@ -1,5 +1,14 @@
 # Plan v2: markdown-soul-kitchen — UI-first drafting studio on Lovable + Cursor Cloud Agents
 
+> [!WARNING]
+> **Historical design document.** This plan predates the credit/Stripe
+> billing system, the print-fidelity pipeline, the brand layer, and several
+> hardening passes; its data model, GitHub-issue orchestration, and RLS
+> descriptions no longer match the merged code (GitHub issue/label flows were
+> deferred — see `docs/RUNBOOK.md`). It is kept for design rationale only.
+> The current, verified architecture is `docs/ARCHITECTURE.md`; billing is
+> `docs/BILLING.md`.
+
 **Status:** v2, 2026-07-11. Supersedes v1 (same file, git history) after an owner redirect.
 **Cursor API facts below are bound to the research in [`docs/cursor-api-research.md`](cursor-api-research.md)** (confidence taxonomy: Documented / Strongly implied / Not established). Anything still unknown is marked `[Unverified]`.
 

@@ -84,7 +84,10 @@ export const Route = createFileRoute("/api/transcribe")({
           const detail = await res.text().catch(() => "");
           if (res.status === 402) {
             return json(
-              { error: "Out of AI credits. Add credits in workspace billing to keep dictating." },
+              {
+                error:
+                  "Dictation is out of workspace AI credits (separate from your generation credits). Add AI credits in workspace billing to keep dictating.",
+              },
               402,
             );
           }

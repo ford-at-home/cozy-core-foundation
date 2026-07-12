@@ -33,12 +33,11 @@ jobs:
       - name: Vitest (markdown + print fidelity)
         run: npm test
 
-      # Build env vars: publishable values only (see .env.example).
+      # Build env vars: publishable values only (see docs/CONFIGURATION.md).
       - name: Build
         run: npm run build
         env:
           VITE_SUPABASE_URL: https://dlaojinagezrlbwyritd.supabase.co
-          VITE_SUPABASE_PROJECT_ID: dlaojinagezrlbwyritd
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY || 'ci-placeholder-publishable-key' }}
 
       - name: Secret scan (source + built assets)

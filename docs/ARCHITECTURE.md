@@ -32,7 +32,7 @@ run.
 | Server functions | `createServerFn` in `src/lib/*.functions.ts`; server-only helpers in `src/lib/*.server.ts`.                                                                                                                                                                                                        |
 | API routes       | `src/routes/api/transcribe.ts` (Lovable AI gateway proxy), `src/routes/api/public/generate-image.ts` (HMAC-token guarded, used by cloud agents).                                                                                                                                                   |
 | Styling          | Tailwind v4 CSS-first. All tokens/theme in `src/styles.css` (`@theme inline`); **no `tailwind.config.*`**. Editorial dark theme: warm charcoal + amber primary, Inter + Instrument Serif.                                                                                                          |
-| Components       | shadcn/ui (new-york) in `src/components/ui/`; app components `StatusPill`, `MarkdownView`, `RunCostCard`, `CostBadge` in `src/components/`.                                                                                                                                                        |
+| Components       | shadcn/ui (new-york) in `src/components/ui/`; app components `StatusPill`, `MarkdownView`, `RunCostCard`, `CostBadge`, `CreditBalance` (header balance chip → `/billing`) in `src/components/`.                                                                                                                                                        |
 | Auth guard       | `src/routes/_authenticated/route.tsx` `beforeLoad` → `supabase.auth.getUser()` → redirect to `/auth`. `ssr: false` for the authenticated tree.                                                                                                                                                     |
 | Brand            | All names/messaging come from `src/config/brand.ts` (company "Hardcopy Tools", product "Hardcopy Draft" — provisional). Never hardcode product names in UI copy; use `brand`/`pageTitle`. Voice and copy dispositions: `docs/brand/BRAND.md`, `docs/brand/UI-COPY-MAP.md`, `docs/brand/NAMING.md`. |
 
@@ -48,6 +48,7 @@ run.
 | `/sessions`, `/sessions/$sessionId` | cost views                                                        |
 | `/runs/$runId`                      | run detail, outputs, actions (ready / resynth / revise)           |
 | `/print/$runId`                     | print-for-markup preview + PDF download                           |
+| `/billing`                          | `src/routes/_authenticated/billing.tsx` (balance, credit packs, purchase history, ledger, checkout return banners) |
 
 ### Mobile (verified — mobile is the primary interface)
 
@@ -112,9 +113,12 @@ Project id `dlaojinagezrlbwyritd` (`supabase/config.toml`).
 | `purchases`, `billing_customers`, `subscriptions` | Stripe object mirrors (Stripe stays the source of truth for payment state)                               |
 | `stripe_events`                                   | Webhook inbox, PK = Stripe event id (duplicate delivery = no-op insert); RLS deny-all, service-role only |
 
-RLS: users SELECT/INSERT their own rows; **UPDATE on `pieces`/`agent_runs` is
-revoked for `authenticated`** (bugbash hardening migration) — all mutations go
-through Edge Functions with the service role. `model_pricing` is read-only to
+RLS: users read/write their own rows where user-editable (profiles, sessions,
+inferences); **INSERT/UPDATE/DELETE on `pieces`/`agent_runs` are revoked for
+`authenticated`** (bugbash hardening +
+`20260712170000_revoke_client_run_insert.sql`) — all mutations to controller
+tables go through Edge Functions with the service role, so a credit
+reservation always precedes a run's existence. `model_pricing` is read-only to
 signed-in users. Storage bucket `research-attachments` is scoped to the
 `auth.uid()/` folder prefix.
 
@@ -181,8 +185,15 @@ User-facing credits (1 credit = 1 completed generation; research = 2):
   redirect grants nothing.
 - The client never submits prices; `create-checkout-session` validates price
   ids against `credit_products`. The frontend has **no Stripe key**.
+- Frontend billing surface: `src/routes/_authenticated/billing.tsx` (packs,
+  history, checkout return banners — display only), `src/components/CreditBalance.tsx`
+  (header chip), `src/lib/use-credits.ts` (balance query + realtime,
+  `CREDIT_COST` mirror, paywall error detection),
+  `src/lib/billing.functions.ts` (server fn → `create-checkout-session`).
 - `CREDITS_MODE=log` is the incident lever (observe without blocking).
-- Tests: `supabase/functions/_tests/credits.test.ts` (Deno),
+- Tests: `supabase/functions/_tests/credits.test.ts` +
+  `_tests/stripe-webhook.test.ts` (Deno), `tests/billing-boundaries.test.ts`
+  (client/server drift guards),
   `supabase/tests/credits.test.sql` + `supabase/tests/credit-concurrency.sh`
   (SQL invariants, need a live database).
 - Money rules, secrets (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`), and the
@@ -200,6 +211,8 @@ User-facing credits (1 credit = 1 completed generation; research = 2):
   `docs/RUNBOOK.md`): `CURSOR_API_KEY`, `CURSOR_WEBHOOK_SECRET`,
   `PARALLEL_API_KEY`, `LOVABLE_API_KEY`, `GITHUB_TOKEN`, `AGENT_IMAGE_SECRET`,
   `RECONCILE_TOKEN`, `AGENT_MODEL` / `AGENT_REPO_URL` / `AGENT_REPO_REF`.
+- The **complete** environment/configuration inventory (every variable, where
+  it is read, which are secrets): `docs/CONFIGURATION.md`.
 - `src/lib/admin.functions.ts` contains a demo admin bootstrap with a
   hardcoded password — known debt, do not extend it.
 - `scripts/check-secrets.sh` scans source and built assets for secret leakage.
@@ -233,8 +246,10 @@ CI runs all of the above except the live-DB credit tests:
 
 ## Missing (verified absent — do not invent)
 
-- **Frontend component/UI test suite** — vitest covers markdown/print only
-  (`tests/`); there are no React component or route tests. UI validation is
+- **Frontend component/UI test suite** — vitest covers the markdown/print
+  pipeline plus static cross-feature guards (`tests/agent-os.test.ts` for
+  skill/doc references, `tests/billing-boundaries.test.ts` for billing drift);
+  there are no React component or route tests. UI validation is
   lint + typecheck + build + manual viewport checks.
 - **GitHub App integration** (issue threads, labels) — deferred by design
   (`docs/RUNBOOK.md`).

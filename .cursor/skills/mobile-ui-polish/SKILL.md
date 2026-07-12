@@ -1,6 +1,6 @@
 ---
 name: mobile-ui-polish
-description: Refine existing Compose UI mobile-first without redesigning it — responsive layout, touch targets, safe areas, keyboard behavior, overflow, breakpoints. Use for tasks mentioning mobile layout, phone screens, responsive fixes, UI polish, touch/tap issues, viewport or keyboard problems. Preserves the editorial dark visual identity; never expands features.
+description: Refine the existing Hardcopy Draft UI mobile-first without redesigning it — responsive layout, touch targets, safe areas, keyboard behavior, overflow, breakpoints, including the billing/paywall surfaces. Use for tasks mentioning mobile layout, phone screens, responsive fixes, UI polish, touch/tap issues, viewport or keyboard problems. Preserves the editorial dark visual identity; never expands features.
 ---
 
 # mobile-ui-polish
@@ -41,6 +41,14 @@ feature.
   - responsive header + action buttons: `src/routes/_authenticated/print.$runId.tsx`
 - `src/hooks/use-mobile.tsx` exists (768px) but the codebase convention is
   Tailwind responsive classes, not the hook. Follow the convention.
+- **Billing surfaces** (added with the credit system — polish them by the same
+  rules): the header balance chip `src/components/CreditBalance.tsx` (amber at
+  ≤1 credit, links to `/billing`), the billing page
+  `src/routes/_authenticated/billing.tsx` (packs, purchase history, ledger,
+  and the `?status=success|canceled` checkout-return banners), and the
+  inline out-of-credits banners in `new.tsx` / `runs.$runId.tsx` driven by
+  `src/lib/use-credits.ts`. Billing is **not** in the bottom tab bar; the
+  chip is the mobile entry point — do not remove or shrink it below `min-h-11`.
 
 ## Repository conventions (verified — follow these exactly)
 
@@ -75,7 +83,12 @@ feature.
 6. Check keyboard interactions for inputs you touched: 16px font on mobile,
    nothing critical hidden behind the tab bar when the on-screen keyboard is
    open (avoid `fixed` bottom elements inside forms).
-7. Stop when the reported issue is fixed. Do not restyle neighboring
+7. If the change touches billing/paywall UI: keep the checkout-return states
+   honest — `status=success` is a display banner only (credits arrive via the
+   Stripe webhook; the UI polls, it never grants), `status=canceled` must
+   preserve prior state, and a pending purchase must never render as
+   completed. Behavior changes here need `billing-and-credits` as well.
+8. Stop when the reported issue is fixed. Do not restyle neighboring
    components, "modernize" spacing, or introduce new UI elements.
 
 ## Validation
@@ -124,3 +137,5 @@ For independent review of significant layout changes, hand the diff to the
 
 - `docs/ARCHITECTURE.md` → Mobile section
 - `src/routes/_authenticated/route.tsx`, `src/routes/_authenticated/sessions.tsx` (canonical patterns)
+- `.cursor/skills/billing-and-credits/SKILL.md` — required alongside this
+  skill for any checkout/paywall/balance behavior change

@@ -33,6 +33,19 @@ engine — and must agree with the annotation protocol.
   that's `supabase/functions/_shared/prompt.ts` + `contract/` territory
   (`run-orchestration-change` for the dispatch side).
 
+## Billing boundary (how credits relate to printing)
+
+Credits attach to **generation**, never to this pipeline. The billable
+boundary is run dispatch (a hold is reserved before dispatch and settled when
+the run completes — see `billing-and-credits`). Viewing, printing, re-printing,
+or Save-as-PDF of an existing artifact is free and involves no edge function:
+the print route reads the already-completed run's `agent_runs.result` and
+renders it entirely client-side. Regenerating content (resynth/revise/ready)
+is a **new run** and does cost a credit — but that flow lives outside this
+skill. If a task would make printing itself billable or gate the print route
+on balance, that is a product change: stop and apply `billing-and-credits` +
+`run-orchestration-change` alongside this skill, and confirm scope first.
+
 ## Required context
 
 - `src/lib/print-document.ts` — `buildPrintDocument`: markdown → HTML

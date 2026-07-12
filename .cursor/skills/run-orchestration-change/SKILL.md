@@ -36,6 +36,10 @@ credit- or Stripe-adjacent** — its money rules override convenience.
 
 - Pure schema/RLS work with no orchestration semantics → `supabase-change`
   (use both when a change spans them).
+- Checkout, the Stripe webhook, purchases, refunds, the paywall, or the
+  billing UI without run-lifecycle changes → `billing-and-credits` (use both
+  when reservation/settlement timing is involved — the credit lifecycle is
+  the run lifecycle).
 - UI display of runs/costs (`dashboard.tsx`, `runs.$runId.tsx`,
   `sessions*.tsx`, `CostBadge`, `RunCostCard`) → ordinary UI work
   (`mobile-ui-polish` if layout).
@@ -63,8 +67,9 @@ credit- or Stripe-adjacent** — its money rules override convenience.
   `supabase/functions/stripe-webhook/index.ts`,
   `supabase/functions/create-checkout-session/index.ts`, and the ledger
   schema in `supabase/migrations/20260712140000_credit_ledger.sql`.
-- `docs/cloud-agents-architecture-plan.md` and `docs/cursor-api-research.md`
-  for design rationale when changing behavior.
+- `docs/cloud-agents-architecture-plan.md` (historical — predates credits)
+  and `docs/cursor-api-research.md` for design rationale when changing
+  behavior.
 
 ## Invariants (do not break)
 
@@ -187,6 +192,8 @@ should not be self-certified.
 ## References
 
 - `docs/BILLING.md` (money rules — read before any credit/Stripe change)
+- `.cursor/skills/billing-and-credits/SKILL.md` — required alongside this
+  skill for checkout/webhook/paywall work
 - `docs/ARCHITECTURE.md` → Run state machine, Cost accounting, Credits and Stripe billing
-- `docs/cloud-agents-architecture-plan.md`, `docs/cursor-api-research.md`
+- `docs/cloud-agents-architecture-plan.md` (historical), `docs/cursor-api-research.md`
 - `docs/RUNBOOK.md` → Operating notes (dispatch_unknown, kill switch, `agent_run_events` debugging)

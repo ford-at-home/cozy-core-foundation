@@ -1,6 +1,6 @@
 /* print.css — the paper-markup document stylesheet.
  *
- * This is the layout engine for Hardcopy Draft's printable artifact: a US Letter,
+ * This is the layout engine for the product's printable artifact: a US Letter,
  * wide-margin draft designed for pen markup, rendered by the browser's paged
  * media engine (print preview, Save as PDF, and paper all share it).
  *
@@ -40,9 +40,13 @@
 
   /* A single muted attribution — the working space of the page stays
    * unbranded; the artifact belongs to the user. Defining this box also
-   * suppresses the browser's own bottom-right footer (URL). */
+   * suppresses the browser's own bottom-right footer (URL). The attribution
+   * string itself (the company domain) is injected per document by
+   * print-document.ts from src/config/brand.ts, so brand names never live
+   * in this stylesheet; this empty fallback keeps the browser footer
+   * suppressed even if that injection is removed. */
   @bottom-right {
-    content: "hardcopy.tools";
+    content: "";
     font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
     font-size: 8pt;
     letter-spacing: 0.05em;

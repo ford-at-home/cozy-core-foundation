@@ -11,11 +11,13 @@
 
 <!-- LOVABLE:END -->
 
-# Agent instructions — Compose
+# Agent instructions — Hardcopy Tools
 
 This file is the permanent instruction layer for coding agents working on this
-repository. Procedures live in skills (`.cursor/skills/`); this file holds the
-rules that always apply and the router that selects skills.
+repository (company **Hardcopy Tools**, product **Hardcopy Draft** — both from
+`src/config/brand.ts`; "Compose" survives only as an internal codename in
+older identifiers). Procedures live in skills (`.cursor/skills/`); this file
+holds the rules that always apply and the router that selects skills.
 
 ## Rules (always apply)
 
@@ -71,12 +73,27 @@ Skills live in `.cursor/skills/<name>/SKILL.md`. Select using this table:
 | the print view, PDF download, page layout, S{n}P{m} anchors, pagination               | `print-artifact-fidelity`                      |
 | schema, migrations, RLS, Edge Functions, Supabase config, backend secrets             | `supabase-change`                              |
 | run dispatch, webhooks, the reconciler, run states, idempotency, cost accounting      | `run-orchestration-change`                     |
-| credits, the ledger, reservations, Stripe checkout or webhooks, the paywall           | `run-orchestration-change` + `docs/BILLING.md` |
+| credits, the ledger, reservations, Stripe checkout or webhooks, purchases, the paywall | `billing-and-credits`                          |
 | release checks, failure/loading/retry behavior, resilience, pre-merge review          | `production-readiness`                         |
 
 Rules for using the router:
 
-- Multiple skills may apply; use the **smallest sufficient set**.
+- **When a task touches more than one architectural boundary, use every
+  relevant skill — not just the most obvious one.** The boundaries are: UI
+  (mobile), print/PDF, Supabase schema, run orchestration, billing, brand,
+  release readiness. Common combinations:
+
+  | Task                                     | Required skills                                                                             |
+  | ---------------------------------------- | ------------------------------------------------------------------------------------------- |
+  | modify artifact generation               | `print-artifact-fidelity` + `run-orchestration-change` + `billing-and-credits`               |
+  | change checkout or paywall UI            | `billing-and-credits` + `mobile-ui-polish`                                                   |
+  | add a new billable artifact type         | `repository-orientation` + `billing-and-credits` + `run-orchestration-change` + `print-artifact-fidelity` |
+  | change Supabase billing schema           | `supabase-change` + `billing-and-credits`                                                    |
+  | prepare a release                        | `production-readiness` + every domain skill the release touches                              |
+  | landing-page pricing or credit copy      | `docs/brand/` guidance + `billing-and-credits` (claims must match implemented billing)       |
+
+- Beyond that, use the **smallest sufficient set** — don't read skills whose
+  boundary the task genuinely does not cross.
 - **Read each selected skill file completely before changing code.**
 - Task-specific instructions override skill defaults when explicitly stated.
 - If no skill fits and the work is specialized or recurring, say so in your
