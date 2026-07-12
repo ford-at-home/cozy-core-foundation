@@ -13,6 +13,9 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
+import { brand } from "@/config/brand";
+
+const OG_IMAGE_URL = `https://${brand.company.domain}/og-image.png`;
 
 function NotFoundComponent() {
   return (
@@ -79,40 +82,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { title: "Compose" },
-      {
-        name: "description",
-        content: "Sign in to start writing workflows and view your recent runs.",
-      },
-      { property: "og:title", content: "Compose" },
-      {
-        property: "og:description",
-        content: "Sign in to start writing workflows and view your recent runs.",
-      },
+      { title: brand.meta.title },
+      { name: "description", content: brand.meta.description },
+      { property: "og:site_name", content: brand.company.name },
+      { property: "og:title", content: brand.meta.title },
+      { property: "og:description", content: brand.meta.description },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: `https://${brand.company.domain}/` },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Compose" },
-      {
-        name: "twitter:description",
-        content: "Sign in to start writing workflows and view your recent runs.",
-      },
-      {
-        property: "og:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ec1c03cf-fca6-4c59-bd34-efd318bc1376/id-preview-387a38c2--7500f965-5a02-4941-b60b-9457ee9814ed.lovable.app-1783742792503.png",
-      },
-      {
-        name: "twitter:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ec1c03cf-fca6-4c59-bd34-efd318bc1376/id-preview-387a38c2--7500f965-5a02-4941-b60b-9457ee9814ed.lovable.app-1783742792503.png",
-      },
+      { name: "twitter:title", content: brand.meta.title },
+      { name: "twitter:description", content: brand.meta.description },
+      { property: "og:image", content: OG_IMAGE_URL },
+      { name: "twitter:image", content: OG_IMAGE_URL },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+      { rel: "alternate icon", href: "/favicon.ico", type: "image/x-icon" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {

@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { createCheckout } from "@/lib/billing.functions";
 import { useCreditBalance } from "@/lib/use-credits";
 import { Skeleton } from "@/components/ui/skeleton";
+import { brand, pageTitle } from "@/config/brand";
 
 // Billing: balance, credit packs (Stripe-hosted Checkout), purchase history,
 // and the credit ledger. The success/canceled banners are UX only — credits
@@ -15,7 +16,7 @@ export const Route = createFileRoute("/_authenticated/billing")({
     search.status === "success" || search.status === "canceled" ? { status: search.status } : {},
   head: () => ({
     meta: [
-      { title: "Billing — Compose" },
+      { title: pageTitle("Billing") },
       { name: "description", content: "Credits and billing." },
       { name: "robots", content: "noindex" },
     ],
@@ -151,7 +152,9 @@ function BillingPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Studio</p>
+        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          {brand.product.name}
+        </p>
         <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Billing</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           Each generation uses 1 credit; a deep-research start uses 2. Credits are only consumed

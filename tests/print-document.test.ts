@@ -59,7 +59,7 @@ describe("buildPrintDocument", () => {
 
   it("uses an empty running header when the document has no heading", () => {
     const untitled = buildPrintDocument("Just a paragraph.");
-    expect(untitled).toContain("<title>Compose piece</title>");
+    expect(untitled).toContain("<title>Hardcopy Draft</title>");
     expect(untitled).toContain('content: "";');
   });
 

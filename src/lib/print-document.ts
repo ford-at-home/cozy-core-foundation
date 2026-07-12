@@ -1,5 +1,6 @@
 import { markdown, extractTitle } from "@/lib/markdown";
 import type { Json } from "@/integrations/supabase/types";
+import { brand } from "@/config/brand";
 // Paper-markup stylesheet; its S{n}P{m} block-anchor counting rule must stay
 // in sync with contract/references/MARKUP.md.
 import printCss from "@/styles/print.css?raw";
@@ -101,7 +102,7 @@ export function buildPrintDocument(source: string): string {
     '<html lang="en">',
     "<head>",
     '<meta charset="utf-8">',
-    `<title>${escapeHtml(title ?? "Compose piece")}</title>`,
+    `<title>${escapeHtml(title ?? brand.product.name)}</title>`,
     `<style>${fontFaces}</style>`,
     `<style>${printCss}</style>`,
     `<style>${pageHeaderCss(title)}</style>`,
