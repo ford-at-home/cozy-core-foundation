@@ -1,0 +1,2 @@
+ALTER TABLE public.agent_runs DROP CONSTRAINT agent_runs_kind_check;
+ALTER TABLE public.agent_runs ADD CONSTRAINT agent_runs_kind_check CHECK (kind = ANY (ARRAY['proposal'::text, 'resynth'::text, 'draft'::text, 'revision'::text, 'research'::text]));
