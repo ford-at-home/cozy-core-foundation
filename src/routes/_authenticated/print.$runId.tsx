@@ -190,7 +190,15 @@ function PrintPage() {
     setDownloading(true);
     try {
       const { default: html2pdf } = await import("html2pdf.js");
-      await html2pdf()
+      // The .d.ts overload resolution picks the (element, options) variant
+      // when called with zero args, which types the return as Promise<void>.
+      // The actual runtime is a chainable Worker, so cast to that shape.
+      const worker = (html2pdf as unknown as () => {
+        from: (el: HTMLElement) => {
+          set: (opts: Record<string, unknown>) => { save: () => Promise<void> };
+        };
+      })();
+      await worker
         .from(doc.body)
         .set({
           filename: `compose-run-${runId}.pdf`,
@@ -198,10 +206,8 @@ function PrintPage() {
           image: { type: "jpeg", quality: 0.95 },
           html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
           jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
-          // `pagebreak` is a valid html2pdf.js option missing from the
-          // shipped .d.ts — cast to keep strict TS happy.
           pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-        } as Parameters<ReturnType<typeof html2pdf>["set"]>[0])
+        })
         .save();
       toast.success("PDF downloaded.");
     } catch (err) {
