@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
   const { data: open, error } = await admin
     .from("agent_runs")
     .select(
-      "id, user_id, piece_id, status, kind, branch, input, external_agent_id, external_run_id, created_at, cancellation_status",
+      "id, user_id, piece_id, status, kind, branch, input, external_agent_id, external_run_id, created_at, dispatched_at, session_id, cancellation_status",
     )
     .not("status", "in", "(completed,failed,cancelled)")
     .order("created_at", { ascending: true })
