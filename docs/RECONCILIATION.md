@@ -123,15 +123,17 @@ for configuration, [CONFIGURATION.md](CONFIGURATION.md).
 - **Correction:** `tests/agent-os.test.ts` validates every path referenced by
   AGENTS.md, skills, and subagent files, and every npm script they name;
   `supabase/functions/_tests/stripe-webhook.test.ts` covers signature
-  rejection and duplicate-event dedup decisions; `tests/use-credits.test.ts`
-  covers the paywall error detector; `supabase/tests/credits.test.sql`
+  rejection and duplicate-event dedup decisions;
+  `tests/billing-boundaries.test.ts` guards the client/server `CREDIT_COST`
+  mirror, the paywall error detector, and the display-only checkout return;
+  `supabase/tests/credits.test.sql`
   extended with client-role immutability checks (ledger UPDATE/DELETE and
   `agent_runs` INSERT must fail).
 
 ### Broken asset links
 
 - `__root.tsx` linked `/favicon.ico`, which does not exist (only
-  `favicon.svg` ships). Link fixed to the SVG.
+  `favicon.svg` ships). The stale alternate-icon link was removed.
 - The OG image URL (`https://hardcopy.tools/og-image.png`) is external and
   cannot be verified from this repo; noted in CONFIGURATION.md.
 

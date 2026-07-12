@@ -115,9 +115,10 @@ Constraints:
 - Apply the run-orchestration-change skill. Its invariants (monotonic state,
   idempotency keys, append-only costs and ledger, HMAC/Stripe-signature-only
   webhook trust) are non-negotiable.
-- For anything credit- or Stripe-adjacent, read docs/BILLING.md first and
-  obey its money rules: webhook-only grants, SECURITY DEFINER balance
-  functions, no client-supplied prices, holds released on failure.
+- For anything credit- or Stripe-adjacent, also apply the billing-and-credits
+  skill and read docs/BILLING.md first; obey its money rules: webhook-only
+  grants, SECURITY DEFINER balance functions, no client-supplied prices,
+  holds released on failure.
 - Name every idempotency key you introduce and its redelivery behavior.
 - Add Deno tests covering duplicate and out-of-order delivery.
 - Ask the backend-integrity-reviewer subagent to review the diff and include
@@ -143,9 +144,8 @@ report them.
 Create one when a class of work recurs, has a recognizable trigger, a
 repeatable procedure, and checkable validation. Do not create skills for
 one-off tasks, generic coding advice, or anything a script could enforce
-instead — add the script. (Candidate to watch: if Stripe/credit work grows
-beyond what `run-orchestration-change` + `docs/BILLING.md` cover, split out a
-dedicated billing skill.)
+instead — add the script. (The dedicated billing skill flagged here
+previously now exists: `.cursor/skills/billing-and-credits/SKILL.md`.)
 
 ### When to revise an existing skill
 

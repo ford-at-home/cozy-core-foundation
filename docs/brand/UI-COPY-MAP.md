@@ -87,8 +87,23 @@ disappear." CTAs: "Start a working draft" / "See how it works". Closing:
 | Title "Print — Compose"                          | "Print — Hardcopy Draft"  | Suffix                        |
 | Kicker "Studio"                                  | "Hardcopy Draft"          | Product label                 |
 | H1 "Print for markup" + margins/anchors copy     | **retained**              | Already the brand's best copy |
-| PDF filename `compose-run-<id>.pdf`              | `hardcopy-draft-<id>.pdf` | Brand artifact naming         |
+| PDF filename                                     | **none set** — Save-as-PDF goes through the browser print dialog, which names the file from the document `<title>` (the piece title, falling back to `brand.product.name`) | No programmatic download exists |
 | Print dialog hints (Letter, background graphics) | **retained**              | Functional                    |
+
+## Billing (`billing.tsx`, `CreditBalance.tsx`, paywall banners)
+
+Added with the credit system; written to the same register — clear, quiet,
+never louder than the rest of the product.
+
+| Surface                                            | Copy                                                                | Why                                                                    |
+| -------------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Title / kicker                                     | "Billing — Hardcopy Draft" / "Hardcopy Draft"                        | Product-level page, standard suffix                                     |
+| Unit of purchase                                   | **credits** — 1 credit = 1 generation, deep research = 2             | Matches the implemented ledger; never call them "tokens" or "points"    |
+| Header chip (`CreditBalance.tsx`)                  | "N credits" (amber at ≤1)                                            | Status, not a sales pitch                                               |
+| Out-of-credits banners (`new.tsx`, `runs.$runId.tsx`) | Calm amber banner + "Get credits" link to `/billing`               | The paywall is a door, not a slot machine                               |
+| Checkout return                                    | success/canceled banners are **display only** — credits "appear when the payment is confirmed" | Honest: grants come from the Stripe webhook, never the redirect |
+| Failed/cancelled run                               | Notes the credit hold was released                                   | A system failure never quietly costs the user a credit                  |
+| Dictation 402 (`profile.tsx`)                      | "workspace AI credits — separate from the generation credits on your Billing page" | Two billing domains exist; the copy must not conflate them |
 
 ## Sessions (`sessions.tsx`, `sessions.$sessionId.tsx`)
 
