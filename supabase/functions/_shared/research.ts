@@ -60,9 +60,9 @@ export async function reconcileResearch(admin: any, run: any): Promise<void> {
         external_raw_status: task.rawStatus,
         ...(mapped === "failed"
           ? {
-            error: `Parallel reported ${task.rawStatus}`,
-            completed_at: new Date().toISOString(),
-          }
+              error: `Parallel reported ${task.rawStatus}`,
+              completed_at: new Date().toISOString(),
+            }
           : {}),
       })
       .eq("id", run.id);
@@ -79,8 +79,7 @@ export async function reconcileResearch(admin: any, run: any): Promise<void> {
       .from("agent_runs")
       .update({
         status: "failed",
-        error:
-          `Deep research exceeded ${RESEARCH_TIMEOUT_MIN} minutes (last Parallel status: ${task.rawStatus}). Resubmit the topic.`,
+        error: `Deep research exceeded ${RESEARCH_TIMEOUT_MIN} minutes (last Parallel status: ${task.rawStatus}). Resubmit the topic.`,
         completed_at: new Date().toISOString(),
       })
       .eq("id", run.id);
@@ -125,7 +124,7 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
   } catch (err) {
     await admin.from("agent_run_events").insert({
       run_id: run.id,
-      source: "usage",
+      source: "edge",
       event_type: "record_error",
       payload: { message: err instanceof Error ? err.message : String(err) },
     });
@@ -171,7 +170,7 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
       kind: "proposal",
       status: "dispatching",
       idempotency_key: chainKey,
-      input: { goal, topic, from_research_run: run.id },
+      input: { goal, topic, research: report, from_research_run: run.id },
     })
     .select("id")
     .single();
@@ -242,9 +241,7 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
 /** Result jsonb for a research run: renders in the run page's file tabs. */
 export function researchResultShape(report: string, nextRunId: string | null) {
   return {
-    channels: [
-      { channel: "research", files: [{ name: "research.md", content: report }] },
-    ],
+    channels: [{ channel: "research", files: [{ name: "research.md", content: report }] }],
     ...(nextRunId ? { nextRunId } : {}),
   };
 }

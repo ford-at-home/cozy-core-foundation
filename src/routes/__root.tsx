@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -81,21 +82,30 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Compose" },
       {
         name: "description",
-        content:
-          "Sign in to start writing workflows and view your recent runs.",
+        content: "Sign in to start writing workflows and view your recent runs.",
       },
       { property: "og:title", content: "Compose" },
       {
         property: "og:description",
-        content:
-          "Sign in to start writing workflows and view your recent runs.",
+        content: "Sign in to start writing workflows and view your recent runs.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Compose" },
-      { name: "twitter:description", content: "Sign in to start writing workflows and view your recent runs." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ec1c03cf-fca6-4c59-bd34-efd318bc1376/id-preview-387a38c2--7500f965-5a02-4941-b60b-9457ee9814ed.lovable.app-1783742792503.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ec1c03cf-fca6-4c59-bd34-efd318bc1376/id-preview-387a38c2--7500f965-5a02-4941-b60b-9457ee9814ed.lovable.app-1783742792503.png" },
+      {
+        name: "twitter:description",
+        content: "Sign in to start writing workflows and view your recent runs.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ec1c03cf-fca6-4c59-bd34-efd318bc1376/id-preview-387a38c2--7500f965-5a02-4941-b60b-9457ee9814ed.lovable.app-1783742792503.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ec1c03cf-fca6-4c59-bd34-efd318bc1376/id-preview-387a38c2--7500f965-5a02-4941-b60b-9457ee9814ed.lovable.app-1783742792503.png",
+      },
     ],
     links: [
       {
@@ -137,11 +147,7 @@ function RootComponent() {
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
-      if (
-        event !== "SIGNED_IN" &&
-        event !== "SIGNED_OUT" &&
-        event !== "USER_UPDATED"
-      ) {
+      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") {
         return;
       }
       router.invalidate();
@@ -154,6 +160,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      <Toaster />
     </QueryClientProvider>
   );
 }

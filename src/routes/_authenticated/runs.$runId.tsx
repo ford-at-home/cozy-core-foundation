@@ -10,10 +10,7 @@ import { RunCostCard } from "@/components/RunCostCard";
 
 export const Route = createFileRoute("/_authenticated/runs/$runId")({
   head: () => ({
-    meta: [
-      { title: "Run — Compose" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Run — Compose" }, { name: "robots", content: "noindex" }],
   }),
   component: RunDetailPage,
 });
@@ -27,6 +24,34 @@ const BRIEF_TAB = "__brief__";
 const RUN_COLUMNS =
   "id, user_id, piece_id, session_id, provider, total_cost_usd, status, kind, input, result, error, branch, created_at, dispatched_at, completed_at";
 
+/** Prefer the more advanced lifecycle snapshot so a slow initial fetch cannot
+ *  overwrite a newer realtime UPDATE (e.g. completed → running). */
+const STATUS_RANK: Record<string, number> = {
+  requested: 0,
+  dispatching: 1,
+  dispatch_unknown: 2,
+  queued: 3,
+  running: 4,
+  awaiting_fetch: 5,
+  cancel_requested: 6,
+  completed: 7,
+  failed: 7,
+  cancelled: 7,
+};
+
+function isFresherRun(incoming: AgentRun, current: AgentRun | null): boolean {
+  if (!current || current.id !== incoming.id) return true;
+  const iRank = STATUS_RANK[incoming.status] ?? 0;
+  const cRank = STATUS_RANK[current.status] ?? 0;
+  if (iRank !== cRank) return iRank > cRank;
+  if (incoming.completed_at && !current.completed_at) return true;
+  if (!incoming.completed_at && current.completed_at) return false;
+  if (incoming.result && !current.result) return true;
+  if (!incoming.result && current.result) return false;
+  if (incoming.error && !current.error) return true;
+  return false;
+}
+
 function RunDetailPage() {
   const { runId } = Route.useParams();
   const [run, setRun] = useState<AgentRun | null>(null);
@@ -36,6 +61,10 @@ function RunDetailPage() {
 
   useEffect(() => {
     let cancelled = false;
+    setRun(null);
+    setLoadError(null);
+    setLoading(true);
+    setActiveFile(null);
 
     supabase
       .from("agent_runs")
@@ -44,9 +73,15 @@ function RunDetailPage() {
       .maybeSingle()
       .then(({ data, error }) => {
         if (cancelled) return;
-        if (error) setLoadError(error.message);
-        else if (!data) setLoadError("Run not found.");
-        else setRun(data as AgentRun);
+        if (error) {
+          setLoadError(error.message);
+        } else if (!data) {
+          setLoadError("Run not found.");
+        } else {
+          const incoming = data as AgentRun;
+          setRun((prev) => (isFresherRun(incoming, prev) ? incoming : prev));
+          setLoadError(null);
+        }
         setLoading(false);
       });
 
@@ -57,7 +92,9 @@ function RunDetailPage() {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "agent_runs", filter: `id=eq.${runId}` },
         (payload) => {
-          if (!cancelled) setRun(payload.new as AgentRun);
+          if (cancelled) return;
+          const incoming = payload.new as AgentRun;
+          setRun((prev) => (isFresherRun(incoming, prev) ? incoming : prev));
         },
       )
       .subscribe();
@@ -116,11 +153,7 @@ function RunDetailPage() {
 
           <RunDetailPanel run={run} />
 
-          <RunCostCard
-            runId={run.id}
-            sessionId={run.session_id}
-            runCostUsd={run.total_cost_usd}
-          />
+          <RunCostCard runId={run.id} sessionId={run.session_id} runCostUsd={run.total_cost_usd} />
 
           {ACTIVE_RUN_STATUSES.includes(run.status) && (
             <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
@@ -248,9 +281,9 @@ function ActionsPanel({ run }: { run: AgentRun }) {
       {isProposal && (
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Happy with the proposal? <strong>Ready</strong> produces the final draft as a
-            pull request you approve. Not quite? Say why and <strong>Resynth</strong> for
-            a fresh attempt.
+            Happy with the proposal? <strong>Ready</strong> produces the final draft as a pull
+            request you approve. Not quite? Say why and <strong>Resynth</strong> for a fresh
+            attempt.
           </p>
           <textarea
             value={feedback}
@@ -290,15 +323,17 @@ function ActionsPanel({ run }: { run: AgentRun }) {
             >
               Print this draft
             </Link>{" "}
-            for pen markup, then type your annotations back here (block anchors like
-            “S4P3: tighten”, marks like “mark three: cut”). <strong>Revise</strong>{" "}
-            produces the final version as a pull request.
+            for pen markup, then type your annotations back here (block anchors like “S4P3:
+            tighten”, marks like “mark three: cut”). <strong>Revise</strong> produces the final
+            version as a pull request.
           </p>
           <textarea
             value={transcript}
             onChange={(e) => setTranscript(e.target.value)}
             rows={6}
-            placeholder={'S2P1: tighten to one sentence.\nMark three: cut everything after the comma.\nThe viz on page 2: sketch of the handoff gap.'}
+            placeholder={
+              "S2P1: tighten to one sentence.\nMark three: cut everything after the comma.\nThe viz on page 2: sketch of the handoff gap."
+            }
             className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-2.5 font-mono text-sm outline-none transition-shadow focus:border-primary/60 focus:ring-2 focus:ring-primary/30"
           />
           <button
@@ -314,8 +349,8 @@ function ActionsPanel({ run }: { run: AgentRun }) {
 
       {run.kind === "revision" && (
         <p className="text-sm text-muted-foreground">
-          Final version produced. Approve its pull request on GitHub, then copy the piece
-          from the tabs above wherever it's going.
+          Final version produced. Approve its pull request on GitHub, then copy the piece from the
+          tabs above wherever it's going.
         </p>
       )}
 
@@ -375,7 +410,15 @@ function activeStatusMessage(status: RunStatus, kind: string): string {
   }
 }
 
-function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function TabButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
@@ -428,6 +471,8 @@ function RunDetailPanel({ run }: { run: AgentRun }) {
 
   useEffect(() => {
     let cancelled = false;
+    setEvents([]);
+    setEventsError(null);
 
     async function load() {
       const { data, error } = await supabase
@@ -438,7 +483,18 @@ function RunDetailPanel({ run }: { run: AgentRun }) {
         .limit(100);
       if (cancelled) return;
       if (error) setEventsError(error.message);
-      else setEvents((data ?? []) as RunEvent[]);
+      else {
+        const initial = (data ?? []) as RunEvent[];
+        // Merge by id so a slow query cannot drop events that arrived via realtime.
+        setEvents((prev) => {
+          const byId = new Map<string, RunEvent>();
+          for (const e of initial) byId.set(e.id, e);
+          for (const e of prev) byId.set(e.id, e);
+          return Array.from(byId.values()).sort((a, b) =>
+            a.received_at.localeCompare(b.received_at),
+          );
+        });
+      }
     }
     load();
 
@@ -454,7 +510,10 @@ function RunDetailPanel({ run }: { run: AgentRun }) {
         },
         (payload) => {
           if (cancelled) return;
-          setEvents((prev) => [...prev, payload.new as RunEvent]);
+          const incoming = payload.new as RunEvent;
+          setEvents((prev) =>
+            prev.some((e) => e.id === incoming.id) ? prev : [...prev, incoming],
+          );
         },
       )
       .subscribe();
@@ -502,9 +561,7 @@ function RunDetailPanel({ run }: { run: AgentRun }) {
           Status transitions
         </div>
         {eventsError && (
-          <p className="text-xs text-destructive">
-            Could not load event history: {eventsError}
-          </p>
+          <p className="text-xs text-destructive">Could not load event history: {eventsError}</p>
         )}
         {timeline.length === 0 ? (
           <p className="text-xs text-muted-foreground">No transitions recorded yet.</p>
@@ -513,19 +570,13 @@ function RunDetailPanel({ run }: { run: AgentRun }) {
             {timeline.map((entry, i) => (
               <li key={`${entry.at}-${i}`} className="text-xs">
                 <div className="flex flex-wrap items-baseline gap-2">
-                  <span className="font-mono text-muted-foreground">
-                    {formatTs(entry.at)}
-                  </span>
-                  <span className="rounded bg-muted px-1.5 py-0.5 font-medium">
-                    {entry.status}
-                  </span>
+                  <span className="font-mono text-muted-foreground">{formatTs(entry.at)}</span>
+                  <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{entry.status}</span>
                   {entry.source && (
                     <span className="text-muted-foreground">via {entry.source}</span>
                   )}
                 </div>
-                {entry.note && (
-                  <div className="text-muted-foreground">{entry.note}</div>
-                )}
+                {entry.note && <div className="text-muted-foreground">{entry.note}</div>}
               </li>
             ))}
           </ol>
@@ -620,9 +671,11 @@ function buildTimeline(run: AgentRun, events: RunEvent[]): TimelineEntry[] {
   });
 }
 
-function parseResult(
-  result: Json | null,
-): { brief: GeneratedBrief | null; channels: OutputChannel[]; nextRunId: string | null } {
+function parseResult(result: Json | null): {
+  brief: GeneratedBrief | null;
+  channels: OutputChannel[];
+  nextRunId: string | null;
+} {
   if (!result || typeof result !== "object" || Array.isArray(result)) {
     return { brief: null, channels: [], nextRunId: null };
   }

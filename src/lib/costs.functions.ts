@@ -3,11 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Json } from "@/integrations/supabase/types";
 
 export type PricingSource =
-  | "provider_reported"
-  | "calculated"
-  | "fixed_task_price"
-  | "estimated"
-  | "manual";
+  "provider_reported" | "calculated" | "fixed_task_price" | "estimated" | "manual";
 
 export type SessionRow = {
   id: string;
@@ -119,18 +115,20 @@ export const getSessionDetail = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!session) return null;
 
-    const { data: runs } = await context.supabase
+    const { data: runs, error: runsError } = await context.supabase
       .from("agent_runs")
       .select(
         "id, kind, status, provider, total_cost_usd, duration_ms, inference_count, created_at, completed_at",
       )
       .eq("session_id", session.id)
       .order("created_at", { ascending: true });
+    if (runsError) throw new Error(runsError.message);
 
-    const { data: infs } = await context.supabase
+    const { data: infs, error: infsError } = await context.supabase
       .from("inferences")
       .select("provider, model, pricing_source, final_cost_usd")
       .eq("session_id", session.id);
+    if (infsError) throw new Error(infsError.message);
 
     const byProvider: Record<string, number> = {};
     const byModel: Record<string, number> = {};
@@ -149,9 +147,11 @@ export const getSessionDetail = createServerFn({ method: "POST" })
       byPricingSource[i.pricing_source as PricingSource] += c;
     }
 
-    const providers = Array.from(new Set((runs ?? []).map(
-      (r) => r.provider ?? (r.kind === "research" ? "parallel" : "cursor"),
-    )));
+    const providers = Array.from(
+      new Set(
+        (runs ?? []).map((r) => r.provider ?? (r.kind === "research" ? "parallel" : "cursor")),
+      ),
+    );
 
     return {
       ...(session as any),
