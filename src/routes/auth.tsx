@@ -2,12 +2,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
-import { useServerFn } from "@tanstack/react-start";
-import {
-  ensureAdminUser,
-  ADMIN_EMAIL,
-  ADMIN_PASSWORD,
-} from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -27,10 +21,8 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [adminLoading, setAdminLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const ensureAdmin = useServerFn(ensureAdminUser);
-  const busy = loading || googleLoading || adminLoading;
+  const busy = loading || googleLoading;
 
   useEffect(() => {
     // If the user is already signed in, go straight to the dashboard.
@@ -95,25 +87,6 @@ function AuthPage() {
       setError(err instanceof Error ? err.message : "Google sign-in failed");
     } finally {
       setGoogleLoading(false);
-    }
-  }
-
-  async function handleAdmin() {
-    if (busy) return;
-    setAdminLoading(true);
-    setError(null);
-    try {
-      await ensureAdmin();
-      const { error } = await supabase.auth.signInWithPassword({
-        email: ADMIN_EMAIL,
-        password: ADMIN_PASSWORD,
-      });
-      if (error) throw error;
-      navigate({ to: "/dashboard" });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Admin sign-in failed");
-    } finally {
-      setAdminLoading(false);
     }
   }
 
@@ -201,16 +174,6 @@ function AuthPage() {
               </svg>
             )}
             {googleLoading ? "Opening Google…" : "Continue with Google"}
-          </button>
-          <button
-            type="button"
-            onClick={handleAdmin}
-            disabled={busy}
-            aria-busy={adminLoading}
-            className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-input bg-transparent px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {adminLoading && <Spinner />}
-            {adminLoading ? "Signing in as admin…" : "Sign in as demo admin"}
           </button>
         </div>
         <button

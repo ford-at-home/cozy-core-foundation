@@ -25,8 +25,11 @@ export const saveMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { styleText?: string; imageStyle?: string }) => data ?? {})
   .handler(async ({ data, context }): Promise<{ profile: Profile }> => {
-    const styleText = typeof data.styleText === "string" ? data.styleText : "";
-    const imageStyle = typeof data.imageStyle === "string" ? data.imageStyle : "";
+    const styleText = typeof data.styleText === "string" ? data.styleText.trim() : "";
+    const imageStyle = typeof data.imageStyle === "string" ? data.imageStyle.trim() : "";
+    if (!styleText || !imageStyle) {
+      throw new Error("Both Style and Image style are required.");
+    }
     const { data: saved, error } = await context.supabase
       .from("profiles")
       .upsert(
