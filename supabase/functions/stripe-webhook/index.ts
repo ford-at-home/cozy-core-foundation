@@ -20,6 +20,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@18.5.0?target=denonext";
 import { logEvent } from "../_shared/observability.ts";
+import { refundCreditsToReverse } from "../_shared/billing.ts";
 
 const FN = "stripe-webhook";
 
@@ -229,10 +230,7 @@ async function handleChargeRefunded(
   // the ledger records the full reversal either way.
   const total = purchase.amount_total_cents ?? charge.amount;
   const refunded = charge.amount_refunded;
-  const reverseCredits =
-    total > 0
-      ? Math.min(purchase.credits, Math.floor((purchase.credits * refunded) / total))
-      : purchase.credits;
+  const reverseCredits = refundCreditsToReverse(purchase.credits, total, refunded);
   if (reverseCredits <= 0) return "skipped";
 
   await admin
