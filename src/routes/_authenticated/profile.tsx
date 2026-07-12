@@ -590,16 +590,19 @@ function ProfilePage() {
 function PresetChips({
   presets,
   current,
+  selectedPreset,
   onPick,
 }: {
   presets: { label: string; value: string }[];
   current: string;
-  onPick: (value: string) => void;
+  selectedPreset: string | null;
+  onPick: (value: string, label: string) => void;
 }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {presets.map((p) => {
-        const active = current.trim() === p.value.trim();
+        const active =
+          selectedPreset === p.label || current.trim() === p.value.trim();
         return (
           <button
             key={p.label}
@@ -612,7 +615,7 @@ function PresetChips({
               ) {
                 return;
               }
-              onPick(p.value);
+              onPick(p.value, p.label);
             }}
             className={
               "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors " +
