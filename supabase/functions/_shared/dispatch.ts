@@ -9,6 +9,7 @@ import { CursorProvider } from "./provider.cursor.ts";
 import { StubProvider } from "./provider.stub.ts";
 import { createResearchTask } from "./parallel.ts";
 import { estimateTokens, promptSummary } from "./token-estimate.ts";
+import { releaseRunCredits } from "./credits.ts";
 
 export function resolveProvider(): AgentProvider {
   if (Deno.env.get("AGENT_PROVIDER") === "stub") return new StubProvider();
@@ -40,7 +41,7 @@ export async function dispatchRun(args: DispatchArgs): Promise<void> {
   const promptEstTokens = estimateTokens(args.prompt);
   const { data: runRow } = await admin
     .from("agent_runs")
-    .select("input")
+    .select("input, parent_run_id")
     .eq("id", runId)
     .maybeSingle();
   await admin
@@ -98,9 +99,16 @@ export async function dispatchRun(args: DispatchArgs): Promise<void> {
         .update({ status: "failed", error: err.message, completed_at: new Date().toISOString() })
         .eq("id", runId);
       await logEvent("dispatch_rejected", { status: err.status, message: err.message });
+      await releaseRunCredits(
+        admin,
+        { id: runId, parent_run_id: runRow?.parent_run_id ?? null },
+        "dispatch rejected by provider",
+        "edge",
+      );
     } else {
       // Timeout / network / 5xx after send: the vendor MAY have created the
-      // agent. Ambiguity state; the reconciler resolves it. No retry here.
+      // agent. Ambiguity state; the reconciler resolves it (and releases the
+      // credit hold if the run is eventually failed). No retry here.
       await admin
         .from("agent_runs")
         .update({
@@ -160,6 +168,7 @@ export async function dispatchResearchRun(args: {
         .update({ status: "failed", error: err.message, completed_at: new Date().toISOString() })
         .eq("id", runId);
       await logEvent("dispatch_rejected", { status: err.status, message: err.message });
+      await releaseRunCredits(admin, { id: runId }, "research dispatch rejected", "edge");
     } else {
       await admin
         .from("agent_runs")

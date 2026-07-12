@@ -20,6 +20,12 @@ import { buildImageCreds } from "../_shared/image-token.ts";
 import { dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
 import { ensureRunSession } from "../_shared/usage.ts";
 import {
+  CREDIT_COST,
+  creditsEnforced,
+  getBalance,
+  reserveCreditsForRun,
+} from "../_shared/credits.ts";
+import {
   corsHeaders,
   errorResponse,
   jsonResponse,
@@ -152,6 +158,20 @@ async function handle(req: Request, rid: string): Promise<Response> {
     });
   }
 
+  // Credits: cheap pre-check before creating any rows; the authoritative,
+  // race-safe check is the reservation placed after the run insert.
+  const creditCost = CREDIT_COST[action];
+  if (creditsEnforced()) {
+    const balance = await getBalance(admin, userId);
+    if (balance < creditCost) {
+      return err(402, "Not enough credits for this generation.", {
+        requestId: rid,
+        code: "insufficient_credits",
+        details: { balance, required: creditCost },
+      });
+    }
+  }
+
   // Base ref: continue from the latest completed run's branch so prior piece
   // files are present. For revise, the draft PR should be merged — fall back
   // to main, where draft.md lives post-merge.
@@ -238,6 +258,38 @@ async function handle(req: Request, rid: string): Promise<Response> {
     pieceId,
     action,
   });
+
+  // Atomic credit hold (idempotent on runId) BEFORE dispatch.
+  const reserved = await reserveCreditsForRun(admin, {
+    userId,
+    runId: inserted.id,
+    amount: creditCost,
+    reason: action,
+  });
+  if (!reserved.ok) {
+    await admin
+      .from("agent_runs")
+      .update({
+        status: "failed",
+        error:
+          reserved.code === "insufficient_credits"
+            ? "Not enough credits for this generation."
+            : "Credit reservation failed; you were not charged.",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", inserted.id);
+    if (reserved.code === "insufficient_credits") {
+      return err(402, "Not enough credits for this generation.", {
+        requestId: rid,
+        code: "insufficient_credits",
+        details: { balance: reserved.balance, required: creditCost },
+      });
+    }
+    return err(500, "Credit reservation failed; you were not charged.", {
+      requestId: rid,
+      code: "reserve_failed",
+    });
+  }
 
   await ensureRunSession(admin, {
     runId: inserted.id,
