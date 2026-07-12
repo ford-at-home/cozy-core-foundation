@@ -28,7 +28,7 @@ import {
 } from "../_shared/complete.ts";
 import { reconcileResearch } from "../_shared/research.ts";
 import { errorResponse, jsonResponse, logEvent, newRequestId } from "../_shared/observability.ts";
-import { recordInference } from "../_shared/usage.ts";
+import { recordInference, cursorInferenceUsage } from "../_shared/usage.ts";
 
 const FN = "reconcile-runs";
 
@@ -198,17 +198,18 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
       const durationMs = dispatchedAt
         ? new Date(now).getTime() - new Date(dispatchedAt).getTime()
         : null;
+      const cursorUsage = cursorInferenceUsage(run);
       await recordInference(admin, {
         runId: run.id,
         provider: "cursor",
-        model: "default",
         operationType: "llm",
         idempotencyKey: `cursor:${run.external_agent_id}:complete`,
         externalRequestId: run.external_agent_id,
         startedAt: dispatchedAt,
         completedAt: now,
         durationMs,
-        metadata: { rawStatus: agent.rawStatus, kind: run.kind, source: "reconciler" },
+        ...cursorUsage,
+        metadata: { ...cursorUsage.metadata, rawStatus: agent.rawStatus, kind: run.kind, source: "reconciler" },
         rawPayload: { rawStatus: agent.rawStatus, branch: agent.branch, prUrl: agent.prUrl },
       });
     } catch (err) {

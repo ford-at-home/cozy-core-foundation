@@ -7,6 +7,11 @@
 // can pipe curl --output straight to a file. Errors return JSON.
 
 import { createFileRoute } from "@tanstack/react-router";
+import {
+  estimateTokens,
+  promptHash,
+  recordInferenceServer,
+} from "@/lib/record-inference.server";
 
 export const Route = createFileRoute("/api/public/generate-image")({
   server: {
@@ -35,15 +40,36 @@ export const Route = createFileRoute("/api/public/generate-image")({
         const fullPrompt = style ? `${style}\n\nSubject: ${prompt}` : prompt;
 
         // Try Lovable AI Gateway first, then fall back to OpenAI direct.
+        const startedAt = new Date().toISOString();
         try {
           const png = await generateViaLovable(fullPrompt, size);
-          if (png) return pngResponse(png, "lovable");
+          if (png) {
+            await recordImageInference({
+              runId,
+              source: "lovable",
+              model: "google/gemini-2.5-flash-image",
+              prompt: fullPrompt,
+              size,
+              startedAt,
+            });
+            return pngResponse(png, "lovable");
+          }
         } catch (err) {
           console.warn("Lovable image gen failed, trying OpenAI:", err);
         }
         try {
           const png = await generateViaOpenAI(fullPrompt, size);
-          if (png) return pngResponse(png, "openai");
+          if (png) {
+            await recordImageInference({
+              runId,
+              source: "openai",
+              model: "gpt-image-1",
+              prompt: fullPrompt,
+              size,
+              startedAt,
+            });
+            return pngResponse(png, "openai");
+          }
         } catch (err) {
           console.error("OpenAI image gen failed:", err);
           return jsonError(502, err instanceof Error ? err.message : "Image generation failed");
@@ -155,4 +181,30 @@ function timingSafeEqual(a: string, b: string): boolean {
   let diff = 0;
   for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
+}
+
+async function recordImageInference(args: {
+  runId: string;
+  source: "lovable" | "openai";
+  model: string;
+  prompt: string;
+  size: string;
+  startedAt: string;
+}) {
+  await recordInferenceServer({
+    runId: args.runId,
+    provider: args.source,
+    model: args.model,
+    operationType: "other",
+    idempotencyKey: `image:${args.runId}:${promptHash(args.prompt)}`,
+    startedAt: args.startedAt,
+    completedAt: new Date().toISOString(),
+    inputTokens: estimateTokens(args.prompt),
+    metadata: {
+      subtype: "image_gen",
+      size: args.size,
+      prompt_chars: args.prompt.length,
+    },
+    rawPayload: { size: args.size, prompt_chars: args.prompt.length },
+  });
 }

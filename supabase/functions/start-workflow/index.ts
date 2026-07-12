@@ -23,7 +23,8 @@ import { buildComposePrompt, slugify } from "../_shared/prompt.ts";
 import { dispatchResearchRun, dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
 import { resolveProcessor } from "../_shared/parallel.ts";
 import { buildImageCreds } from "../_shared/image-token.ts";
-import { ensureRunSession } from "../_shared/usage.ts";
+import { ensureRunSession, recordInference } from "../_shared/usage.ts";
+import { estimateTokens } from "../_shared/token-estimate.ts";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 import {
   corsHeaders,
@@ -218,7 +219,7 @@ async function handle(req: Request, rid: string): Promise<Response> {
   const imageCreds = await buildImageCreds(runId);
 
   // --- 5b. Materialize attachments: inline text, sign URLs for binaries ----
-  const attachments = await resolveAttachments(admin, userId, rawAttachments);
+  const attachments = await resolveAttachments(admin, userId, rawAttachments, runId);
 
   // --- 6. Dispatch ----------------------------------------------------------
   await dispatchRun({
@@ -347,6 +348,7 @@ async function resolveAttachments(
   admin: any,
   userId: string,
   raw: any[],
+  runId: string,
 ): Promise<Array<{
   name: string;
   contentType?: string;
@@ -410,6 +412,32 @@ async function resolveAttachments(
             if (nonWhitespaceLength(ocr) > nonWhitespaceLength(full)) {
               full = ocr;
               source = "pdf-ocr";
+              try {
+                await recordInference(admin, {
+                  runId,
+                  provider: "lovable",
+                  model: "google/gemini-2.5-flash",
+                  operationType: "llm",
+                  idempotencyKey: `lovable:ocr:${runId}:${path}`,
+                  inputTokens: estimateTokens(
+                    "Transcribe ALL text from this PDF verbatim.",
+                  ) + Math.ceil(buf.length / 4),
+                  outputTokens: estimateTokens(ocr),
+                  metadata: {
+                    subtype: "pdf_ocr",
+                    filename: name,
+                    pdf_bytes: buf.length,
+                    model_gateway: OCR_MODEL,
+                  },
+                  rawPayload: { filename: name, pdf_bytes: buf.length, ocr_chars: ocr.length },
+                });
+              } catch (err) {
+                logEvent(FN, "warn", {
+                  event: "ocr_usage_record_failed",
+                  runId,
+                  message: err instanceof Error ? err.message : String(err),
+                });
+              }
             }
           }
           if (!full) throw new Error("empty");
