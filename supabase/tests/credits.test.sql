@@ -158,4 +158,66 @@ BEGIN
   RAISE NOTICE 'credits.test.sql: all invariants hold';
 END $$;
 
+-- ---------------------------------------------------------------------
+-- Client-role immutability: the authenticated role must not be able to
+-- write billing state or create runs directly. Runs are created only by
+-- Edge Functions (service_role) so a credit reservation always precedes
+-- dispatch; the ledger is append-only and server-written.
+-- Each attempt runs in a sub-block: the expected permission failure
+-- rolls the sub-transaction (and the role change) back.
+-- ---------------------------------------------------------------------
+DO $$
+DECLARE
+  _uid uuid := gen_random_uuid();
+  _entry uuid;
+BEGIN
+  INSERT INTO auth.users (id, email) VALUES (_uid, _uid || '@test.local');
+  SELECT id INTO _entry FROM public.credit_ledger WHERE user_id = _uid LIMIT 1;
+
+  BEGIN
+    PERFORM set_config('role', 'authenticated', true);
+    UPDATE public.credit_ledger SET amount = 999 WHERE id = _entry;
+    RAISE EXCEPTION 'client wrote the ledger: UPDATE should be denied';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END;
+
+  BEGIN
+    PERFORM set_config('role', 'authenticated', true);
+    DELETE FROM public.credit_ledger WHERE id = _entry;
+    RAISE EXCEPTION 'client deleted from the ledger: DELETE should be denied';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END;
+
+  BEGIN
+    PERFORM set_config('role', 'authenticated', true);
+    INSERT INTO public.credit_ledger (user_id, amount, entry_type, idempotency_key)
+    VALUES (_uid, 100, 'promo_grant', 'client-forged:' || _uid);
+    RAISE EXCEPTION 'client granted itself credits: INSERT should be denied';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END;
+
+  BEGIN
+    PERFORM set_config('role', 'authenticated', true);
+    INSERT INTO public.agent_runs (user_id, kind, status)
+    VALUES (_uid, 'proposal', 'dispatching');
+    RAISE EXCEPTION 'client created a run without a reservation: INSERT should be denied';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END;
+
+  BEGIN
+    PERFORM set_config('role', 'authenticated', true);
+    INSERT INTO public.pieces (user_id, slug, title)
+    VALUES (_uid, 'forged-' || _uid, 'forged piece');
+    RAISE EXCEPTION 'client created a piece directly: INSERT should be denied';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END;
+
+  RAISE NOTICE 'credits.test.sql: client-role immutability holds';
+END $$;
+
 ROLLBACK;
