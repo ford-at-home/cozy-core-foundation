@@ -113,6 +113,8 @@ function RunDetailPage() {
             </span>
           </div>
 
+          <RunDetailPanel run={run} />
+
           {ACTIVE_RUN_STATUSES.includes(run.status) && (
             <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
               {activeStatusMessage(run.status, run.kind)}
@@ -399,6 +401,216 @@ function StatusBadge({ status }: { status: RunStatus }) {
   return (
     <span className={`rounded px-2 py-0.5 text-xs font-medium ${tone[status]}`}>{status}</span>
   );
+}
+
+// -----------------------------------------------------------------------------
+// Run detail panel — last error, status transitions, and timestamps.
+// -----------------------------------------------------------------------------
+
+type RunEvent = {
+  id: string;
+  event_type: string | null;
+  source: string;
+  received_at: string;
+  payload: Json | null;
+};
+
+function RunDetailPanel({ run }: { run: AgentRun }) {
+  const [events, setEvents] = useState<RunEvent[]>([]);
+  const [eventsError, setEventsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      const { data, error } = await supabase
+        .from("agent_run_events")
+        .select("id, event_type, source, received_at, payload")
+        .eq("run_id", run.id)
+        .order("received_at", { ascending: true })
+        .limit(100);
+      if (cancelled) return;
+      if (error) setEventsError(error.message);
+      else setEvents((data ?? []) as RunEvent[]);
+    }
+    load();
+
+    const channel = supabase
+      .channel(`run-events-${run.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "agent_run_events",
+          filter: `run_id=eq.${run.id}`,
+        },
+        (payload) => {
+          if (cancelled) return;
+          setEvents((prev) => [...prev, payload.new as RunEvent]);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [run.id]);
+
+  // Derive an ordered timeline of status transitions from the run row plus
+  // the event stream. The run row alone gives the lifecycle bookends; events
+  // give the intermediate provider-reported statuses.
+  const timeline = useMemo(() => buildTimeline(run, events), [run, events]);
+
+  return (
+    <section className="rounded-xl border border-border bg-card p-5 space-y-4">
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 className="font-serif text-lg">Run detail</h2>
+        <span className="text-xs text-muted-foreground">kind: {run.kind}</span>
+      </div>
+
+      <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+        <Stat label="Created" value={formatTs(run.created_at)} />
+        <Stat label="Dispatched" value={formatTs(run.dispatched_at)} />
+        <Stat label="Completed" value={formatTs(run.completed_at)} />
+        <Stat label="Duration" value={formatDuration(run)} />
+        <Stat label="Branch" value={run.branch ?? "—"} mono />
+        <Stat label="Piece" value={run.piece_id ?? "—"} mono />
+      </dl>
+
+      {run.error && (
+        <div className="space-y-1">
+          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Last error
+          </div>
+          <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
+            {run.error}
+          </pre>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Status transitions
+        </div>
+        {eventsError && (
+          <p className="text-xs text-destructive">
+            Could not load event history: {eventsError}
+          </p>
+        )}
+        {timeline.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No transitions recorded yet.</p>
+        ) : (
+          <ol className="space-y-1.5 border-l border-border pl-3">
+            {timeline.map((entry, i) => (
+              <li key={`${entry.at}-${i}`} className="text-xs">
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <span className="font-mono text-muted-foreground">
+                    {formatTs(entry.at)}
+                  </span>
+                  <span className="rounded bg-muted px-1.5 py-0.5 font-medium">
+                    {entry.status}
+                  </span>
+                  {entry.source && (
+                    <span className="text-muted-foreground">via {entry.source}</span>
+                  )}
+                </div>
+                {entry.note && (
+                  <div className="text-muted-foreground">{entry.note}</div>
+                )}
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function Stat({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex flex-col">
+      <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dd className={mono ? "font-mono text-xs break-all" : "text-sm"}>{value}</dd>
+    </div>
+  );
+}
+
+function formatTs(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleString();
+}
+
+function formatDuration(run: AgentRun): string {
+  const start = run.dispatched_at ?? run.created_at;
+  const end = run.completed_at ?? (ACTIVE_RUN_STATUSES.includes(run.status) ? null : null);
+  if (!start) return "—";
+  const startMs = new Date(start).getTime();
+  const endMs = end ? new Date(end).getTime() : Date.now();
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) return "—";
+  const secs = Math.round((endMs - startMs) / 1000);
+  if (secs < 60) return `${secs}s`;
+  const mins = Math.floor(secs / 60);
+  const rem = secs % 60;
+  return rem === 0 ? `${mins}m` : `${mins}m ${rem}s`;
+}
+
+type TimelineEntry = { at: string; status: string; source: string; note?: string };
+
+function buildTimeline(run: AgentRun, events: RunEvent[]): TimelineEntry[] {
+  const entries: TimelineEntry[] = [];
+  entries.push({ at: run.created_at, status: "requested", source: "controller" });
+  if (run.dispatched_at) {
+    entries.push({ at: run.dispatched_at, status: "dispatched", source: "controller" });
+  }
+
+  for (const ev of events) {
+    const payload = (ev.payload ?? {}) as Record<string, unknown>;
+    const rawStatus = typeof payload.rawStatus === "string" ? payload.rawStatus : null;
+    const message = typeof payload.message === "string" ? payload.message : null;
+
+    // Poll / webhook events with a status change from the provider.
+    if (rawStatus) {
+      entries.push({
+        at: ev.received_at,
+        status: rawStatus.toLowerCase(),
+        source: ev.source,
+        note: ev.event_type && ev.event_type !== "polled" ? ev.event_type : undefined,
+      });
+      continue;
+    }
+
+    // Errors surface as their own timeline rows.
+    if (ev.event_type && /error|failed|fetch_failed|reconcile_error/i.test(ev.event_type)) {
+      entries.push({
+        at: ev.received_at,
+        status: ev.event_type,
+        source: ev.source,
+        note: message ?? undefined,
+      });
+    }
+  }
+
+  if (run.completed_at) {
+    entries.push({
+      at: run.completed_at,
+      status: run.status,
+      source: "controller",
+      note: run.status === "failed" && run.error ? run.error : undefined,
+    });
+  }
+
+  // Stable chronological order — repeated identical (at, status) pairs collapse.
+  entries.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+  const seen = new Set<string>();
+  return entries.filter((e) => {
+    const key = `${e.at}|${e.status}|${e.source}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function parseResult(
