@@ -4,12 +4,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listMyRuns } from "@/lib/workflows.functions";
 import { StatusPill } from "@/components/StatusPill";
 import { Skeleton } from "@/components/ui/skeleton";
+import { brand, pageTitle } from "@/config/brand";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
-      { title: "Dashboard — Compose" },
-      { name: "description", content: "Your recent workflow runs." },
+      { title: pageTitle("Dashboard") },
+      { name: "description", content: "Your recent runs." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -35,16 +36,18 @@ function DashboardPage() {
     <div className="space-y-6 sm:space-y-8">
       <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
         <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Studio</p>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            {brand.product.name}
+          </p>
           <h1 className="mt-1 font-serif text-3xl tracking-tight sm:text-5xl">Dashboard</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Your 20 most recent workflow runs.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Your 20 most recent runs.</p>
         </div>
         <button
           type="button"
           onClick={() => router.navigate({ to: "/new" })}
           className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto"
         >
-          + New piece
+          + New draft
         </button>
       </div>
 
@@ -109,15 +112,15 @@ function DashboardPage() {
               </svg>
             </div>
             <div className="space-y-1">
-              <p className="font-serif text-xl">No runs yet</p>
-              <p className="text-sm text-muted-foreground">Start one from the New piece page.</p>
+              <p className="font-serif text-xl">No drafts yet</p>
+              <p className="text-sm text-muted-foreground">Start one from the New draft page.</p>
             </div>
             <button
               type="button"
               onClick={() => router.navigate({ to: "/new" })}
               className="mt-2 inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60"
             >
-              Create your first piece
+              Start your first draft
             </button>
           </div>
         )}

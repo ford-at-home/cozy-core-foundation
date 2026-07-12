@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from "react";
 import { startWorkflow } from "@/lib/workflows.functions";
 import { getMyProfile } from "@/lib/profile.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { brand, pageTitle } from "@/config/brand";
 import { CREDIT_COST, isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
 
 // Composer: paste research, optionally steer with a goal, and compose.
@@ -14,8 +15,8 @@ import { CREDIT_COST, isInsufficientCreditsError, useCreditBalance } from "@/lib
 export const Route = createFileRoute("/_authenticated/new")({
   head: () => ({
     meta: [
-      { title: "New piece — Compose" },
-      { name: "description", content: "Start a new writing workflow." },
+      { title: pageTitle("New draft") },
+      { name: "description", content: "Start a new working draft." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -83,7 +84,7 @@ function NewPiecePage() {
         continue;
       }
       if (count >= MAX_TOTAL_FILES) {
-        nextError = `Up to ${MAX_TOTAL_FILES} files per piece.`;
+        nextError = `Up to ${MAX_TOTAL_FILES} files per draft.`;
         break;
       }
       if (!files.find((x) => x.name === f.name && x.size === f.size)) {
@@ -164,21 +165,23 @@ function NewPiecePage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Studio</p>
-        <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">New piece</h1>
+        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          {brand.product.name}
+        </p>
+        <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">New draft</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Paste your research and hit Create. The studio authors a writing brief from the research
-          in your voice — taken from{" "}
+          Bring your research, and AI prepares a structured working draft from it — written in your
+          voice, taken from{" "}
           <Link to="/profile" className="underline hover:text-foreground">
             your profile
-          </Link>{" "}
-          — then synthesizes the piece.
+          </Link>
+          . When it's ready, print it and continue by hand.
         </p>
       </div>
 
       {!profileLoading && !hasStyle && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
-          Your voice profile is empty, and composing without a voice is refused by design.{" "}
+          Your voice profile is empty, and drafting without a voice is refused by design.{" "}
           <Link to="/profile" className="font-medium underline">
             Describe your style first →
           </Link>
@@ -232,8 +235,8 @@ function NewPiecePage() {
             />
             <p className="text-xs text-muted-foreground">
               Deep web research runs first (usually 2–10 minutes, with sources cited), then the
-              piece is composed from the report in your voice. The report is versioned with the
-              piece.
+              draft is prepared from the report in your voice. The report is versioned with the
+              draft.
             </p>
           </label>
         )}
@@ -248,7 +251,7 @@ function NewPiecePage() {
               onChange={(e) => setResearch(e.target.value)}
               rows={10}
               enterKeyHint="next"
-              placeholder="Paste notes, transcripts, links, a rough dump — whatever the piece is drawn from."
+              placeholder="Paste notes, transcripts, links, a rough dump — whatever the draft is drawn from."
               className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-3 font-mono text-base leading-relaxed outline-none transition-shadow focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-sm"
             />
           </label>
@@ -357,8 +360,8 @@ function NewPiecePage() {
                 ? "Uploading…"
                 : "Creating…"
               : mode === "topic"
-                ? "Research & create →"
-                : "Create piece →"}
+                ? "Research & prepare →"
+                : "Prepare draft →"}
           </button>
         </div>
       </form>
