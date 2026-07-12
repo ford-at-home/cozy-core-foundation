@@ -43,6 +43,7 @@ function PrintPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalReady, setModalReady] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const modalIframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -174,6 +175,51 @@ function PrintPage() {
     }
   }
 
+  // Client-side PDF generation using html2pdf.js. Renders the already-loaded
+  // preview iframe's <body> so the output matches what the user sees —
+  // wide-margin serif layout, S{n}P{m} anchors, and page-break rules from
+  // src/styles/print.css.
+  async function downloadPdf() {
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc?.body) {
+      const msg = "Preview isn't ready yet — try again in a moment.";
+      console.error("[print] downloadPdf: iframe document not available", { runId });
+      toast.error(msg);
+      return;
+    }
+    setDownloading(true);
+    try {
+      const { default: html2pdf } = await import("html2pdf.js");
+      // The .d.ts overload resolution picks the (element, options) variant
+      // when called with zero args, which types the return as Promise<void>.
+      // The actual runtime is a chainable Worker, so cast to that shape.
+      const worker = (html2pdf as unknown as () => {
+        from: (el: HTMLElement) => {
+          set: (opts: Record<string, unknown>) => { save: () => Promise<void> };
+        };
+      })();
+      await worker
+        .from(doc.body)
+        .set({
+          filename: `compose-run-${runId}.pdf`,
+          margin: [1.5, 2, 1.5, 1.5], // top, right, bottom, left (inches)
+          image: { type: "jpeg", quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+          jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
+          pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+        })
+        .save();
+      toast.success("PDF downloaded.");
+    } catch (err) {
+      console.error("[print] downloadPdf failed", err);
+      toast.error("Couldn't generate the PDF.", {
+        description: err instanceof Error ? err.message : "Unknown error.",
+      });
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   // Close the modal on Escape.
   useEffect(() => {
     if (!modalOpen) return;
@@ -203,6 +249,14 @@ function PrintPage() {
           >
             ← Back to run
           </Link>
+          <button
+            type="button"
+            onClick={downloadPdf}
+            disabled={!post || !iframeReady || downloading}
+            className="rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50"
+          >
+            {downloading ? "Generating PDF…" : "Download PDF"}
+          </button>
           <button
             type="button"
             onClick={openPreview}
