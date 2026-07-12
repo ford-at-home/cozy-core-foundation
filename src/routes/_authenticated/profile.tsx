@@ -513,9 +513,10 @@ function ProfilePage() {
                   type="button"
                   onClick={() => {
                     setImageStyle("");
+                    setImageStylePreset(null);
                     setDirty(true);
                   }}
-                  disabled={!imageStyle}
+                  disabled={!imageStyle && !imageStylePreset}
                   className="inline-flex items-center rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
                   title="Clear the image style field"
                 >
