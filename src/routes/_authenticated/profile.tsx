@@ -85,6 +85,8 @@ function ProfilePage() {
 
   const [styleText, setStyleText] = useState("");
   const [imageStyle, setImageStyle] = useState("");
+  const [textStylePreset, setTextStylePreset] = useState<string | null>(null);
+  const [imageStylePreset, setImageStylePreset] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
