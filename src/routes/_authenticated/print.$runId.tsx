@@ -38,7 +38,10 @@ function PrintPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [iframeReady, setIframeReady] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalReady, setModalReady] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const modalIframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,8 +86,17 @@ function PrintPage() {
     ].join("");
   }, [post]);
 
-  function handlePrint() {
-    const win = iframeRef.current?.contentWindow;
+  function openPreview() {
+    setModalReady(false);
+    setModalOpen(true);
+  }
+
+  function closePreview() {
+    setModalOpen(false);
+  }
+
+  function confirmPrint() {
+    const win = modalIframeRef.current?.contentWindow;
     try {
       if (!win) throw new Error("iframe not ready");
       win.focus();
@@ -98,7 +110,6 @@ function PrintPage() {
       w.document.write(srcDoc);
       w.document.close();
       w.focus();
-      // Give the new document a tick to lay out before printing.
       setTimeout(() => {
         try {
           w.print();
@@ -108,6 +119,16 @@ function PrintPage() {
       }, 250);
     }
   }
+
+  // Close the modal on Escape.
+  useEffect(() => {
+    if (!modalOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closePreview();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [modalOpen]);
 
   return (
     <div className="space-y-6">
@@ -130,11 +151,11 @@ function PrintPage() {
           </Link>
           <button
             type="button"
-            onClick={handlePrint}
+            onClick={openPreview}
             disabled={!post || !iframeReady}
             className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
-            Print
+            Preview &amp; print…
           </button>
         </div>
       </div>
@@ -154,6 +175,62 @@ function PrintPage() {
           onLoad={() => setIframeReady(true)}
           className="h-[75vh] w-full rounded-lg border border-border bg-white shadow-sm"
         />
+      )}
+
+      {modalOpen && post && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="print-preview-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 sm:p-8"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closePreview();
+          }}
+        >
+          <div className="flex h-full max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-2xl">
+            <div className="flex items-center justify-between gap-4 border-b border-border px-5 py-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                  Confirm before printing
+                </p>
+                <h2 id="print-preview-title" className="font-serif text-xl tracking-tight">
+                  Print preview
+                </h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={closePreview}
+                  className="rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmPrint}
+                  disabled={!modalReady}
+                  className="rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {modalReady ? "Confirm & print" : "Preparing…"}
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-hidden bg-neutral-200 p-3 sm:p-6">
+              <iframe
+                ref={modalIframeRef}
+                title="Print preview (modal)"
+                srcDoc={srcDoc}
+                onLoad={() => setModalReady(true)}
+                className="h-full w-full rounded-md border border-border bg-white shadow-inner"
+              />
+            </div>
+            <div className="border-t border-border px-5 py-2.5 text-xs text-muted-foreground">
+              Uses your browser's print dialog. Choose <strong>Letter</strong> paper and
+              enable <strong>Background graphics</strong> for the S{"{n}"}P{"{m}"} anchors
+              to appear.
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
