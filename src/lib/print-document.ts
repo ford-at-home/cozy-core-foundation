@@ -92,6 +92,19 @@ function pageFurnitureCss(title: string | null): string {
   ].join("\n");
 }
 
+// Printed markup key. Content mirrors contract/references/MARKUP.md ("Quick
+// Reference"); update both together. Divs/spans only — the S{n}P{m} anchor
+// counters in print.css count p/headings/blockquote/pre/table, and the legend
+// must not consume S1.
+const MARKUP_LEGEND_HTML = `
+<div class="markup-legend">
+  <div class="markup-legend-title">Markup key</div>
+  <div class="markup-legend-row"><span class="markup-legend-label">Symbols</span>✓ keep &middot; ✗ cut &middot; ~ rework &middot; ★ expand &middot; → move &middot; ? weak</div>
+  <div class="markup-legend-row"><span class="markup-legend-label">Dials</span>WC word choice &middot; REG register &middot; VOI voice &middot; RH rhythm — always signed: + more / – less, doubled = a lot (WC––)</div>
+  <div class="markup-legend-row"><span class="markup-legend-label">Directives</span>VIZ &middot; SLOP &middot; DEEPEN &middot; TIGHT &middot; KSP &middot; EX &middot; HOOK &middot; LAND &middot; PIVOT &middot; STAKES &middot; CLAIM &middot; SCENE &middot; EV &middot; CB &middot; ASIDE</div>
+  <div class="markup-legend-row"><span class="markup-legend-label">Voice</span>&ldquo;WC&ndash; on S3P4 — &lsquo;optimize&rsquo;&rdquo; &middot; S{n}P{m} anchors pre-printed in margin &middot; ① ② ③ = your hand-numbered handles</div>
+</div>`;
+
 /**
  * Build the complete, self-contained print document for a markdown piece.
  *
@@ -113,6 +126,7 @@ export function buildPrintDocument(source: string): string {
     `<style>${pageFurnitureCss(title)}</style>`,
     "</head>",
     '<body class="with-anchors">',
+    MARKUP_LEGEND_HTML,
     markdown.render(source),
     "</body>",
     "</html>",

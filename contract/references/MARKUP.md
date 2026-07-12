@@ -50,6 +50,15 @@ One color = **"use this as-is."** (Preserve in Edit Mode. Pull into new post in 
 | **CALLBACK** / CB   | reference earlier in the doc                     | STYLE.md          |
 | **ASIDE**           | Holmberg-style parenthetical                     | STYLE.md          |
 
+### Dials (always signed: + / –, double for "a lot")
+
+| Dial | + | – |
+|---|---|---|
+| **WC** | stronger word | plainer word |
+| **REG** | more formal | more casual |
+| **VOI** | more me | more neutral |
+| **RH** | more cadence | smoother |
+
 ### Voice grammar — four ways to point at something
 
 1. By **block anchor**: _"Section four paragraph three: …"_ / _"S4P3: …"_ — uses pre-printed `S{n}P{m}` labels.
@@ -187,6 +196,30 @@ Write as short uppercase tokens, in the margin or inline-circled. Each directive
 | **ASIDE**             | Holmberg-style parenthetical.                                                 | STYLE.md "Mark Holmberg" accent                                                  |
 
 Abbreviations in parentheses are accepted shorthand. Use whichever fits your remaining pen-stroke budget.
+
+### Dials (bidirectional directives, take + / –)
+
+Most directives are actions or flags — there's no "more move" or "less cite." But some
+edits name a *scalar property* of the prose, and for those a bare token underdetermines
+the fix. Dials are directives that always carry a `+` or `–`:
+
+| Dial | Axis | `+` means | `–` means |
+|---|---|---|---|
+| **WC** | Word choice | stronger, more vivid word | too ornate — plainer, quieter word |
+| **REG** | Register | more formal | more casual |
+| **VOI** | Voice | amplify personality, sound more like me | dial back idiosyncrasy, flatten toward neutral |
+| **RH** | Rhythm | more musical / varied cadence | choppy — smooth it out |
+
+Rules:
+
+- **A dial always points somewhere.** A bare `WC` with no sign is malformed; AI treats it
+  as `?` on the word and asks (or picks per STYLE.md and flags the guess).
+- **Magnitude by doubling.** Single sign = some (`WC–`). Doubled = a lot (`WC––`,
+  `REG++`). Same grammar written or spoken: "WC minus" / "WC double-minus."
+- **Length is not a dial.** Compression and expansion already have marks: **TIGHTEN**
+  (`TIGHT`) and **★** / **DEEPEN**. Don't write `LEN±`.
+- **Target via voice when it matters.** `WC–` in a margin flags the block; voice narrows
+  it: *"WC minus on S3P4 — 'optimize.'"*
 
 ---
 

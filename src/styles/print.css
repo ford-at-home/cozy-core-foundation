@@ -318,6 +318,54 @@ th {
 }
 
 /* ============================================================
+ * Markup key (legend) printed above the piece.
+ *
+ * Built from divs/spans on purpose: the anchor counters below only count
+ * p / headings / blockquote / pre / table, so the legend never consumes S1.
+ * Content mirrors contract/references/MARKUP.md "Quick Reference".
+ * ============================================================ */
+
+.markup-legend {
+  /* Embedded font (see print-document.ts): OS-fallback metrics would make
+   * page-1 pagination machine-dependent. */
+  font-family: "Source Code Pro", Menlo, Consolas, monospace;
+  font-size: 8.5pt;
+  line-height: 1.5;
+  color: #444444;
+  border: 0.75pt solid #bbbbbb;
+  border-radius: 3px;
+  padding: 0.5em 0.75em;
+  margin-bottom: 2em;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.markup-legend-title {
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 7.5pt;
+  color: #888;
+  margin-bottom: 0.35em;
+}
+
+.markup-legend-row {
+  display: flex;
+  gap: 0.6em;
+}
+
+.markup-legend-label {
+  flex: 0 0 5.5em;
+  font-weight: bold;
+  color: #777;
+  text-transform: uppercase;
+  font-size: 7.5pt;
+  padding-top: 0.1em;
+}
+
+/* ============================================================
  * Pre-printed block anchors (S{n}P{m} labels in the left margin)
  *
  * Active when <body class="with-anchors"> (the default).
