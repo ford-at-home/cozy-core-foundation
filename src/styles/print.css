@@ -226,23 +226,28 @@ a {
 }
 
 img {
-  display: block;
   max-width: 100%;
   /* Never taller than the 8in page box, with headroom for the anchor of the
    * block that follows. */
   max-height: 7in;
-  margin: 10pt auto;
   break-inside: avoid;
   page-break-inside: avoid;
 }
 
 /* Image-only paragraphs, tagged by the shared markdown renderer. Treated as
  * figures: centered, kept on one page, and skipped by the anchor counters
- * below (per MARKUP.md, images are not addressable blocks). */
+ * below (per MARKUP.md, images are not addressable blocks). Images mixed
+ * into prose stay inline. */
 p.md-figure {
   text-align: center;
+  margin: 12pt 0;
   break-inside: avoid;
   page-break-inside: avoid;
+}
+
+p.md-figure img {
+  display: block;
+  margin: 0 auto;
 }
 
 hr {
