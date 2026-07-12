@@ -175,16 +175,6 @@ function AuthPage() {
             )}
             {googleLoading ? "Opening Google…" : "Continue with Google"}
           </button>
-          <button
-            type="button"
-            onClick={handleAdmin}
-            disabled={busy}
-            aria-busy={adminLoading}
-            className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-input bg-transparent px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {adminLoading && <Spinner />}
-            {adminLoading ? "Signing in as admin…" : "Sign in as demo admin"}
-          </button>
         </div>
         <button
           type="button"
