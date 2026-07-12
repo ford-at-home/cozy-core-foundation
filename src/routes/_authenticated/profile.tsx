@@ -485,8 +485,16 @@ function ProfilePage() {
               <p className="text-xs text-muted-foreground">
                 Describe the visual style for images generated with your pieces —
                 medium, palette, mood, references. Applied to every image the agent
-                creates for a post. Leave blank to skip images.
+                creates for a post. Pick a preset below to start, then tweak.
               </p>
+              <PresetChips
+                presets={IMAGE_STYLE_PRESETS}
+                current={imageStyle}
+                onPick={(v) => {
+                  setImageStyle(v);
+                  setDirty(true);
+                }}
+              />
               <textarea
                 value={imageStyle}
                 onChange={(e) => {
