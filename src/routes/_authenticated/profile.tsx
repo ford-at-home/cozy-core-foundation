@@ -392,32 +392,46 @@ function ProfilePage() {
                 <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Style
                 </span>
-                <button
-                  type="button"
-                  onClick={recording ? stopRecording : startRecording}
-                  disabled={transcribing}
-                  className={
-                    "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 " +
-                    (recording
-                      ? "border-destructive/60 bg-destructive/10 text-destructive hover:bg-destructive/15"
-                      : "border-border bg-background hover:bg-muted")
-                  }
-                  aria-pressed={recording}
-                  title={recording ? "Stop and transcribe" : "Dictate with your voice"}
-                >
-                  <span
-                    aria-hidden
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStyleText("");
+                      setDirty(true);
+                    }}
+                    disabled={!styleText}
+                    className="inline-flex items-center rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+                    title="Clear the style field"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="button"
+                    onClick={recording ? stopRecording : startRecording}
+                    disabled={transcribing}
                     className={
-                      "h-1.5 w-1.5 rounded-full " +
-                      (recording ? "animate-pulse bg-destructive" : "bg-muted-foreground")
+                      "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 " +
+                      (recording
+                        ? "border-destructive/60 bg-destructive/10 text-destructive hover:bg-destructive/15"
+                        : "border-border bg-background hover:bg-muted")
                     }
-                  />
-                  {transcribing
-                    ? "Transcribing…"
-                    : recording
-                      ? "Stop recording"
-                      : "Dictate"}
-                </button>
+                    aria-pressed={recording}
+                    title={recording ? "Stop and transcribe" : "Dictate with your voice"}
+                  >
+                    <span
+                      aria-hidden
+                      className={
+                        "h-1.5 w-1.5 rounded-full " +
+                        (recording ? "animate-pulse bg-destructive" : "bg-muted-foreground")
+                      }
+                    />
+                    {transcribing
+                      ? "Transcribing…"
+                      : recording
+                        ? "Stop recording"
+                        : "Dictate"}
+                  </button>
+                </div>
               </div>
               <PresetChips
                 presets={TEXT_STYLE_PRESETS}
