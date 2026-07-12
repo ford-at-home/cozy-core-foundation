@@ -419,6 +419,14 @@ function ProfilePage() {
                       : "Dictate"}
                 </button>
               </div>
+              <PresetChips
+                presets={TEXT_STYLE_PRESETS}
+                current={styleText}
+                onPick={(v) => {
+                  setStyleText(v);
+                  setDirty(true);
+                }}
+              />
               <textarea
                 value={styleText}
                 onChange={(e) => {
