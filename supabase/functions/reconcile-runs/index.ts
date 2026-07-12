@@ -34,6 +34,7 @@ import {
   settleRunCredits,
   sweepStaleReservations,
 } from "../_shared/credits.ts";
+import { reconcilePurchases } from "../_shared/stripe-reconcile.ts";
 
 const FN = "reconcile-runs";
 
@@ -123,14 +124,32 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Stripe-vs-ledger reconciliation: heal paid-but-ungranted purchases and
+  // close out expired sessions. No-op until STRIPE_SECRET_KEY is configured.
+  let purchases = { healed: 0, expired: 0, flagged: 0 };
+  try {
+    purchases = await reconcilePurchases(admin);
+  } catch (err) {
+    logEvent(FN, "error", {
+      requestId: rid,
+      event: "purchase_reconcile_failed",
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+
   logEvent(FN, "info", {
     requestId: rid,
     event: "swept",
     scanned: open?.length ?? 0,
     summary,
     reservationsResolved,
+    purchases,
   });
-  return jsonResponse({ scanned: open?.length ?? 0, summary, reservationsResolved }, 200, rid);
+  return jsonResponse(
+    { scanned: open?.length ?? 0, summary, reservationsResolved, purchases },
+    200,
+    rid,
+  );
 });
 
 async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
