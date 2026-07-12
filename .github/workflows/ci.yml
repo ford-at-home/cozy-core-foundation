@@ -26,6 +26,13 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # The print-fidelity suite drives a real Chromium (playwright).
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Vitest (markdown + print fidelity)
+        run: npm test
+
       # Build env vars: publishable values only (see .env.example).
       - name: Build
         run: npm run build

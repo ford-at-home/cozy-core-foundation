@@ -10,22 +10,27 @@ description: Change the agent-run orchestration and cost-accounting subsystem �
 Modify the run controller — the subsystem this product treats with financial
 rigor — without breaking its three core guarantees: **exactly-once effects**
 (app-owned idempotency keys), **monotonic state** (late/out-of-order events
-can never regress a run), and **append-only cost accounting** (inference rows
-upserted by key; totals only via triggers). There is no Stripe or credit
-ledger here (verified absent); this subsystem is where those disciplines
-apply today.
+can never regress a run), and **append-only accounting** (inference rows
+upserted by key; totals only via triggers; the credit ledger is append-only).
+The run lifecycle is also the credit lifecycle: dispatch reserves credits,
+completion settles them, failure/cancel/sweep releases them
+(`_shared/credits.ts`). **Read `docs/BILLING.md` before touching anything
+credit- or Stripe-adjacent** — its money rules override convenience.
 
 ## Use this skill when
 
 - Changing `supabase/functions/start-workflow`, `cursor-webhook`,
-  `reconcile-runs`, `piece-action`, or anything in
-  `supabase/functions/_shared/` (dispatch, state, complete, usage, provider.*,
+  `reconcile-runs`, `piece-action`, `create-checkout-session`,
+  `stripe-webhook`, or anything in `supabase/functions/_shared/` (dispatch,
+  state, complete, usage, credits, billing, stripe-reconcile, provider.*,
   parallel, research, prompt).
 - Adding a run kind, run state, provider, webhook event type, or inference
   source.
-- Anything about costs: `inferences`, `model_pricing`, `sessions`, rollups,
-  `recordInference`.
-- Debugging stuck runs, duplicate events, or wrong statuses/costs.
+- Anything about costs or credits: `inferences`, `model_pricing`, `sessions`,
+  rollups, `recordInference`, `credit_ledger`, `credit_reservations`,
+  reserve/settle/release, Stripe checkout or webhooks.
+- Debugging stuck runs, duplicate events, wrong statuses/costs, or stuck
+  credit holds.
 
 ## Do not use this skill when
 
@@ -50,7 +55,14 @@ apply today.
   verification over the raw body; event dedup via
   `agent_run_events (run_id, external_event_id)`.
 - `supabase/functions/reconcile-runs/index.ts` — the authoritative sweep;
-  webhooks are an optimization, the reconciler is correctness.
+  webhooks are an optimization, the reconciler is correctness. It also
+  settles/releases credits and sweeps stale reservations.
+- For credit/Stripe work: `docs/BILLING.md` (money rules, secrets, manual
+  Stripe checklist), `supabase/functions/_shared/credits.ts`
+  (reserve/settle/release/sweep), `_shared/stripe-reconcile.ts`,
+  `supabase/functions/stripe-webhook/index.ts`,
+  `supabase/functions/create-checkout-session/index.ts`, and the ledger
+  schema in `supabase/migrations/20260712140000_credit_ledger.sql`.
 - `docs/cloud-agents-architecture-plan.md` and `docs/cursor-api-research.md`
   for design rationale when changing behavior.
 
@@ -81,6 +93,13 @@ calculated → estimated → manual`. New billable operations get a
 7. **The reconciler must remain sufficient on its own** (webhooks can be
    disabled by unsetting `CURSOR_WEBHOOK_SECRET`); don't move
    correctness-critical logic to the webhook-only path.
+8. **Credit money rules (`docs/BILLING.md`) are non-negotiable.** The ledger
+   is append-only; balances mutate only through the SECURITY DEFINER
+   functions (`grant_credits`, `reserve_credits`, `settle_reservation`,
+   `release_reservation`); credits are granted only by the verified Stripe
+   webhook or the Stripe reconciler, never from a redirect; the client never
+   supplies prices; every grant/consumption carries an idempotency key.
+   Failed/cancelled/stuck runs must release their holds.
 
 ## Procedure
 
@@ -97,10 +116,16 @@ calculated → estimated → manual`. New billable operations get a
    `20260712110000_gateway_inference_pricing.sql`); mark estimates as
    `estimated`, never fake `provider_reported`.
 5. Keep pure logic in `_shared/` and test it there; handlers stay thin.
-6. If schema changes are needed, apply `supabase-change` for the migration
+6. For credit changes: trace the reservation lifecycle end to end — where the
+   hold is placed, settled, released, and swept — and confirm a run failure at
+   each stage cannot strand or double-consume a hold. Follow the SECURITY
+   DEFINER function boundary; never write `credit_ledger` or
+   `credit_accounts` rows directly.
+7. If schema changes are needed, apply `supabase-change` for the migration
    conventions.
-7. Write or extend Deno tests covering: the happy path, a duplicate delivery,
-   and an out-of-order event for the code you touched.
+8. Write or extend Deno tests covering: the happy path, a duplicate delivery,
+   and an out-of-order event for the code you touched
+   (`_tests/credits.test.ts` shows the credit-side patterns).
 
 ## Validation
 
@@ -112,6 +137,10 @@ calculated → estimated → manual`. New billable operations get a
       (`rg "update.*status" supabase/functions` and inspect).
 - [ ] State every idempotency key you introduced and its uniqueness scope in
       the report.
+- [ ] If ledger/reservation SQL changed: the SQL invariant suites
+      `supabase/tests/credits.test.sql` and
+      `supabase/tests/credit-concurrency.sh` need a live database — run them
+      if you have one, otherwise list them as a required manual action.
 - [ ] If client display changed: `npm run lint && npm run typecheck && npm run build`.
 
 For independent review, use the `backend-integrity-reviewer` subagent
@@ -136,17 +165,28 @@ should not be self-certified.
   are off.
 - Forgetting `ensureRunSession` for a new run kind, so `recordInference`
   silently returns null (no session, no cost row).
+- Granting credits from the `/billing?status=success` redirect or any other
+  client-observable signal instead of the verified Stripe webhook.
+- Mutating `credit_ledger` / `credit_accounts` directly instead of calling
+  the SECURITY DEFINER functions.
+- Adding a billable run path that reserves credits but has no release path
+  for failure/cancel/stuck — holds strand and users lose credits.
+- Trusting a client-supplied price or amount anywhere in checkout.
 
 ## Output contract
 
 - Modules changed; state-machine changes listed transition by transition.
 - Idempotency keys introduced/affected and their redelivery behavior.
+- Credit-lifecycle impact: where holds are placed/settled/released, and what
+  happens on failure at each stage.
 - Tests added (name the duplicate/out-of-order cases) and results.
 - Cost/pricing impact, including new `model_pricing` rows.
-- Manual actions (deploy functions, apply migrations, secrets).
+- Manual actions (deploy functions, apply migrations, secrets, Stripe
+  dashboard steps per `docs/BILLING.md`).
 
 ## References
 
-- `docs/ARCHITECTURE.md` → Run state machine, Cost accounting
+- `docs/BILLING.md` (money rules — read before any credit/Stripe change)
+- `docs/ARCHITECTURE.md` → Run state machine, Cost accounting, Credits and Stripe billing
 - `docs/cloud-agents-architecture-plan.md`, `docs/cursor-api-research.md`
 - `docs/RUNBOOK.md` → Operating notes (dispatch_unknown, kill switch, `agent_run_events` debugging)

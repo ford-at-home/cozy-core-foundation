@@ -61,38 +61,53 @@ markup, then types the annotations back to trigger a revision run.
 
 ## Print and PDF (verified)
 
-- `src/routes/_authenticated/print.$runId.tsx` renders the run's `post.md`
-  through markdown-it into an **isolated iframe** via `srcDoc`, importing
-  `src/styles/print.css?raw`. The iframe exists because print.css restyles
-  global tags and must not leak into the app.
-- `src/styles/print.css`: `@page { size: letter; margin: 1.5in 2in 1.5in 1.5in }`,
-  serif 12pt, page-break rules, and the **S{n}P{m} block-anchor CSS counters**
-  (`body.with-anchors`).
+- `src/lib/print-document.ts` (`buildPrintDocument`) builds a **self-contained
+  HTML document**: markdown rendered via `src/lib/markdown.ts`, `print.css`
+  inlined via `?raw`, fonts embedded as data URIs (Source Serif 4 + Source
+  Code Pro from `@fontsource`) so pagination is machine-independent, plus a
+  per-document running header.
+- `src/routes/_authenticated/print.$runId.tsx` renders that document in an
+  **isolated iframe** via `srcDoc` (print.css restyles global tags and must
+  not leak into the app). Printing and Save-as-PDF both go through the
+  browser's native print dialog — **there is no client PDF library**
+  (html2pdf.js was removed); the paged-media engine is the single renderer
+  for preview, PDF, and paper.
+- `src/styles/print.css`: `@page { size: letter; margin: 1.5in 2in 1.5in 0.5in }`
+  — the left margin is deliberately **split** (0.5in page margin + 1in body
+  padding in print) so the S{n}P{m} anchors stay inside the page content box
+  (print engines clip the @page margin area). Serif 12pt, page-break rules,
+  folio margin box, and the **S{n}P{m} block-anchor CSS counters**.
 - **Sync contract**: the anchor-counting rule in `print.css` must match
   `contract/references/MARKUP.md` ("Pre-Printed Block Anchors") — the revision
-  agent resolves "S4P3" annotations with the same rule. Enforced by
-  `scripts/check-print-contract.sh`.
-- PDF: `html2pdf.js` (html2canvas + jsPDF) from the already-rendered iframe
-  body, `format: "letter"`, margins `[1.5, 2, 1.5, 1.5]` inches,
-  `pagebreak: { mode: ["avoid-all", "css", "legacy"] }`.
+  agent resolves "S4P3" annotations with the same rule. Guarded by
+  `scripts/check-print-contract.sh` (markers) and proven end-to-end by
+  `tests/print-fidelity.test.ts` (real Chromium: rendered anchors vs. the
+  reference walker in `tests/anchor-reference.ts`, PDF pagination, page
+  furniture; artifacts land in `test-artifacts/print/`).
 - Everything targets **US Letter**. There is no A4 anywhere.
 
 ## Backend — Supabase (verified)
 
 Project id `dlaojinagezrlbwyritd` (`supabase/config.toml`).
 
-### Tables (from `supabase/migrations/`, 17 files)
+### Tables (from `supabase/migrations/`)
 
-| Table                   | Role                                                                                             |
-| ----------------------- | ------------------------------------------------------------------------------------------------ |
-| `profiles`              | Per-user voice/style (`style_text`, `image_style`, presets)                                      |
-| `pieces`                | Content lifecycle (stage, slug, PR URLs)                                                         |
-| `agent_runs`            | Canonical job rows: status machine, `idempotency_key` (unique), external agent ids, cost rollups |
-| `agent_run_events`      | Append-only audit + webhook dedup (partial unique on `(run_id, external_event_id)`)              |
-| `sessions`              | Cost rollup per piece (unique `sessions(piece_id)`)                                              |
-| `model_pricing`         | Versioned provider pricing                                                                       |
-| `inferences`            | Billable units; unique `(provider, idempotency_key)`                                             |
-| `provider_usage_events` | Raw usage audit trail                                                                            |
+| Table                                             | Role                                                                                                     |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `profiles`                                        | Per-user voice/style (`style_text`, `image_style`, presets)                                              |
+| `pieces`                                          | Content lifecycle (stage, slug, PR URLs)                                                                 |
+| `agent_runs`                                      | Canonical job rows: status machine, `idempotency_key` (unique), external agent ids, cost rollups         |
+| `agent_run_events`                                | Append-only audit + webhook dedup (partial unique on `(run_id, external_event_id)`)                      |
+| `sessions`                                        | Cost rollup per piece (unique `sessions(piece_id)`)                                                      |
+| `model_pricing`                                   | Versioned provider pricing                                                                               |
+| `inferences`                                      | Billable units; unique `(provider, idempotency_key)`                                                     |
+| `provider_usage_events`                           | Raw usage audit trail                                                                                    |
+| `credit_accounts`                                 | Balance projection per user: `SUM(ledger) − held reservations`                                           |
+| `credit_ledger`                                   | **Append-only** credit history; corrections are new rows, never edits                                    |
+| `credit_reservations`                             | Holds placed at dispatch; settled on completion, released on failure/sweep                               |
+| `credit_products`                                 | Purchasable packs; checkout validates client-sent price ids against this table                           |
+| `purchases`, `billing_customers`, `subscriptions` | Stripe object mirrors (Stripe stays the source of truth for payment state)                               |
+| `stripe_events`                                   | Webhook inbox, PK = Stripe event id (duplicate delivery = no-op insert); RLS deny-all, service-role only |
 
 RLS: users SELECT/INSERT their own rows; **UPDATE on `pieces`/`agent_runs` is
 revoked for `authenticated`** (bugbash hardening migration) — all mutations go
@@ -105,19 +120,23 @@ costs up to `agent_runs` and `sessions`. Never write totals directly.
 
 ### Edge Functions (`supabase/functions/`)
 
-| Function         | Auth (config.toml)                                                     | Purpose                                                            |
-| ---------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `start-workflow` | JWT required                                                           | Create piece + run, dispatch Cursor agent or Parallel research     |
-| `piece-action`   | JWT required + explicit `piece.user_id` ownership check                | `resynth` / `ready` / `revise` actions                             |
-| `cursor-webhook` | `verify_jwt = false`; HMAC-SHA256 over raw body (`_shared/webhook.ts`) | Cursor `statusChange` receiver                                     |
-| `reconcile-runs` | `verify_jwt = false`; optional `RECONCILE_TOKEN` bearer                | pg_cron sweep of non-terminal runs (authoritative completion path) |
+| Function                  | Auth (config.toml)                                                     | Purpose                                                                            |
+| ------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `start-workflow`          | JWT required                                                           | Create piece + run, reserve credits, dispatch Cursor agent or research             |
+| `piece-action`            | JWT required + explicit `piece.user_id` ownership check                | `resynth` / `ready` / `revise` actions (credit-reserving where billable)           |
+| `cursor-webhook`          | `verify_jwt = false`; HMAC-SHA256 over raw body (`_shared/webhook.ts`) | Cursor `statusChange` receiver                                                     |
+| `reconcile-runs`          | `verify_jwt = false`; optional `RECONCILE_TOKEN` bearer                | pg_cron sweep: completes runs, settles/releases credits, sweeps stale reservations |
+| `create-checkout-session` | JWT required                                                           | Server-created Stripe Checkout; validates price ids against `credit_products`      |
+| `stripe-webhook`          | `verify_jwt = false`; Stripe signature verification                    | Sole grantor of purchased credits; `stripe_events` inbox dedup                     |
 
 Shared modules in `supabase/functions/_shared/`: `state.ts` (run state machine),
 `dispatch.ts` (insert-before-dispatch, `dispatch_unknown` on ambiguity),
 `complete.ts` (monotonic completion + GitHub fetch-back), `usage.ts`
-(idempotent `recordInference`), `prompt.ts` (cloud-agent prompt builders),
-`webhook.ts`, `parallel.ts`, `research.ts`, `provider.cursor.ts`,
-`provider.stub.ts`, `observability.ts`.
+(idempotent `recordInference`), `credits.ts` (reserve/settle/release/sweep),
+`billing.ts` (refund reversal), `stripe-reconcile.ts` (re-checks Stripe for
+missed webhooks), `prompt.ts` (cloud-agent prompt builders), `webhook.ts`,
+`parallel.ts`, `research.ts`, `provider.cursor.ts`, `provider.stub.ts`,
+`observability.ts`.
 
 ### Run state machine (verified — `_shared/state.ts`)
 
@@ -127,10 +146,9 @@ out-of-order webhooks can never regress a run. Unknown external statuses map to
 `null` (hold), never to a terminal state. Tested in
 `supabase/functions/_tests/state.test.ts`.
 
-### Cost accounting (verified — this is the money-adjacent subsystem)
+### Cost accounting (verified)
 
-There is **no credit ledger, no Stripe, no payments** (missing — see below).
-What exists is USD **cost accounting**:
+USD **cost accounting** for provider spend (separate from user credits below):
 
 - One `inferences` row per billable unit, upserted on
   `(provider, idempotency_key)` so webhook redelivery/re-polling never
@@ -141,6 +159,31 @@ estimated → manual` (`_shared/usage.ts` `computeCost`).
 - Rollups happen in DB triggers only.
 - Lovable workspace AI credits are **external**; the app only surfaces the
   gateway's 402 ("Out of AI credits") in `/api/transcribe` and `profile.tsx`.
+
+### Credits and Stripe billing (verified — read `docs/BILLING.md` before touching)
+
+User-facing credits (1 credit = 1 completed generation; research = 2):
+
+- **Append-only ledger** (`credit_ledger`); `credit_accounts.balance` is a
+  projection. All balance mutation goes through SECURITY DEFINER Postgres
+  functions (`grant_credits`, `reserve_credits`, `settle_reservation`,
+  `release_reservation`, `admin_adjust_credits`) executable only by
+  `service_role` — defined in
+  `supabase/migrations/20260712140000_credit_ledger.sql`.
+- Reserve at dispatch → settle on completion → release on failure/cancel;
+  `sweepStaleReservations` in the reconciler recovers stuck holds
+  (`_shared/credits.ts`).
+- **Credits are granted only by the verified Stripe webhook** (or
+  `stripe-reconcile.ts` re-checking Stripe). The `/billing?status=success`
+  redirect grants nothing.
+- The client never submits prices; `create-checkout-session` validates price
+  ids against `credit_products`. The frontend has **no Stripe key**.
+- `CREDITS_MODE=log` is the incident lever (observe without blocking).
+- Tests: `supabase/functions/_tests/credits.test.ts` (Deno),
+  `supabase/tests/credits.test.sql` + `supabase/tests/credit-concurrency.sh`
+  (SQL invariants, need a live database).
+- Money rules, secrets (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`), and the
+  owner's manual Stripe checklist: `docs/BILLING.md`.
 
 ## Auth and secrets (verified)
 
@@ -170,27 +213,26 @@ codebase do not follow `contract/SKILL.md`; they follow `AGENTS.md` and
 
 ## Validation commands (verified)
 
-| Check               | Command                                                                          |
-| ------------------- | -------------------------------------------------------------------------------- |
-| Lint                | `npm run lint`                                                                   |
-| Typecheck           | `npm run typecheck`                                                              |
-| Build               | `npm run build`                                                                  |
-| Edge function tests | `deno test --allow-env supabase/functions/_tests/` (or `npm run test:functions`) |
-| Secret scan         | `bash scripts/check-secrets.sh`                                                  |
-| Migration RLS check | `bash scripts/check-migrations.sh`                                               |
-| Print contract sync | `bash scripts/check-print-contract.sh`                                           |
+| Check                                | Command                                                                          |
+| ------------------------------------ | -------------------------------------------------------------------------------- |
+| Lint                                 | `npm run lint`                                                                   |
+| Typecheck                            | `npm run typecheck`                                                              |
+| Frontend/print tests (vitest)        | `npm test` (print-fidelity needs Chromium: `npx playwright install chromium`)    |
+| Build                                | `npm run build`                                                                  |
+| Edge function tests                  | `deno test --allow-env supabase/functions/_tests/` (or `npm run test:functions`) |
+| Secret scan                          | `bash scripts/check-secrets.sh`                                                  |
+| Migration RLS check                  | `bash scripts/check-migrations.sh`                                               |
+| Print contract sync                  | `bash scripts/check-print-contract.sh`                                           |
+| Credit SQL invariants (live DB only) | `supabase/tests/credits.test.sql`, `supabase/tests/credit-concurrency.sh`        |
 
-CI runs all of the above: `.github/workflows/ci.yml`.
+CI runs all of the above except the live-DB credit tests:
+`.github/workflows/ci.yml`.
 
 ## Missing (verified absent — do not invent)
 
-- **Stripe / payments / checkout / credit ledger** — no integration exists.
-  If billing is ever added, create `stripe-billing-change` and
-  `credit-ledger-change` skills; until then the closest analog is
-  `run-orchestration-change` (idempotency + append-only accounting).
-- **Frontend test suite** — no vitest/playwright/cypress. Validation is
+- **Frontend component/UI test suite** — vitest covers markdown/print only
+  (`tests/`); there are no React component or route tests. UI validation is
   lint + typecheck + build + manual viewport checks.
-- **Browser automation / screenshot tooling** — none in-repo.
 - **GitHub App integration** (issue threads, labels) — deferred by design
   (`docs/RUNBOOK.md`).
 
@@ -198,8 +240,11 @@ CI runs all of the above: `.github/workflows/ci.yml`.
 
 - Lovable Cloud hosting, backend secrets, and workspace AI credits.
 - Supabase dashboard state (applied migrations, cron jobs, deployed functions).
+- The Stripe dashboard (products, prices, webhook endpoints, test/live mode) —
+  the owner's checklist is in `docs/BILLING.md`.
 - Cursor platform (cursor.com/agents), Parallel platform (platform.parallel.ai).
 - The GitHub repository that content agents commit pieces to.
 
 Never claim work in these systems was completed. Document the exact manual
-steps instead (see `docs/RUNBOOK.md` for the established format).
+steps instead (see `docs/RUNBOOK.md` and `docs/BILLING.md` for the
+established format).

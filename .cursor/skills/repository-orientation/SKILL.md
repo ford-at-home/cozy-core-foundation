@@ -91,7 +91,11 @@ Orientation itself produces no code, so validation is the checklist:
   migration; mutations go through Edge Functions.
 - Treating `contract/SKILL.md` as instructions for _implementation_ agents —
   it is the contract for the _content_ agents that write prose.
-- Assuming Stripe/credits/frontend-tests exist — they do not
+- Touching credits/Stripe code without reading `docs/BILLING.md` first — the
+  money rules there are non-negotiable (append-only ledger, webhook-only
+  grants, SECURITY DEFINER balance functions).
+- Assuming React component/route tests exist — vitest covers only the
+  markdown/print pipeline under `tests/`
   (see `docs/ARCHITECTURE.md` → Missing).
 
 ## Output contract

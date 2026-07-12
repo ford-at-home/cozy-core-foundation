@@ -38,13 +38,22 @@ accounting, strict authorization.
    writes to `total_cost_usd`/session totals; pricing precedence preserved;
    new billable operations have `model_pricing` rows; no fabricated
    `provider_reported` costs.
-5. **Secret boundaries** — no secret values in code or client-reachable
-   modules; new env vars documented in `docs/RUNBOOK.md`; nothing secret
-   passed to client code or content-agent prompts beyond the established
-   HMAC image-token pattern; secrets absent from logs.
-6. **Reconciler sufficiency** — correctness must not depend on webhooks
-   alone; the pg_cron reconciler path still completes runs.
-7. **Migration safety** — new timestamped file (not an edit of an existing
+5. **Credit & Stripe integrity (`docs/BILLING.md`)** — ledger stays
+   append-only; balance mutation only through the SECURITY DEFINER functions
+   (`grant_credits`, `reserve_credits`, `settle_reservation`,
+   `release_reservation`, `admin_adjust_credits`); credits granted only by
+   the verified Stripe webhook or `stripe-reconcile.ts` (never a redirect);
+   prices validated against `credit_products`, never client-supplied; every
+   reservation has a release path on failure/cancel/stuck; `stripe_events`
+   dedup intact; `CREDITS_MODE=log` rollback lever still works.
+6. **Secret boundaries** — no secret values in code or client-reachable
+   modules; new env vars documented in `docs/RUNBOOK.md` (or `docs/BILLING.md`
+   for Stripe); nothing secret passed to client code or content-agent prompts
+   beyond the established HMAC image-token pattern; secrets absent from logs.
+7. **Reconciler sufficiency** — correctness must not depend on webhooks
+   alone; the pg_cron reconciler path still completes runs and settles or
+   releases their credits.
+8. **Migration safety** — new timestamped file (not an edit of an existing
    one), idempotent guards for Lovable replay, no destructive DDL without an
    explicit note.
 

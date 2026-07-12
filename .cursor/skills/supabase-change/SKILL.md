@@ -34,9 +34,10 @@ everything that lives outside the repo.
   tables; `20260712121000_bugbash_hardening.sql` shows the current RLS
   posture (client UPDATE revoked on `pieces`/`agent_runs`).
 - For Edge Function work: the closest existing function as a template
-  (`piece-action` for JWT-authenticated user actions, `cursor-webhook` for
-  unauthenticated signed callbacks, `reconcile-runs` for cron sweeps) and the
-  `_shared/` modules — reuse them, don't reimplement.
+  (`piece-action` for JWT-authenticated user actions, `cursor-webhook` or
+  `stripe-webhook` for unauthenticated signed callbacks, `reconcile-runs` for
+  cron sweeps, `create-checkout-session` for JWT + external-API calls) and
+  the `_shared/` modules — reuse them, don't reimplement.
 - `supabase/config.toml` — every function must have an explicit
   `verify_jwt` entry with a comment justifying `false`.
 - `docs/RUNBOOK.md` — the secrets that exist and the manual-steps format.
@@ -50,7 +51,7 @@ everything that lives outside the repo.
 | Service role       | `GRANT ALL … TO service_role` on controller tables; mutations happen in Edge Functions.                                                                                                                                 |
 | Realtime           | If the UI needs live updates: `alter publication supabase_realtime add table …` (guarded), as in the existing realtime migrations.                                                                                      |
 | Edge Function auth | JWT functions: parse `Authorization: Bearer`, `getUser(token)`, then **explicitly check row ownership** — service role bypasses RLS, so the function is the authorization boundary.                                     |
-| Secrets            | `Deno.env.get(...)` only. New secrets must be added to `docs/RUNBOOK.md` and set by the owner in Lovable Cloud — you cannot set them.                                                                                   |
+| Secrets            | `Deno.env.get(...)` only. New secrets must be added to `docs/RUNBOOK.md` (Stripe ones to `docs/BILLING.md`) and set by the owner in Lovable Cloud — you cannot set them.                                                |
 | Pure logic         | Extract to `supabase/functions/_shared/*.ts` and cover with a Deno test in `supabase/functions/_tests/`.                                                                                                                |
 
 ## Procedure

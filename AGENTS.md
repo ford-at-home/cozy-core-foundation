@@ -31,9 +31,9 @@ rules that always apply and the router that selects skills.
    width first. Interactive elements keep `min-h-11` touch targets and
    safe-area padding conventions.
 5. **Printable artifacts are fixed-layout US Letter documents**, not
-   responsive pages. Never assume A4. The S{n}P{m} anchor rule in
-   `src/styles/print.css` must stay in sync with
-   `contract/references/MARKUP.md` — change both or neither.
+   responsive pages. Never assume A4. The S{n}P{m} anchor rule is defined in
+   `src/styles/print.css`, `contract/references/MARKUP.md`, and
+   `tests/anchor-reference.ts` — change all three together or none.
 6. **Secrets stay server-side.** Only `VITE_`-prefixed publishable values may
    reach client code. `SUPABASE_SERVICE_ROLE_KEY` and provider API keys are
    used only in `*.server.ts` files, API routes, and Edge Functions.
@@ -43,31 +43,34 @@ rules that always apply and the router that selects skills.
 8. **Database changes are migrations** in `supabase/migrations/` (timestamped
    SQL). New tables get RLS enabled with policies in the same migration. Never
    weaken or drop an RLS policy to make a query work.
-9. **Idempotency is mandatory** for run dispatch, webhook processing, and cost
-   recording. Respect the state machine in
+9. **Idempotency is mandatory** for run dispatch, webhook processing, cost
+   recording, and credit operations. Respect the state machine in
    `supabase/functions/_shared/state.ts`; never write run statuses that bypass
-   its transition guard.
+   its transition guard. For credits and Stripe, the money rules in
+   `docs/BILLING.md` are non-negotiable: append-only ledger, webhook-only
+   grants, SECURITY DEFINER balance functions, no client-supplied prices.
 10. **Never edit generated files**: `src/routeTree.gen.ts`,
     `src/integrations/supabase/types.ts`, `src/integrations/lovable/`.
 11. **Never claim external work was done.** Lovable Cloud, the Supabase
     dashboard, and provider platforms are not reachable from this repo. List
     required manual steps explicitly instead (format: `docs/RUNBOOK.md`).
 12. **Run validation before declaring work complete**: `npm run lint`,
-    `npm run typecheck`, `npm run build`, plus the task-specific checks the
-    selected skill requires.
+    `npm run typecheck`, `npm test`, `npm run build`, plus the task-specific
+    checks the selected skill requires.
 
 ## Skill router
 
 Skills live in `.cursor/skills/<name>/SKILL.md`. Select using this table:
 
-| When the task involves…                                                               | Use                        |
-| ------------------------------------------------------------------------------------- | -------------------------- |
-| unfamiliar architecture, finding where something lives, starting any non-trivial task | `repository-orientation`   |
-| mobile layout, responsive behavior, UI polish, touch/keyboard/viewport issues         | `mobile-ui-polish`         |
-| the print view, PDF download, page layout, S{n}P{m} anchors, pagination               | `print-artifact-fidelity`  |
-| schema, migrations, RLS, Edge Functions, Supabase config, backend secrets             | `supabase-change`          |
-| run dispatch, webhooks, the reconciler, run states, idempotency, cost accounting      | `run-orchestration-change` |
-| release checks, failure/loading/retry behavior, resilience, pre-merge review          | `production-readiness`     |
+| When the task involves…                                                               | Use                                            |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| unfamiliar architecture, finding where something lives, starting any non-trivial task | `repository-orientation`                       |
+| mobile layout, responsive behavior, UI polish, touch/keyboard/viewport issues         | `mobile-ui-polish`                             |
+| the print view, PDF download, page layout, S{n}P{m} anchors, pagination               | `print-artifact-fidelity`                      |
+| schema, migrations, RLS, Edge Functions, Supabase config, backend secrets             | `supabase-change`                              |
+| run dispatch, webhooks, the reconciler, run states, idempotency, cost accounting      | `run-orchestration-change`                     |
+| credits, the ledger, reservations, Stripe checkout or webhooks, the paywall           | `run-orchestration-change` + `docs/BILLING.md` |
+| release checks, failure/loading/retry behavior, resilience, pre-merge review          | `production-readiness`                         |
 
 Rules for using the router:
 

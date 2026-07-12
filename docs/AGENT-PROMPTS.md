@@ -69,11 +69,14 @@ Task: <describe the print change, e.g. "Fix the annotated draft so preview
 and generated PDF fit US Letter with stable pagination.">
 
 Constraints:
-- Apply the print-artifact-fidelity skill. US Letter only.
-- If the anchor rule changes, update src/styles/print.css and
-  contract/references/MARKUP.md together; run scripts/check-print-contract.sh.
-- Verify with a multi-page fixture (headings, blockquote, code, table, image);
-  report the anchor sequence you verified.
+- Apply the print-artifact-fidelity skill. US Letter only; the paged-media
+  engine is the single renderer (no client PDF libraries).
+- If the anchor rule changes, update src/styles/print.css,
+  contract/references/MARKUP.md, and tests/anchor-reference.ts together;
+  run scripts/check-print-contract.sh.
+- Run npm test (Chromium via `npx playwright install chromium`) — the
+  print-fidelity suite is the authoritative check — and inspect the
+  regenerated PDFs in test-artifacts/print/ for the affected fixtures.
 - Ask the print-layout-reviewer subagent to review the diff and include its
   verdict.
 ```
@@ -99,18 +102,22 @@ Constraints:
   its verdict.
 ```
 
-### Orchestration / cost work
+### Orchestration / cost / billing work
 
 ```
 <PREAMBLE>
 
-Task: <describe the change, e.g. "Record a new billable operation for X" or
-"Handle a new webhook event type.">
+Task: <describe the change, e.g. "Record a new billable operation for X",
+"Handle a new webhook event type", or "Adjust the credit hold for research
+runs.">
 
 Constraints:
 - Apply the run-orchestration-change skill. Its invariants (monotonic state,
-  idempotency keys, append-only costs, HMAC-only webhook trust) are
-  non-negotiable.
+  idempotency keys, append-only costs and ledger, HMAC/Stripe-signature-only
+  webhook trust) are non-negotiable.
+- For anything credit- or Stripe-adjacent, read docs/BILLING.md first and
+  obey its money rules: webhook-only grants, SECURITY DEFINER balance
+  functions, no client-supplied prices, holds released on failure.
 - Name every idempotency key you introduce and its redelivery behavior.
 - Add Deno tests covering duplicate and out-of-order delivery.
 - Ask the backend-integrity-reviewer subagent to review the diff and include
@@ -133,10 +140,12 @@ report them.
 
 ### When to create a new skill
 
-Create one when a class of work recurs (or is about to, e.g. Stripe/credits
-if billing is ever built), has a recognizable trigger, a repeatable procedure,
-and checkable validation. Do not create skills for one-off tasks, generic
-coding advice, or anything a script could enforce instead — add the script.
+Create one when a class of work recurs, has a recognizable trigger, a
+repeatable procedure, and checkable validation. Do not create skills for
+one-off tasks, generic coding advice, or anything a script could enforce
+instead — add the script. (Candidate to watch: if Stripe/credit work grows
+beyond what `run-orchestration-change` + `docs/BILLING.md` cover, split out a
+dedicated billing skill.)
 
 ### When to revise an existing skill
 

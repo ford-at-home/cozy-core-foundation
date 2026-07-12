@@ -29,22 +29,24 @@ sanely in each one it touches.
 
 - The full diff being reviewed (`git diff main...HEAD` or the PR).
 - `docs/RUNBOOK.md` — operational failure modes and recovery paths.
+- `docs/BILLING.md` — money rules, if the diff touches credits or Stripe.
 - `docs/ARCHITECTURE.md` → Missing/External sections (so you don't demand
-  checks that can't exist, like frontend test suites).
+  checks that can't exist, like React component test suites).
 
 ## Procedure
 
 ### 1. Deterministic checks (all must pass)
 
-| Check                               | Command                                |
-| ----------------------------------- | -------------------------------------- |
-| Lint                                | `npm run lint`                         |
-| Types                               | `npm run typecheck`                    |
-| Production build                    | `npm run build`                        |
-| Edge function tests                 | `npm run test:functions`               |
-| Secret scan (source + built assets) | `bash scripts/check-secrets.sh`        |
-| Migration RLS check                 | `bash scripts/check-migrations.sh`     |
-| Print contract sync                 | `bash scripts/check-print-contract.sh` |
+| Check                               | Command                                                     |
+| ----------------------------------- | ----------------------------------------------------------- |
+| Lint                                | `npm run lint`                                              |
+| Types                               | `npm run typecheck`                                         |
+| Vitest (markdown + print fidelity)  | `npm test` (Chromium via `npx playwright install chromium`) |
+| Production build                    | `npm run build`                                             |
+| Edge function tests                 | `npm run test:functions`                                    |
+| Secret scan (source + built assets) | `bash scripts/check-secrets.sh`                             |
+| Migration RLS check                 | `bash scripts/check-migrations.sh`                          |
+| Print contract sync                 | `bash scripts/check-print-contract.sh`                      |
 
 Run all of them even if the change "obviously" doesn't affect an area — the
 suite is cheap and CI (`.github/workflows/ci.yml`) runs it anyway.
@@ -74,7 +76,19 @@ degraded states:
   (`role="alert"`, sonner toasts), not silent console noise.
 - Realtime disconnect: pages still work by refetch, realtime is enhancement.
 
-**Credits / external providers**
+**Credits / billing (`docs/BILLING.md`)**
+
+- A run that fails, is cancelled, or gets stuck must release its credit
+  reservation (reconciler sweep); a system failure must never consume a
+  user's credit.
+- Insufficient credits at dispatch: the paywall path
+  (`isInsufficientCreditsError`, `/billing`) responds cleanly — no half-created
+  runs.
+- Duplicate Stripe webhook delivery is a no-op (`stripe_events` inbox); the
+  success redirect grants nothing.
+- `CREDITS_MODE=log` remains a working rollback lever if enforcement breaks.
+
+**External providers**
 
 - Lovable gateway 402 ("Out of AI credits"): transcription and image paths
   degrade with the established message; a system failure must not appear as
@@ -89,8 +103,10 @@ degraded states:
 
 - Migrations: are they idempotent on replay? What is the rollback story
   (forward-fix migration is the norm here — say so explicitly)?
-- New secrets/config: documented in RUNBOOK and listed as manual actions?
-- Kill switch still valid (unset `CURSOR_API_KEY` / pause cron)?
+- New secrets/config: documented in RUNBOOK (or BILLING.md for Stripe) and
+  listed as manual actions?
+- Kill switches still valid (unset `CURSOR_API_KEY` / pause cron /
+  `CREDITS_MODE=log`)?
 - Anything on the Lovable-synced branch that would leave it in a non-working
   state (the AGENTS.md Lovable rule)?
 
@@ -103,7 +119,7 @@ State one of: **ready**, **ready with manual actions** (list them), or
 
 This skill _is_ validation; its own success criteria:
 
-- [ ] All seven deterministic checks executed with their real output reported.
+- [ ] All eight deterministic checks executed with their real output reported.
 - [ ] Every failure state relevant to the diff explicitly addressed (or marked
       not applicable with a reason).
 - [ ] A verdict with zero unstated assumptions about external systems.
@@ -116,8 +132,8 @@ This skill _is_ validation; its own success criteria:
   be verified from the repo — those belong in "manual actions".
 - Treating red checks as advisory. A failing check means **not ready**; either
   fix it or report it as a blocker. Never weaken a check script to get green.
-- Inventing requirements this repo doesn't have (frontend test coverage,
-  staging environments, screenshot suites) instead of the verified check set.
+- Inventing requirements this repo doesn't have (React component test
+  coverage, staging environments) instead of the verified check set.
 - Skipping the failure-state walkthrough because the happy path works.
 
 ## Output contract
