@@ -269,8 +269,8 @@ function ProfilePage() {
       if (!res.ok) {
         if (res.status === 402) {
           setDictationError({
-            message: "Out of AI credits.",
-            hint: "Add credits in Workspace Settings → Plans & credits, then press Retry.",
+            message: "Dictation is out of workspace AI credits.",
+            hint: "Dictation bills workspace AI credits — separate from the generation credits on your Billing page. Add AI credits in Workspace Settings → Plans & credits, then press Retry.",
             retryable: true,
           });
         } else if (res.status === 429) {
@@ -499,7 +499,7 @@ function ProfilePage() {
                     type="button"
                     onClick={() => void transcribeBlob(lastBlob)}
                     disabled={transcribing}
-                    className="mt-2 inline-flex items-center rounded-md border border-destructive/50 bg-background px-2.5 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+                    className="mt-2 inline-flex min-h-11 items-center rounded-md border border-destructive/50 bg-background px-3 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
                   >
                     {transcribing ? "Retrying…" : "Retry transcription"}
                   </button>

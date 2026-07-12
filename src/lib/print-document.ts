@@ -62,12 +62,14 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/* The running header carries the document title, so it is generated per
- * document rather than living in print.css. Suppressed on page 1, where the
- * title itself is the first thing on the page. Defining the box at all also
- * tells Chromium to drop its own date/title header on that edge. Static
- * furniture (the page-number footer) lives in print.css. */
-function pageHeaderCss(title: string | null): string {
+/* Per-document page furniture. The running header carries the document title
+ * and the bottom-right attribution carries the brand domain, so both are
+ * generated here rather than living in print.css (brand strings come only
+ * from src/config/brand.ts). The header is suppressed on page 1, where the
+ * title itself is the first thing on the page. Defining the boxes at all also
+ * tells Chromium to drop its own date/title/URL furniture on those edges.
+ * Static furniture (the page-number footer) lives in print.css. */
+function pageFurnitureCss(title: string | null): string {
   return [
     "@page {",
     "  @top-center {",
@@ -79,6 +81,9 @@ function pageHeaderCss(title: string | null): string {
     "    color: #666666;",
     "    /* Center on the text column (see the split-margin note in print.css). */",
     "    padding-left: 1in;",
+    "  }",
+    "  @bottom-right {",
+    `    content: "${escapeCssString(brand.company.domain)}";`,
     "  }",
     "}",
     "@page :first {",
@@ -105,7 +110,7 @@ export function buildPrintDocument(source: string): string {
     `<title>${escapeHtml(title ?? brand.product.name)}</title>`,
     `<style>${fontFaces}</style>`,
     `<style>${printCss}</style>`,
-    `<style>${pageHeaderCss(title)}</style>`,
+    `<style>${pageFurnitureCss(title)}</style>`,
     "</head>",
     '<body class="with-anchors">',
     markdown.render(source),
