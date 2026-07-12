@@ -344,6 +344,12 @@ function ProfilePage() {
   }, [data, dirty]);
 
   async function handleSave() {
+    const trimmedStyle = styleText.trim();
+    const trimmedImage = imageStyle.trim();
+    if (!trimmedStyle || !trimmedImage) {
+      setSaveError("Both Style and Image style are required.");
+      return;
+    }
     setSaving(true);
     setSaveError(null);
     try {
