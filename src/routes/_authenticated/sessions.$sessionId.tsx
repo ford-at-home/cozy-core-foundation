@@ -76,7 +76,56 @@ function SessionDetailPage() {
 
       <section className="space-y-3">
         <h2 className="font-serif text-xl">Runs</h2>
-        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+
+        <ul className="space-y-3 md:hidden">
+          {data.runs.map((r) => (
+            <li key={r.id}>
+              <Link
+                to="/runs/$runId"
+                params={{ runId: r.id }}
+                className="block rounded-xl border border-border bg-card p-4 shadow-sm transition-colors active:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring/60"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="font-medium capitalize">{r.kind}</p>
+                  <StatusPill status={r.status} />
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                  <div>
+                    <p className="uppercase tracking-wide">Cost</p>
+                    <p className="mt-0.5 font-mono text-sm text-foreground tabular-nums">
+                      {formatUsd(r.total_cost_usd)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="uppercase tracking-wide">Duration</p>
+                    <p className="mt-0.5 text-sm text-foreground tabular-nums">
+                      {formatDuration(r.duration_ms)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="uppercase tracking-wide">Inferences</p>
+                    <p className="mt-0.5 text-sm text-foreground tabular-nums">
+                      {r.inference_count}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                  <span className="rounded bg-muted px-1.5 py-0.5 uppercase tracking-wide">
+                    {r.provider ?? (r.kind === "research" ? "parallel" : "cursor")}
+                  </span>
+                  <time dateTime={r.created_at}>{new Date(r.created_at).toLocaleString()}</time>
+                </div>
+              </Link>
+            </li>
+          ))}
+          {data.runs.length === 0 && (
+            <li className="rounded-xl border border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+              No runs yet.
+            </li>
+          )}
+        </ul>
+
+        <div className="hidden overflow-hidden rounded-xl border border-border bg-card shadow-sm md:block">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[44rem] text-sm">
               <thead className="border-b border-border bg-muted/30 text-xs uppercase tracking-wide text-muted-foreground">

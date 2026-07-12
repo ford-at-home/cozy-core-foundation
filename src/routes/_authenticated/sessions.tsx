@@ -53,17 +53,21 @@ function SessionsPage() {
   const total = sessions.reduce((s, x) => s + Number(x.total_cost_usd), 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div className="min-w-0">
           <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Studio</p>
-          <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Cost</h1>
+          <h1 className="mt-1 font-serif text-3xl tracking-tight sm:text-5xl">Cost</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Total across shown sessions:{" "}
             <span className="font-mono font-medium text-foreground">{formatUsd(total)}</span>
           </p>
         </div>
-        <div className="flex flex-wrap gap-1" role="group" aria-label="Sort sessions">
+        <div
+          className="grid grid-cols-4 gap-1 sm:flex sm:flex-wrap"
+          role="group"
+          aria-label="Sort sessions"
+        >
           {(["newest", "cost", "duration", "runs"] as Sort[]).map((k) => (
             <button
               key={k}
@@ -71,7 +75,7 @@ function SessionsPage() {
               onClick={() => setSort(k)}
               aria-pressed={sort === k}
               className={
-                "inline-flex h-8 items-center rounded-md px-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring/60 " +
+                "inline-flex min-h-11 items-center justify-center rounded-md px-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring/60 sm:min-h-8 " +
                 (sort === k
                   ? "bg-primary text-primary-foreground"
                   : "border border-border text-muted-foreground hover:text-foreground")
@@ -85,9 +89,9 @@ function SessionsPage() {
 
       {isLoading && (
         <div className="space-y-3" aria-busy="true" aria-label="Loading sessions">
-          <Skeleton className="h-12 w-full rounded-xl" />
-          <Skeleton className="h-12 w-full rounded-xl" />
-          <Skeleton className="h-12 w-full rounded-xl" />
+          <Skeleton className="h-20 w-full rounded-xl" />
+          <Skeleton className="h-20 w-full rounded-xl" />
+          <Skeleton className="h-20 w-full rounded-xl" />
         </div>
       )}
       {error && (
@@ -97,14 +101,14 @@ function SessionsPage() {
       )}
 
       {!isLoading && !error && sessions.length === 0 && (
-        <div className="rounded-xl border border-border bg-card p-10 text-center">
+        <div className="rounded-xl border border-border bg-card p-8 text-center sm:p-10">
           <p className="font-serif text-xl">No sessions yet</p>
           <p className="mt-2 text-sm text-muted-foreground">
             Start a piece from the dashboard — cost tracking appears here.
           </p>
           <Link
             to="/new"
-            className="mt-5 inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="mt-5 inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             Create a piece
           </Link>
@@ -112,42 +116,96 @@ function SessionsPage() {
       )}
 
       {!isLoading && sessions.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[48rem] text-sm">
-              <thead className="border-b border-border bg-muted/30 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th scope="col" className="px-4 py-3 text-left font-medium">
-                    Title
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left font-medium">
-                    Status
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-right font-medium">
-                    Cost
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-right font-medium">
-                    Duration
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-right font-medium">
-                    Runs
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left font-medium">
-                    Providers
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left font-medium">
-                    Started
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {sessions.map((s) => (
-                  <SessionRowView key={s.id} s={s} />
-                ))}
-              </tbody>
-            </table>
+        <>
+          <ul className="space-y-3 md:hidden">
+            {sessions.map((s) => (
+              <li key={s.id}>
+                <Link
+                  to="/sessions/$sessionId"
+                  params={{ sessionId: s.id }}
+                  className="block rounded-xl border border-border bg-card p-4 shadow-sm transition-colors active:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring/60"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="min-w-0 truncate font-medium">
+                      {s.title || `Session ${s.id.slice(0, 8)}`}
+                    </p>
+                    <StatusPill status={s.status} />
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                    <div>
+                      <p className="uppercase tracking-wide">Cost</p>
+                      <p className="mt-0.5 font-mono text-sm text-foreground tabular-nums">
+                        {formatUsd(s.total_cost_usd)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="uppercase tracking-wide">Duration</p>
+                      <p className="mt-0.5 text-sm text-foreground tabular-nums">
+                        {formatDuration(s.total_duration_ms)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="uppercase tracking-wide">Runs</p>
+                      <p className="mt-0.5 text-sm text-foreground tabular-nums">{s.run_count}</p>
+                    </div>
+                  </div>
+                  {(s.providers.length > 0 || s.started_at) && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                      {s.providers.map((p) => (
+                        <span
+                          key={p}
+                          className="rounded bg-muted px-1.5 py-0.5 uppercase tracking-wide"
+                        >
+                          {p}
+                        </span>
+                      ))}
+                      <time dateTime={s.started_at} className="ml-auto">
+                        {new Date(s.started_at).toLocaleString()}
+                      </time>
+                    </div>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+
+          <div className="hidden overflow-hidden rounded-xl border border-border bg-card shadow-sm md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[48rem] text-sm">
+                <thead className="border-b border-border bg-muted/30 text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 text-left font-medium">
+                      Title
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left font-medium">
+                      Status
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-right font-medium">
+                      Cost
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-right font-medium">
+                      Duration
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-right font-medium">
+                      Runs
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left font-medium">
+                      Providers
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left font-medium">
+                      Started
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sessions.map((s) => (
+                    <SessionRowView key={s.id} s={s} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
@@ -160,7 +218,7 @@ function SessionRowView({ s }: { s: SessionRow }) {
         <Link
           to="/sessions/$sessionId"
           params={{ sessionId: s.id }}
-          className="font-medium underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-ring/60 rounded-sm"
+          className="rounded-sm font-medium underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-ring/60"
         >
           {s.title || `Session ${s.id.slice(0, 8)}`}
         </Link>
