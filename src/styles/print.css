@@ -108,10 +108,18 @@ th, td {
 
 th { background: #efefef; }
 
-/* Footer page numbers when supported by the print engine */
+/* Footer page numbers, plus a single muted attribution, when supported by
+ * the print engine. The working space of the page stays unbranded — the
+ * artifact belongs to the user. */
 @media print {
   @page {
     @bottom-center { content: counter(page); }
+    @bottom-right {
+      content: "hardcopy.tools";
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 8pt;
+      color: #999;
+    }
   }
 }
 
