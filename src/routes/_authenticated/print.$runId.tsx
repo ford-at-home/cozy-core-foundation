@@ -1,12 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import MarkdownIt from "markdown-it";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
-// Vendored paper-markup stylesheet; its S{n}P{m} block-anchor counting rule
-// must stay in sync with contract/references/MARKUP.md.
-import printCss from "@/styles/print.css?raw";
+import { buildPrintDocument, extractPost } from "@/lib/print-document";
 import { brand, pageTitle } from "@/config/brand";
 
 export const Route = createFileRoute("/_authenticated/print/$runId")({
@@ -15,21 +12,6 @@ export const Route = createFileRoute("/_authenticated/print/$runId")({
   }),
   component: PrintPage,
 });
-
-const md = new MarkdownIt({ html: false, linkify: true, typographer: true });
-
-function extractPost(result: Json | null): string | null {
-  if (!result || typeof result !== "object" || Array.isArray(result)) return null;
-  const channels = (result as Record<string, unknown>).channels;
-  if (!Array.isArray(channels)) return null;
-  for (const ch of channels as Array<Record<string, unknown>>) {
-    if (!Array.isArray(ch?.files)) continue;
-    for (const f of ch.files as Array<Record<string, unknown>>) {
-      if (f?.name === "post.md" && typeof f.content === "string") return f.content;
-    }
-  }
-  return null;
-}
 
 function PrintPage() {
   const { runId } = Route.useParams();
@@ -41,7 +23,6 @@ function PrintPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalReady, setModalReady] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const modalIframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -136,19 +117,12 @@ function PrintPage() {
     };
   }, [runId]);
 
-  // Self-contained document: the print stylesheet is global by design (it
-  // restyles body, h1, p, ...), so it must not leak into the app. The iframe
-  // gives it its own document, with anchors on.
-  const srcDoc = useMemo(() => {
-    if (!post) return "";
-    return [
-      "<!doctype html><html><head><meta charset='utf-8'>",
-      `<style>${printCss}</style>`,
-      "</head><body class='with-anchors'>",
-      md.render(post),
-      "</body></html>",
-    ].join("");
-  }, [post]);
+  // Self-contained document (fonts, stylesheet, and page furniture inlined by
+  // buildPrintDocument) rendered in an iframe so the print styles — which
+  // restyle body, h1, p, ... — can't leak into the app. The same document is
+  // what the browser's print engine paginates, so screen preview, print
+  // preview, Save-as-PDF, and paper all share one renderer.
+  const srcDoc = useMemo(() => (post ? buildPrintDocument(post) : ""), [post]);
 
   function openPreview() {
     setModalReady(false);
@@ -160,8 +134,13 @@ function PrintPage() {
     setModalOpen(false);
   }
 
-  function confirmPrint() {
-    const win = modalIframeRef.current?.contentWindow;
+  // Open the native print dialog for the rendered document. Saving as PDF
+  // happens in the same dialog ("Save as PDF" destination): the browser's
+  // print engine produces vector, selectable-text output with embedded fonts
+  // that is identical to the paper output, which no DOM-screenshot PDF
+  // library can match.
+  function printDocument(frame: HTMLIFrameElement | null) {
+    const win = frame?.contentWindow;
     try {
       if (!win) throw new Error("iframe not ready");
       win.focus();
@@ -198,51 +177,13 @@ function PrintPage() {
     }
   }
 
-  // Client-side PDF generation using html2pdf.js. Renders the already-loaded
-  // preview iframe's <body> so the output matches what the user sees —
-  // wide-margin serif layout, S{n}P{m} anchors, and page-break rules from
-  // src/styles/print.css.
-  async function downloadPdf() {
-    const doc = iframeRef.current?.contentDocument;
-    if (!doc?.body) {
-      const msg = "Preview isn't ready yet — try again in a moment.";
-      console.error("[print] downloadPdf: iframe document not available", { runId });
-      toast.error(msg);
-      return;
-    }
-    setDownloading(true);
-    try {
-      const { default: html2pdf } = await import("html2pdf.js");
-      // The .d.ts overload resolution picks the (element, options) variant
-      // when called with zero args, which types the return as Promise<void>.
-      // The actual runtime is a chainable Worker, so cast to that shape.
-      const worker = (
-        html2pdf as unknown as () => {
-          from: (el: HTMLElement) => {
-            set: (opts: Record<string, unknown>) => { save: () => Promise<void> };
-          };
-        }
-      )();
-      await worker
-        .from(doc.body)
-        .set({
-          filename: `hardcopy-draft-${runId}.pdf`,
-          margin: [1.5, 2, 1.5, 1.5], // top, right, bottom, left (inches)
-          image: { type: "jpeg", quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-          jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
-          pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-        })
-        .save();
-      toast.success("PDF downloaded.");
-    } catch (err) {
-      console.error("[print] downloadPdf failed", err);
-      toast.error("Couldn't generate the PDF.", {
-        description: err instanceof Error ? err.message : "Unknown error.",
-      });
-    } finally {
-      setDownloading(false);
-    }
+  function savePdf() {
+    toast.info("Choose “Save as PDF” as the destination in the print dialog.");
+    printDocument(iframeRef.current);
+  }
+
+  function confirmPrint() {
+    printDocument(modalIframeRef.current);
   }
 
   // Close the modal on Escape.
@@ -278,11 +219,11 @@ function PrintPage() {
           </Link>
           <button
             type="button"
-            onClick={downloadPdf}
-            disabled={!post || !iframeReady || downloading}
+            onClick={savePdf}
+            disabled={!post || !iframeReady}
             className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
           >
-            {downloading ? "Generating PDF…" : "Download PDF"}
+            Save as PDF
           </button>
           <button
             type="button"
@@ -333,7 +274,7 @@ function PrintPage() {
               setIframeError(msg);
               toast.error(msg);
             }}
-            className="h-[75vh] w-full rounded-lg border border-border bg-white shadow-sm"
+            className="h-[80vh] w-full rounded-lg border border-border shadow-sm"
           />
         </>
       )}
@@ -399,12 +340,13 @@ function PrintPage() {
                   setModalError(msg);
                   toast.error(msg);
                 }}
-                className="h-full w-full rounded-md border border-border bg-white shadow-inner"
+                className="h-full w-full rounded-md border border-border shadow-inner"
               />
             </div>
             <div className="border-t border-border px-5 py-2.5 text-xs text-muted-foreground">
-              Uses your browser's print dialog. Choose <strong>Letter</strong> paper and enable{" "}
-              <strong>Background graphics</strong> for the S{"{n}"}P{"{m}"} anchors to appear.
+              Uses your browser's print dialog. Keep paper size <strong>Letter</strong> and margins{" "}
+              <strong>Default</strong>; to keep a digital copy, pick <strong>Save as PDF</strong> as
+              the destination.
             </div>
           </div>
         </div>
