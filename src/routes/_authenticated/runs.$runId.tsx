@@ -504,7 +504,13 @@ function ActionsPanel({ run }: { run: AgentRun }) {
       )}
 
       {isDraft && (
-        <div className="space-y-3">
+        <div ref={dictationPanelRef} className="space-y-3">
+          {fromRevisionHint && (
+            <p className="rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm">
+              Dictate your annotations on that revision to produce the next version — the same
+              transcript flow drives every pass.
+            </p>
+          )}
           <p className="text-sm text-muted-foreground">
             <Link
               to="/print/$runId"
@@ -512,30 +518,90 @@ function ActionsPanel({ run }: { run: AgentRun }) {
               className="underline hover:text-foreground"
             >
               Print this draft
-            </Link>{" "}
-            for pen markup, then return your annotations here (block anchors like “S4P3: tighten”,
-            marks like “mark three: cut”). <strong>Revise</strong> reconciles them into the final
-            version as a pull request.
+            </Link>
+            , mark it up on paper, then <strong>dictate what you wrote</strong> — anchors like
+            “S2P1” and marks like “mark three: cut”. <strong>Revise</strong> reconciles the
+            transcript into the final version as a pull request.
           </p>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={recording ? stopDictation : startDictation}
+              disabled={transcribing || pending !== null}
+              aria-pressed={recording}
+              className={
+                "inline-flex min-h-11 items-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors disabled:opacity-50 " +
+                (recording
+                  ? "border-destructive/60 bg-destructive/10 text-destructive hover:bg-destructive/15"
+                  : "border-border bg-background hover:bg-muted")
+              }
+              title={recording ? "Stop and transcribe" : "Dictate your annotations"}
+            >
+              <span
+                aria-hidden
+                className={
+                  "h-1.5 w-1.5 rounded-full " +
+                  (recording ? "animate-pulse bg-destructive" : "bg-muted-foreground")
+                }
+              />
+              {transcribing
+                ? "Transcribing…"
+                : recording
+                  ? `Stop (${formatSecs(recordingSecs)})`
+                  : "🎙 Dictate annotations"}
+            </button>
+            {recording && (
+              <span className="text-xs text-muted-foreground">
+                Speak freely — press Stop when done and the transcript will append below.
+              </span>
+            )}
+          </div>
+
+          {dictationError && (
+            <div
+              role="alert"
+              className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+            >
+              <p className="font-medium">{dictationError.message}</p>
+              {dictationError.hint && (
+                <p className="mt-1 text-xs leading-relaxed text-destructive/85">
+                  {dictationError.hint}
+                </p>
+              )}
+              {dictationError.retryable && lastBlob && (
+                <button
+                  type="button"
+                  onClick={retryDictation}
+                  disabled={transcribing}
+                  className="mt-2 inline-flex min-h-11 items-center rounded-md border border-destructive/50 bg-background px-3 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+                >
+                  {transcribing ? "Retrying…" : "Retry transcription"}
+                </button>
+              )}
+            </div>
+          )}
+
           <textarea
             value={transcript}
             onChange={(e) => setTranscript(e.target.value)}
             rows={6}
             placeholder={
-              "S2P1: tighten to one sentence.\nMark three: cut everything after the comma.\nThe viz on page 2: sketch of the handoff gap."
+              "Press Dictate above, or type: \nS2P1: tighten to one sentence.\nMark three: cut everything after the comma."
             }
             className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-2.5 font-mono text-base outline-none transition-shadow focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-sm"
           />
           <button
             type="button"
             onClick={() => dispatch("revise")}
-            disabled={pending !== null || transcript.trim() === "" || outOfCredits}
+            disabled={pending !== null || transcript.trim() === "" || outOfCredits || recording}
             className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
           >
             {pending === "revise" ? "Starting…" : "Revise → final PR"}
           </button>
           <p className="text-xs text-muted-foreground">
-            Uses 1 credit — charged only when the generation finishes.
+            Uses 1 credit — charged only when the generation finishes. Dictation itself uses
+            workspace AI credits, separate from your generation credits.
           </p>
         </div>
       )}
