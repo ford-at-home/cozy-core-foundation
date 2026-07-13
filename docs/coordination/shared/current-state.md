@@ -86,3 +86,24 @@ not rewrite another agent's entry. Newest entries at the bottom.
   redeploys `prepare-follow-up-questions`.
 - Remaining Cursor phases: **C6** ← L2 accounts + WI-0008 applied,
   **C8** ← L7 certification data, **C9** ← post-certification backlog.
+
+### 2026-07-13 — C8 — Cursor
+
+- L7 certification came back (WI-0005 results): all 4 runs completed,
+  ledger consistent, test accounts A/B exist — and the P0 `duration_ms = 0`
+  defect re-confirmed on every kind except `revision`.
+- **C8 complete on the repo side** (this commit): root cause is that
+  duration was only computed from the inference-rollup trigger, and
+  completion paths record inferences before `completed_at` lands. Fix in
+  `20260713184000_run_duration_stats.sql`: a BEFORE trigger stamps
+  `duration_ms` whenever `completed_at` is set, a backfill repairs the
+  existing zero rows, and a `run_duration_stats` view (median/p75 per kind,
+  published at n≥10) feeds new "usually X–Y minutes, based on recent runs"
+  copy in the hub and new page — non-numeric copy remains until a kind
+  crosses the gate. WI-0009 filed for apply + verify (after WI-0008).
+- **C6 is now unblocked on accounts** (L2 test accounts exist per the L7
+  report) but still needs WI-0008 applied first — the RLS probe suite
+  asserts the client-write revokes, which are not live yet.
+- Owner items outstanding: drive one piece through follow-up →
+  `final_docx` → `final_pptx` (Account A has 8 credits) so the C3
+  session-attach fix and OOXML validation get their first live exercise.

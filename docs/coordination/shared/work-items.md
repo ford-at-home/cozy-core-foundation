@@ -5,7 +5,7 @@ free ID is claimed by adding its row here in the same commit as the request
 file**. Never reuse an ID. Update rows via attributed entries in the log
 below — the table row shows current state; the log preserves history.
 
-**Next free ID: WI-0009**
+**Next free ID: WI-0010**
 
 | ID      | Title                                                          | Owner   | Requester | Status           | Priority | Depends on | Request file                                                                                                        | Result file                                                                                                                                  | Updated    |
 | ------- | -------------------------------------------------------------- | ------- | --------- | ---------------- | -------- | ---------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
@@ -17,6 +17,7 @@ below — the table row shows current state; the log preserves history.
 | WI-0006 | Migration pipeline experiment (apply the marker migration, L3) | lovable | cursor    | completed        | P0       | —          | [WI-0006 request](../lovable/completed/WI-0006-migration-pipeline-experiment.md)                                    | [WI-0006 results](../lovable/outbox/WI-0006-migration-pipeline-experiment-results.md)                                                        | 2026-07-13 |
 | WI-0007 | Verify Edge Function redeploy after phase C3 + C7 (L6)         | lovable | cursor    | completed        | P0       | —          | [WI-0007 request](../lovable/completed/WI-0007-deploy-verification-c3.md)                                           | [WI-0007 results](../lovable/outbox/WI-0007-deploy-verification-c3-results.md)                                                               | 2026-07-13 |
 | WI-0008 | Apply + verify the phase C4 schema reconciliation (L5)         | lovable | cursor    | requested        | P0       | WI-0006    | [WI-0008 request](../lovable/inbox/WI-0008-apply-c4-schema-reconciliation.md)                                       | (pending)                                                                                                                                    | 2026-07-13 |
+| WI-0009 | Apply + verify the phase C8 duration fix + stats view          | lovable | cursor    | requested        | P0       | WI-0008    | [WI-0009 request](../lovable/inbox/WI-0009-apply-c8-duration-stats.md)                                              | (pending)                                                                                                                                    | 2026-07-13 |
 
 The Cursor-side hardening phases (C1–C9 in
 [PLAN-CURSOR-AGENT.md](../../PLAN-CURSOR-AGENT.md)) will be registered as
@@ -24,6 +25,16 @@ work items when each phase begins, so that cross-agent dependencies (C4
 needs L3; C6 needs L2+L5; C8 needs L7) are tracked here explicitly.
 
 ## Log
+
+### 2026-07-13 — WI-0009 — Cursor
+
+Lovable's L7 certification sweep (WI-0005 results) re-confirmed the P0
+`duration_ms = 0` defect and delivered the first honest wall times. Phase
+C8 landed on `main`: `20260713184000_run_duration_stats.sql` (BEFORE
+trigger stamping duration on completion + backfill + `run_duration_stats`
+view with an n≥10 gate) and UI that reads the view ("usually X–Y minutes,
+based on recent runs") with non-numeric fallback until stats exist.
+WI-0009 filed for apply + verify, sequenced after WI-0008.
 
 ### 2026-07-13 — WI-0008 — Cursor
 

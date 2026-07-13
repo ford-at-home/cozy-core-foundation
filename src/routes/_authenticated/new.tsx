@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { brand, pageTitle } from "@/config/brand";
 import { CREDIT_COST, isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
 import { MODE_COPY } from "@/config/workflow-copy";
+import { DurationEstimate } from "@/components/DurationEstimate";
 
 // New draft: paste research, optionally steer with a goal, and prepare a
 // draft. Voice is NOT an input here — it comes from the signed-in user's
@@ -273,6 +274,9 @@ function NewDraftPage() {
                 ? "Deep web research runs first (with sources cited), then the packet is prepared from the report: findings, evidence discussion, and questions tailored to what was found. You can watch its progress while it works."
                 : "Deep web research runs first (with sources cited), then the draft is prepared from the report in your voice. The report is versioned with the draft. You can watch its progress while it works."}
             </p>
+            {/* Covers only the research leg — the chained prepare run adds
+                more time, so name the subject precisely. */}
+            <DurationEstimate kind="research" subject="The research pass" />
           </label>
         )}
 

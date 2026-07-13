@@ -37,6 +37,7 @@ import {
 } from "@/lib/packet-stage";
 import { Skeleton } from "@/components/ui/skeleton";
 import { interpretRunError } from "@/lib/run-error";
+import { DurationEstimate } from "@/components/DurationEstimate";
 
 // The guided hub for one research-packet project: one authoritative stage
 // model (src/lib/packet-stage.ts, derived from server-persisted rows), one
@@ -319,6 +320,7 @@ function StageCard({
               ? "Deep research is running — reading sources and assembling evidence. The timer below shows how long it has been working."
               : "The research is done; your packet — findings, sources, and questions written for this specific research — is being prepared."}
           </p>
+          <DurationEstimate kind={view.activeRun.kind} />
           <LiveHeartbeat since={view.activeRun.created_at} />
           <div className="flex flex-col gap-2 sm:flex-row">
             <Link to="/runs/$runId" params={{ runId: view.activeRun.id }} className={secondaryBtn}>
@@ -455,9 +457,10 @@ function StageCard({
       return (
         <StageShell title="Follow up" status="Researching your questions…" optional>
           <p>
-            The second research pass is running against your approved questions. It usually takes a
-            few minutes and arrives as a revised packet — your original packet stays untouched.
+            The second research pass is running against your approved questions and arrives as a
+            revised packet — your original packet stays untouched.
           </p>
+          <DurationEstimate kind="followup_research" />
           {followupRun && (
             <div className="flex flex-col gap-2 sm:flex-row">
               <Link to="/runs/$runId" params={{ runId: followupRun.id }} className={secondaryBtn}>
@@ -708,6 +711,7 @@ function ArtifactFlow({
     return (
       <div className="space-y-4">
         <p className="text-foreground">{copy.generatingBody}</p>
+        <DurationEstimate kind={kind === "docx" ? "final_docx" : "final_pptx"} />
         {artifact.run_id && (
           <Link to="/runs/$runId" params={{ runId: artifact.run_id }} className={secondaryBtn}>
             Watch progress
