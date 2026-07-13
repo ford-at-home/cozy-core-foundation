@@ -95,20 +95,24 @@ function ProjectHubPage() {
     ? derivePacketWorkflow({
         runs: data.runs as StageRun[],
         packets: data.packets as StagePacket[],
-        returns: data.returns.map((r): StageReturn => ({
-          id: r.id,
-          status: r.uiStatus,
-          created_at: r.created_at,
-        })),
+        returns: data.returns.map(
+          (r): StageReturn => ({
+            id: r.id,
+            status: r.uiStatus,
+            created_at: r.created_at,
+          }),
+        ),
         followups: data.followups as StageFollowup[],
         artifacts: data.artifacts
           .filter((a) => a.kind === "docx" || a.kind === "pptx")
-          .map((a): StageArtifact => ({
-            id: a.id,
-            kind: a.kind as "docx" | "pptx",
-            status: a.status,
-            created_at: a.created_at,
-          })),
+          .map(
+            (a): StageArtifact => ({
+              id: a.id,
+              kind: a.kind as "docx" | "pptx",
+              status: a.status,
+              created_at: a.created_at,
+            }),
+          ),
       })
     : null;
 

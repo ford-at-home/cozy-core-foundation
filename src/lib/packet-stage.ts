@@ -36,16 +36,14 @@ export const STAGE_LABELS: Record<PacketStageKey, string> = {
 export const STAGE_DESCRIPTIONS: Record<PacketStageKey, string> = {
   research:
     "AI gathers sources and prepares your working packet — findings and questions written for what it found.",
-  print:
-    "Review the tailored questions, then print a clean hardcopy with anchors on every block.",
+  print: "Review the tailored questions, then print a clean hardcopy with anchors on every block.",
   think:
     "Off-screen, on paper. Read, annotate, answer, and note up to three follow-up research questions of your own.",
   return:
     "Bring your work back: photograph the pages, dictate your notes, or both. You can leave and come back.",
   review:
     "Confirm what the system read from your handwriting. Only your approved words move forward.",
-  follow_up:
-    "Optional. Approve up to three questions for a focused second research pass.",
+  follow_up: "Optional. Approve up to three questions for a focused second research pass.",
   finish:
     "Create your final Word document and (optionally) a class presentation — from the research and your verified contributions.",
 };
@@ -59,14 +57,7 @@ export const STAGE_DESCRIPTIONS: Record<PacketStageKey, string> = {
 // -----------------------------------------------------------------------
 
 /** The six-verb spine both workflows share. Packet adds Review + Follow up. */
-export const SHARED_STAGES = [
-  "explore",
-  "print",
-  "think",
-  "return",
-  "refine",
-  "finish",
-] as const;
+export const SHARED_STAGES = ["explore", "print", "think", "return", "refine", "finish"] as const;
 export type SharedStageKey = (typeof SHARED_STAGES)[number];
 
 export const SHARED_STAGE_LABELS: Record<SharedStageKey, string> = {

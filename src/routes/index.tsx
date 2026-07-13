@@ -120,8 +120,8 @@ function Hero() {
           {brand.company.line}
         </h1>
         <p className="mx-auto max-w-xl text-base leading-relaxed text-muted-foreground">
-          Research a subject with AI. Print a working hardcopy. Think and mark it up by hand.
-          Return your notes. Finish in Word, slides, or a merged draft — in your voice.
+          Research a subject with AI. Print a working hardcopy. Think and mark it up by hand. Return
+          your notes. Finish in Word, slides, or a merged draft — in your voice.
         </p>
         <div className="flex flex-col items-center justify-center gap-3 pt-2 sm:flex-row">
           <Link to="/auth" className={`${primaryCta} w-full sm:w-auto`}>
@@ -296,14 +296,14 @@ function FirstProduct() {
             {brand.product.descriptor}
           </p>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Draft a piece in your voice, or study a subject and write from it — the same loop
-            either way. Every project ends in a real artifact: a merged draft in your repo, a Word
+            Draft a piece in your voice, or study a subject and write from it — the same loop either
+            way. Every project ends in a real artifact: a merged draft in your repo, a Word
             document, or a class presentation.
           </p>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Signing up includes three credits. A prepared draft or packet uses one; a focused
-            follow-up research pass uses two; the Word document and presentation each use their
-            own credits when you create them. Printing, reviewing, correcting, dictating, and
+            follow-up research pass uses two; the Word document and presentation each use their own
+            credits when you create them. Printing, reviewing, correcting, dictating, and
             downloading are free — and nothing is charged for work that fails.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -329,7 +329,10 @@ function AICompact() {
           <ul className="space-y-2">
             {AI_WILL_DO.map((item) => (
               <li key={item} className="flex gap-2 text-sm leading-relaxed text-foreground">
-                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" aria-hidden />
+                <span
+                  className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70"
+                  aria-hidden
+                />
                 {item}
               </li>
             ))}

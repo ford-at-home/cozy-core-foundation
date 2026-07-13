@@ -184,9 +184,7 @@ function NewDraftPage() {
         <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           {brand.product.name}
         </p>
-        <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">
-          New project
-        </h1>
+        <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">New project</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           What are you starting? Both modes follow the same loop — explore, print, think, return,
           refine, finish — and end in a real artifact.
@@ -394,11 +392,7 @@ function NewDraftPage() {
             aria-busy={submitting}
             className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 sm:w-auto"
           >
-            {submitting
-              ? uploadProgress
-                ? "Uploading…"
-                : "Creating…"
-              : "Start →"}
+            {submitting ? (uploadProgress ? "Uploading…" : "Creating…") : "Start →"}
           </button>
         </div>
       </form>
