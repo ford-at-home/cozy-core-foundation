@@ -6,6 +6,31 @@ compose. New users get 3 credits on signup. Credits are held when a
 generation is dispatched and **consumed only when it completes**; failed,
 cancelled, and stuck runs release the hold automatically.
 
+## What costs what
+
+| Action                                                      | Credits | Reserved by                                          |
+| ----------------------------------------------------------- | ------- | ---------------------------------------------------- |
+| Compose from pasted research (`compose`)                    | 1       | `start-workflow` (`CREDIT_COST` in `_shared/credits.ts`) |
+| Deep research + chained compose or packet (`research`)      | 2       | `start-workflow`                                     |
+| Resynthesize / finalize / revise (`resynth`/`ready`/`revise`) | 1     | `piece-action`                                       |
+| Follow-up research pass (`followup_research`)               | 2       | `run-follow-up-research` (`COST` const)              |
+| Final Word document (`final_docx`)                          | 2       | `create-final-document-job` (`COST` const)           |
+| Presentation (`final_pptx`)                                 | 2       | `create-presentation-job` (`COST` const)             |
+
+Client mirrors of these numbers (display only, never authoritative):
+`CREDIT_COST` in `src/lib/use-credits.ts`, `FOLLOWUP_RESEARCH_COST` in
+`src/lib/followup.functions.ts`, `FINAL_ARTIFACT_COST` in
+`src/lib/final-artifacts.functions.ts`. `tests/billing-boundaries.test.ts`
+fails when a mirror drifts from its server source. Every billable button
+states its cost before dispatch.
+
+**Free, always:** printing and reprinting packets, returning work (photo
+uploads, dictation), handwriting recognition, verification and corrections,
+follow-up question submission/refinement/approval, downloads of finished
+artifacts, and system retries. Recognition and transcription bill Lovable
+workspace AI credits (provider cost, recorded as `inferences`), never the
+student's generation credits.
+
 ## Money rules (do not break these)
 
 - **Stripe is the source of truth for payment state.** Postgres is the

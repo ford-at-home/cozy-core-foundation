@@ -29,11 +29,40 @@ Deno.serve(
     if (!piece || piece.user_id !== userId)
       return e(FN, 404, "Piece not found", { requestId: rid, code: "not_found" });
 
-    const rows = corrections
+    const candidates = corrections.filter(
+      (c) =>
+        (typeof c?.blockId === "string" || typeof c?.segmentId === "string") &&
+        typeof c?.correctedText === "string",
+    );
+
+    // Never trust client-supplied target ids: a correction may only attach to
+    // a block/segment the caller owns (corrections feed downstream prompts).
+    const blockIds = [...new Set(candidates.map((c) => c.blockId).filter(Boolean))];
+    const segmentIds = [...new Set(candidates.map((c) => c.segmentId).filter(Boolean))];
+    const ownedBlocks = new Set<string>();
+    const ownedSegments = new Set<string>();
+    if (blockIds.length > 0) {
+      const { data } = await admin
+        .from("recognized_blocks")
+        .select("id")
+        .in("id", blockIds)
+        .eq("user_id", userId);
+      for (const r of data ?? []) ownedBlocks.add(r.id as string);
+    }
+    if (segmentIds.length > 0) {
+      const { data } = await admin
+        .from("dictation_segments")
+        .select("id")
+        .in("id", segmentIds)
+        .eq("user_id", userId);
+      for (const r of data ?? []) ownedSegments.add(r.id as string);
+    }
+
+    const rows = candidates
       .filter(
         (c) =>
-          (typeof c?.blockId === "string" || typeof c?.segmentId === "string") &&
-          typeof c?.correctedText === "string",
+          (!c.blockId || ownedBlocks.has(c.blockId)) &&
+          (!c.segmentId || ownedSegments.has(c.segmentId)),
       )
       .map((c) => ({
         block_id: c.blockId ?? null,
@@ -43,6 +72,11 @@ Deno.serve(
         corrected_meaning: c.correctedMeaning ?? null,
         verified_by: userId,
       }));
+    if (rows.length !== candidates.length)
+      return e(FN, 404, "one or more corrections target rows you don't own", {
+        requestId: rid,
+        code: "not_found",
+      });
     if (rows.length === 0)
       return e(FN, 400, "no valid corrections", { requestId: rid, code: "invalid_input" });
 

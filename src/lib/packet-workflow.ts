@@ -356,13 +356,51 @@ async function listVerifiedReturnIds(): Promise<Set<string>> {
 }
 
 // ---------------------------------------------------------------------------
+// Activity history (piece_events: append-only, owner SELECT, written only by
+// Edge Functions via logPieceEvent).
+
+export type PieceEvent = {
+  id: string;
+  piece_id: string;
+  user_id: string;
+  actor: string;
+  event: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+export async function listPieceEvents(pieceId: string): Promise<PieceEvent[]> {
+  const { data, error } = await supabase
+    .from("piece_events")
+    .select("*")
+    .eq("piece_id", pieceId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) throw new Error(error.message);
+  // The webhook and the reconciler can race on the same completion; both log
+  // the event. Keep one row per (event, runId) pair.
+  const seen = new Set<string>();
+  return ((data ?? []) as PieceEvent[]).filter((ev) => {
+    const runId = typeof ev.metadata?.runId === "string" ? ev.metadata.runId : null;
+    if (!runId) return true;
+    const key = `${ev.event}:${runId}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Artifact downloads (free — no credits attach to downloads).
 
 export async function artifactDownloadUrl(artifact: FinalArtifact): Promise<string> {
   if (!artifact.storage_path) throw new Error("Artifact has no file yet");
+  // `download` sets Content-Disposition: attachment with a friendly filename,
+  // so tapping the link saves the file instead of showing bytes in the tab.
+  const filename = artifact.storage_path.split("/").pop() ?? `final.${artifact.kind}`;
   const { data, error } = await supabase.storage
     .from("final-artifacts")
-    .createSignedUrl(artifact.storage_path, 60 * 10);
+    .createSignedUrl(artifact.storage_path, 60 * 10, { download: filename });
   if (error || !data?.signedUrl) throw new Error(error?.message ?? "Could not sign URL");
   return data.signedUrl;
 }

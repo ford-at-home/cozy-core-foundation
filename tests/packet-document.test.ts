@@ -71,6 +71,12 @@ describe("buildPacketPrintDocument", () => {
     expect(doc).toContain('<span class="packet-field-label">Date</span>');
   });
 
+  it("omits the version stamp when the packet row was unreadable (version: null)", () => {
+    const degraded = buildPacketPrintDocument(BODY, [], { ...OPTS, version: null });
+    expect(degraded).toContain("Research packet 0a1b2c3d</div>");
+    expect(degraded).not.toContain("· v");
+  });
+
   it("keeps the existing markup legend and adds the handwriting guidance", () => {
     expect(doc).toContain("Markup key");
     expect(doc).toContain("Writing your answers");

@@ -54,8 +54,29 @@ instead of `pieces.workflow_stage`):
    pure `assembleVerifiedResponses` (tested in `_tests/followup.test.ts`)
    walking packet → returns → pages → blocks plus segments, with the same
    latest-correction-wins / empty-is-rejection rules as the review UI.
+5. ~~`final_artifacts` rows stuck `pending` when the run fails~~ — fixed:
+   nothing settled the artifact row on run failure/cancellation, so the UI
+   could never distinguish "generating" from "dead" or offer a retry.
+   `settleFinalArtifactFailure` now runs on every failure/cancel path in
+   `cursor-webhook` and `reconcile-runs` (never downgrades `ready`).
+6. ~~Final DOCX/PPTX prompts shipped with `(missing)` packet body~~ — fixed:
+   `create-final-document-job` / `create-presentation-job` passed
+   `packetBody: null, followupSummary: null` although their prompt templates
+   render both verbatim. `loadPacketBodies` now reads the v1 packet body and
+   the latest follow-up report from the persisted run results.
 
 ## Capability inventory
+
+The table below is the original point-in-time audit (commit `979d666`).
+Capabilities delivered since, on the branches building the workflow frontend:
+photo return + handwriting recognition (`/return/$packetId`,
+`analyze-returned-page`), dictation return (`submit-dictation` + the same
+route), mandatory verification (`/review/$returnId`,
+`verify-student-responses`), follow-up questions with approval and the
+2-credit research pass (`/followup/$packetId`), final Word document and
+presentation with download (`create-final-document-job`,
+`create-presentation-job`, project-hub Finish card), and the activity
+history (`piece_events` in the hub).
 
 | Capability | Status | Where | Notes |
 | --- | --- | --- | --- |
@@ -82,7 +103,7 @@ instead of `pieces.workflow_stage`):
 | Privacy controls | Partial | RLS everywhere; `research-attachments` folder scoping | No retention policies, no handwriting profiles yet (Phases 2–3, 8). |
 | Annotation shorthand | Implemented | `contract/references/MARKUP.md` | Authoritative existing system (symbols, dials, directives, S{n}P{m}, numbered handles). **Reused as-is** — no new notation shipped. |
 | Reader-facing Socratic questions | Missing → Phase 1 | — | `notes/tighten.md` questions are writer-facing, not reader-facing. |
-| Activity record | Partial | `agent_run_events` | Append-only per-run audit trail exists; workflow-level surface is Phase 8. |
+| Activity record | Implemented | `agent_run_events` + `piece_events` | Per-run audit trail plus a workflow-level event log written by every Edge Function (`logPieceEvent`) and surfaced as the project hub's "Activity history". |
 | Relevant tests | Implemented | `tests/`, `supabase/functions/_tests/`, `supabase/tests/` | Print fidelity (real Chromium), prompt content, state machine, credits, billing boundaries. No React component tests (known gap). |
 
 ## Contradictions and dead ends found

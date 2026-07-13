@@ -60,7 +60,8 @@ All responses: JSON. Standard error shape: `{ error, code, requestId }`.
 
 Error codes: `invalid_input`, `too_many_pages`, `too_many`, `too_long`,
 `invalid_count`, `not_found`, `packet_not_found`, `piece_not_found`,
-`no_approved_questions`, `already_researched`, `insufficient_credits`, `reserve_failed`,
+`no_approved_questions`, `already_researched`, `research_running`,
+`insufficient_credits`, `reserve_failed`,
 `sign_failed`, `insert_failed`, `recognition_failed`, `env_missing`,
 `unhandled`. Idempotency: billable functions accept `requestId`; the same
 `requestId` returns the existing runId with HTTP 202.

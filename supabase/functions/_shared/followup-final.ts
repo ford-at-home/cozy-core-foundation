@@ -362,7 +362,9 @@ export async function loadPriorPacketContext(
   const { data: pqs } = await admin
     .from("packet_questions")
     .select("id, prompt")
-    .in("packet_id", packetIds);
+    .in("packet_id", packetIds)
+    .order("packet_id", { ascending: true })
+    .order("position", { ascending: true });
 
   const { data: returns } = await admin
     .from("packet_returns")
@@ -389,23 +391,28 @@ export async function loadPriorPacketContext(
     .in("packet_id", packetIds);
   const segments = (segmentRows ?? []) as AssemblySegment[];
 
-  let corrections: AssemblyCorrection[] = [];
+  // Two indexed queries (one per FK), deduped by row id — a correction row
+  // carrying both FKs must not be applied twice.
+  const byId = new Map<string, AssemblyCorrection>();
   const blockIds = blocks.map((b) => b.id);
   const segmentIds = segments.map((s) => s.id);
+  const correctionSelect =
+    "id, block_id, segment_id, corrected_text, corrected_meaning, verified_at";
   if (blockIds.length > 0) {
     const { data } = await admin
       .from("verification_corrections")
-      .select("block_id, segment_id, corrected_text, corrected_meaning, verified_at")
+      .select(correctionSelect)
       .in("block_id", blockIds);
-    corrections = corrections.concat((data ?? []) as AssemblyCorrection[]);
+    for (const c of data ?? []) byId.set(c.id as string, c as AssemblyCorrection);
   }
   if (segmentIds.length > 0) {
     const { data } = await admin
       .from("verification_corrections")
-      .select("block_id, segment_id, corrected_text, corrected_meaning, verified_at")
+      .select(correctionSelect)
       .in("segment_id", segmentIds);
-    corrections = corrections.concat((data ?? []) as AssemblyCorrection[]);
+    for (const c of data ?? []) byId.set(c.id as string, c as AssemblyCorrection);
   }
+  const corrections = Array.from(byId.values());
 
   const verifiedResponses = assembleVerifiedResponses({
     questions: (pqs ?? []) as AssemblyQuestion[],
@@ -448,6 +455,37 @@ function fileFromResult(result: any, name: string): string | null {
     }
   }
   return null;
+}
+
+/**
+ * The packet body (v1 post.md) and the latest follow-up report, read from the
+ * persisted run results — the final DOCX/PPTX prompts carry both verbatim so
+ * the artifact is built from the actual findings, not from repo-path hints.
+ */
+export async function loadPacketBodies(
+  admin: any,
+  pieceId: string,
+): Promise<{ packetBody: string | null; followupSummary: string | null }> {
+  const { data: packets } = await admin
+    .from("packets")
+    .select("version, run_id")
+    .eq("piece_id", pieceId)
+    .order("version", { ascending: true });
+  let packetBody: string | null = null;
+  let followupSummary: string | null = null;
+  for (const p of packets ?? []) {
+    if (!p.run_id) continue;
+    const { data: run } = await admin
+      .from("agent_runs")
+      .select("result")
+      .eq("id", p.run_id)
+      .maybeSingle();
+    const body = fileFromResult(run?.result, "post.md");
+    if (!body) continue;
+    if (p.version === 1) packetBody = body;
+    else followupSummary = body; // ascending order → the latest follow-up wins
+  }
+  return { packetBody, followupSummary };
 }
 
 /**
@@ -562,6 +600,23 @@ export async function persistFollowUpResult(
       },
     });
   }
+}
+
+/**
+ * Settle the pending final_artifacts row when its run fails or is cancelled —
+ * without this the row sits 'pending' forever and the UI can never offer a
+ * retry. Ready artifacts are never downgraded (idempotent under redelivery).
+ */
+export async function settleFinalArtifactFailure(
+  admin: any,
+  run: { id: string; kind: string },
+): Promise<void> {
+  if (run.kind !== "final_docx" && run.kind !== "final_pptx") return;
+  await admin
+    .from("final_artifacts")
+    .update({ status: "failed", updated_at: new Date().toISOString() })
+    .eq("run_id", run.id)
+    .neq("status", "ready");
 }
 
 /**

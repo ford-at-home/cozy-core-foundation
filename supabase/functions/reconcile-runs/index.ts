@@ -32,7 +32,11 @@ import { recordInference, cursorInferenceUsage } from "../_shared/usage.ts";
 import { releaseRunCredits, settleRunCredits, sweepStaleReservations } from "../_shared/credits.ts";
 import { reconcilePurchases } from "../_shared/stripe-reconcile.ts";
 import { persistPacketResult } from "../_shared/packet.ts";
-import { persistFinalArtifactResult, persistFollowUpResult } from "../_shared/followup-final.ts";
+import {
+  persistFinalArtifactResult,
+  persistFollowUpResult,
+  settleFinalArtifactFailure,
+} from "../_shared/followup-final.ts";
 import { advanceStage, logPieceEvent } from "../_shared/workflow.ts";
 import { workflowStageForCompletedKind, workflowStageForFailedKind } from "../_shared/complete.ts";
 
@@ -175,6 +179,7 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
         })
         .eq("id", run.id);
       await releaseRunCredits(admin, run, "dispatch never confirmed", "reconciler");
+      await settleFinalArtifactFailure(admin, run);
     }
     return;
   }
@@ -193,6 +198,7 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
         })
         .eq("id", run.id);
       await releaseRunCredits(admin, run, "agent not found at provider", "reconciler");
+      await settleFinalArtifactFailure(admin, run);
       return;
     }
     throw err;
@@ -220,6 +226,7 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
       .eq("id", run.id);
     if (update.status === "failed") {
       await releaseRunCredits(admin, run, "agent reported failure", "reconciler");
+      await settleFinalArtifactFailure(admin, run);
       const failStage = workflowStageForFailedKind(run.kind);
       if (failStage && run.piece_id) {
         await advanceStage(admin, { pieceId: run.piece_id, to: failStage });
@@ -242,6 +249,7 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
         })
         .eq("id", run.id);
       await releaseRunCredits(admin, run, "run cancelled", "reconciler");
+      await settleFinalArtifactFailure(admin, run);
       return;
     }
     // Finished before the stop landed: raced; fall through to fetch.
@@ -319,13 +327,15 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
         const nextStage = workflowStageForCompletedKind(run.kind);
         if (nextStage) {
           await advanceStage(admin, { pieceId: run.piece_id, to: nextStage });
-          await logPieceEvent(admin, {
-            pieceId: run.piece_id,
-            userId: run.user_id,
-            event: `${run.kind}_completed`,
-            metadata: { runId: run.id },
-          });
         }
+        // Activity history: every completed run on a piece is an event,
+        // whether or not it maps to an FSM hop (research/packet don't).
+        await logPieceEvent(admin, {
+          pieceId: run.piece_id,
+          userId: run.user_id,
+          event: `${run.kind}_completed`,
+          metadata: { runId: run.id },
+        });
       }
     }
   }

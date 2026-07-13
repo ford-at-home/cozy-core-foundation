@@ -139,7 +139,7 @@ Project id `dlaojinagezrlbwyritd` (`supabase/config.toml`).
 | `verification_corrections`                        | Append-only student-approved final text per block/segment, written via `verify-student-responses`; latest row per target wins |
 | `followup_questions`                              | Up to 3 follow-up research questions per packet (unique `(packet_id, position)`); `submitted → refined → approved → researched`; written via `prepare-follow-up-questions` |
 | `final_artifacts`                                 | Generated Word/PowerPoint artifacts (`final-artifacts` bucket); `pending → generating → ready`/`failed`; service-role writes, owner downloads via signed URL |
-| `pieces.workflow_stage` + `piece_events`          | Backend FSM (`advance_workflow_stage`, service-role only) + packet-level audit trail; the hub UI derives its stage from rows, not this column (see `src/lib/packet-stage.ts`) |
+| `pieces.workflow_stage` + `piece_events`          | Backend FSM (`advance_workflow_stage`, service-role only) + packet-level audit trail (owner SELECT; surfaced as the hub's "Activity history"); the hub UI derives its stage from rows, not this column (see `src/lib/packet-stage.ts`) |
 
 RLS: users read/write their own rows where user-editable (profiles, sessions,
 inferences); **INSERT/UPDATE/DELETE on `pieces`/`agent_runs` are revoked for

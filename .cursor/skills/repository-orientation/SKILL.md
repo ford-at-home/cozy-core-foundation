@@ -40,6 +40,13 @@ Read, in order:
    copy dispositions: `docs/brand/`. For historical product/orchestration
    design rationale: `docs/cloud-agents-architecture-plan.md` (predates the
    credit system — `docs/ARCHITECTURE.md` is current).
+4. For the research-packet workflow (project hub, packet return, handwriting
+   recognition, verification, follow-up research, final artifacts):
+   `docs/research-workflow/` — specs plus the audit — and
+   `docs/research-workflow/BACKEND-CONTRACTS.md` (Edge Function request/
+   response contracts and storage paths). The client stage model is derived
+   in `src/lib/packet-stage.ts` from rows read via
+   `src/lib/packet-workflow.ts`; every write goes through an Edge Function.
 
 ## Procedure
 

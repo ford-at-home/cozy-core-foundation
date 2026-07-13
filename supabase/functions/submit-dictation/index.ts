@@ -3,6 +3,7 @@
 // the transcript and optional audio path. JWT + ownership checked.
 // deno-lint-ignore-file no-explicit-any
 import { serve, authenticate, j, e } from "../_shared/http.ts";
+import { logPieceEvent } from "../_shared/workflow.ts";
 
 const FN = "submit-dictation";
 
@@ -26,7 +27,7 @@ Deno.serve(
 
     const { data: packet } = await admin
       .from("packets")
-      .select("id, user_id")
+      .select("id, user_id, piece_id")
       .eq("id", packetId)
       .maybeSingle();
     if (!packet || packet.user_id !== userId)
@@ -51,6 +52,13 @@ Deno.serve(
         code: "insert_failed",
         cause: err,
       });
+    await logPieceEvent(admin, {
+      pieceId: packet.piece_id,
+      userId,
+      actor: "student",
+      event: "dictation_submitted",
+      metadata: { segmentId: seg.id, returnId },
+    });
     return j({ segmentId: seg.id }, 201, rid);
   }),
 );

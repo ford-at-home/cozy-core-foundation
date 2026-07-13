@@ -301,6 +301,9 @@ function QuestionEditor({
   );
   const [busy, setBusy] = useState<"suggest" | "approve" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // State drives the button label; the ref is what dictation reads at insert
+  // time (onFocus updates both so the label never goes stale).
+  const [activeSlot, setActiveSlot] = useState(0);
   const activeSlotRef = useRef(0);
   const dictation = useDictation((text) => {
     const i = Math.min(activeSlotRef.current, slots.length - 1);
@@ -447,6 +450,7 @@ function QuestionEditor({
                 <button
                   type="button"
                   onClick={() => setSlots((prev) => prev.filter((_, j) => j !== i))}
+                  aria-label={`Remove question ${i + 1}`}
                   className="inline-flex min-h-11 items-center rounded-md px-2 text-xs text-muted-foreground hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring/60"
                 >
                   Remove
@@ -457,7 +461,10 @@ function QuestionEditor({
               id={`fq-${i}`}
               value={slot.student}
               onChange={(e) => setStudent(i, e.target.value)}
-              onFocus={() => (activeSlotRef.current = i)}
+              onFocus={() => {
+                activeSlotRef.current = i;
+                setActiveSlot(i);
+              }}
               rows={2}
               placeholder="What do you want to know now that you've worked through the packet?"
               className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-2.5 text-base leading-relaxed outline-none transition-shadow focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-sm"
@@ -467,7 +474,7 @@ function QuestionEditor({
                 <legend className="px-1 text-[11px] uppercase tracking-wider text-muted-foreground">
                   Suggested narrower wording — your choice
                 </legend>
-                <label className="flex items-start gap-2 text-sm leading-snug">
+                <label className="flex min-h-11 items-start gap-2 py-1.5 text-sm leading-snug">
                   <input
                     type="radio"
                     name={`choice-${i}`}
@@ -477,14 +484,14 @@ function QuestionEditor({
                         prev.map((s, j) => (j === i ? { ...s, final: s.student } : s)),
                       )
                     }
-                    className="mt-1"
+                    className="mt-1 size-4 shrink-0 accent-primary"
                   />
-                  <span>
+                  <span className="min-w-0 break-words">
                     <span className="text-xs text-muted-foreground">Keep mine: </span>
                     {slot.student}
                   </span>
                 </label>
-                <label className="flex items-start gap-2 text-sm leading-snug">
+                <label className="flex min-h-11 items-start gap-2 py-1.5 text-sm leading-snug">
                   <input
                     type="radio"
                     name={`choice-${i}`}
@@ -496,9 +503,9 @@ function QuestionEditor({
                         ),
                       )
                     }
-                    className="mt-1"
+                    className="mt-1 size-4 shrink-0 accent-primary"
                   />
-                  <span>
+                  <span className="min-w-0 break-words">
                     <span className="text-xs text-muted-foreground">Use suggestion: </span>
                     {slot.suggested}
                   </span>
@@ -515,7 +522,7 @@ function QuestionEditor({
                       )
                     }
                     rows={2}
-                    className="w-full resize-y rounded-md border border-input bg-background/60 px-3 py-2 text-base leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-sm"
+                    className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-2.5 text-base leading-relaxed outline-none transition-shadow focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-sm"
                   />
                 </label>
               </fieldset>
@@ -550,7 +557,7 @@ function QuestionEditor({
             ? "Transcribing…"
             : dictation.recording
               ? "Stop recording"
-              : `Dictate into question ${Math.min(activeSlotRef.current, slots.length - 1) + 1}`}
+              : `Dictate into question ${Math.min(activeSlot, slots.length - 1) + 1}`}
         </button>
       </div>
 
@@ -677,7 +684,7 @@ function ApprovedPanel({
       <ol className="space-y-3">
         {followups.map((f) => (
           <li key={f.id} className="rounded-lg border border-border bg-background/40 p-3 text-sm">
-            <p className="leading-relaxed">
+            <p className="break-words leading-relaxed">
               <span className="mr-2 font-mono text-xs font-semibold text-muted-foreground">
                 {f.position}.
               </span>

@@ -51,7 +51,11 @@ on balance, that is a product change: stop and apply `billing-and-credits` +
 - `src/lib/print-document.ts` — `buildPrintDocument`: markdown → HTML
   (via `src/lib/markdown.ts`) → self-contained document with `print.css?raw`
   inlined, fonts embedded as data URIs (Source Serif 4 + Source Code Pro),
-  and a per-document running header.
+  and a per-document running header. `buildPacketPrintDocument` (same file)
+  wraps the same renderer for research packets — question blocks, ruled
+  response areas, follow-up section — using `div`/`span` furniture so it
+  consumes zero S{n}P{m} anchors. Both `packet` and `followup_research`
+  runs print through it (`tests/packet-document.test.ts`).
 - `src/routes/_authenticated/print.$runId.tsx` — renders that document in an
   isolated iframe via `srcDoc`; print and Save-as-PDF both go through the
   browser's native print dialog. There is **no client PDF library**.

@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { CREDIT_COST, isInsufficientCreditsError } from "@/lib/use-credits";
+import { FOLLOWUP_RESEARCH_COST } from "@/lib/followup.functions";
+import { FINAL_ARTIFACT_COST } from "@/lib/final-artifacts.functions";
 
 const ROOT = join(__dirname, "..");
 
@@ -31,6 +33,25 @@ describe("credit costs", () => {
     for (const cost of Object.values(CREDIT_COST)) {
       expect(cost).toBeGreaterThanOrEqual(1);
     }
+  });
+
+  // The packet-workflow functions declare their reserve amount as a local
+  // `const COST = n` rather than through CREDIT_COST; the UI shows the
+  // client mirror on every billable button, so drift = lying to the student.
+  function serverCost(fn: string): number {
+    const source = readFileSync(join(ROOT, "supabase/functions", fn, "index.ts"), "utf8");
+    const m = source.match(/^const COST = (\d+);/m);
+    if (!m) throw new Error(`const COST not found in ${fn}`);
+    return Number(m[1]);
+  }
+
+  it("follow-up research client mirror matches run-follow-up-research", () => {
+    expect(serverCost("run-follow-up-research")).toBe(FOLLOWUP_RESEARCH_COST);
+  });
+
+  it("final artifact client mirror matches both artifact job functions", () => {
+    expect(serverCost("create-final-document-job")).toBe(FINAL_ARTIFACT_COST);
+    expect(serverCost("create-presentation-job")).toBe(FINAL_ARTIFACT_COST);
   });
 });
 

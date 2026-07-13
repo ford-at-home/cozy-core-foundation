@@ -20,6 +20,7 @@ import { buildImageCreds } from "./image-token.ts";
 import { dispatchRun, resolveProvider } from "./dispatch.ts";
 import { ensureRunSession, recordInference } from "./usage.ts";
 import { releaseRunCredits } from "./credits.ts";
+import { logPieceEvent } from "./workflow.ts";
 
 const RELEASE_AFTER_MIN = 30;
 // Deep research (ultra-fast) is documented at 1-10 min; anything past this is stuck.
@@ -224,6 +225,16 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
     event_type: "chained",
     payload: { composeRunId, reportChars: report.length, sources: raw.sourceUrls.length },
   });
+  // Activity history: research completions never pass through the webhook
+  // (Parallel runs are polled here), so this is their only event site.
+  if (run.piece_id) {
+    await logPieceEvent(admin, {
+      pieceId: run.piece_id,
+      userId: run.user_id,
+      event: "research_completed",
+      metadata: { runId: run.id },
+    });
+  }
 
   if (needsDispatch && composeRunId) {
     // Chained compose run inherits the same session as the research run.

@@ -22,7 +22,11 @@ import {
 import { recordInference, cursorInferenceUsage } from "../_shared/usage.ts";
 import { releaseRunCredits, settleRunCredits } from "../_shared/credits.ts";
 import { persistPacketResult } from "../_shared/packet.ts";
-import { persistFinalArtifactResult, persistFollowUpResult } from "../_shared/followup-final.ts";
+import {
+  persistFinalArtifactResult,
+  persistFollowUpResult,
+  settleFinalArtifactFailure,
+} from "../_shared/followup-final.ts";
 import { advanceStage, logPieceEvent } from "../_shared/workflow.ts";
 import { workflowStageForCompletedKind } from "../_shared/complete.ts";
 
@@ -96,6 +100,7 @@ Deno.serve(async (req) => {
 
     if (update.status === "failed") {
       await releaseRunCredits(admin, run, "agent reported failure", "cursor-webhook");
+      await settleFinalArtifactFailure(admin, run);
     }
 
     if (update.status === "awaiting_fetch") {
@@ -173,13 +178,15 @@ Deno.serve(async (req) => {
             const nextStage = workflowStageForCompletedKind(run.kind);
             if (nextStage) {
               await advanceStage(admin, { pieceId: run.piece_id, to: nextStage });
-              await logPieceEvent(admin, {
-                pieceId: run.piece_id,
-                userId: run.user_id,
-                event: `${run.kind}_completed`,
-                metadata: { runId: run.id },
-              });
             }
+            // Activity history: every completed run on a piece is an event,
+            // whether or not it maps to an FSM hop (research/packet don't).
+            await logPieceEvent(admin, {
+              pieceId: run.piece_id,
+              userId: run.user_id,
+              event: `${run.kind}_completed`,
+              metadata: { runId: run.id },
+            });
           }
         }
       } catch (err) {

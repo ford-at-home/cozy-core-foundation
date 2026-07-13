@@ -1,15 +1,26 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { brand, pageTitle } from "@/config/brand";
 import {
+  FINAL_ARTIFACT_COST,
+  createFinalDocumentJob,
+  createPresentationJob,
+} from "@/lib/final-artifacts.functions";
+import { isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
+import {
+  artifactDownloadUrl,
   getPiece,
   listArtifactsByPiece,
   listFollowupsByPackets,
   listPacketsByPiece,
+  listPieceEvents,
   listRunsByPiece,
   loadReturnSummaries,
+  type FinalArtifact,
+  type PieceEvent,
 } from "@/lib/packet-workflow";
 import {
   derivePacketWorkflow,
@@ -165,7 +176,10 @@ function ProjectHubPage() {
                 ? (data.packets.find((p) => p.id === view.packet?.id) ?? null)
                 : null
             }
+            docxArtifact={data.artifacts.find((a) => a.id === view.docx?.id) ?? null}
+            pptxArtifact={data.artifacts.find((a) => a.id === view.pptx?.id) ?? null}
           />
+          <ActivityHistory pieceId={pieceId} />
           <WhoDoesWhat />
         </>
       )}
@@ -212,6 +226,8 @@ function StageCard({
   pieceId,
   followupRun,
   revisedPacket,
+  docxArtifact,
+  pptxArtifact,
 }: {
   view: PacketWorkflowView;
   pieceId: string;
@@ -219,8 +235,13 @@ function StageCard({
   followupRun: { id: string } | null;
   /** The latest packet when it's a follow-up product (version > 1). */
   revisedPacket: { id: string; run_id: string; status: string } | null;
+  /** Full rows for the latest artifacts (view.docx/pptx carry only summaries). */
+  docxArtifact: FinalArtifact | null;
+  pptxArtifact: FinalArtifact | null;
 }) {
-  void pieceId;
+  // Follow-up is optional: skipping shows the Finish card without recording
+  // anything server-side (creating the document is what commits the skip).
+  const [skipFollowup, setSkipFollowup] = useState(false);
   const packetRunId = view.packet?.run_id ?? null;
 
   if (view.current === "research") {
@@ -357,7 +378,7 @@ function StageCard({
     );
   }
 
-  if (view.current === "follow_up") {
+  if (view.current === "follow_up" && !skipFollowup) {
     if (view.followupResearchActive) {
       return (
         <StageShell title="Follow up" status="Researching your questions…" optional>
@@ -365,13 +386,13 @@ function StageCard({
             The second research pass is running against your approved questions. It usually takes a
             few minutes and arrives as a revised packet — your original packet stays untouched.
           </p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            {followupRun && (
+          {followupRun && (
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Link to="/runs/$runId" params={{ runId: followupRun.id }} className={secondaryBtn}>
                 Watch progress
               </Link>
-            )}
-          </div>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">
             You can close this page — the work continues, and this project picks up where it left
             off.
@@ -386,24 +407,74 @@ function StageCard({
           typed directly — and a focused second research pass answers them with authoritative
           sources. This step is optional and costs 2 credits only when you run it.
         </p>
-        {view.packet && (
-          <Link
-            to="/followup/$packetId"
-            params={{ packetId: view.packet.id }}
-            className={primaryBtn}
-          >
-            Ask follow-up questions
-          </Link>
-        )}
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {view.packet && (
+            <Link
+              to="/followup/$packetId"
+              params={{ packetId: view.packet.id }}
+              className={primaryBtn}
+            >
+              Ask follow-up questions
+            </Link>
+          )}
+          <button type="button" onClick={() => setSkipFollowup(true)} className={secondaryBtn}>
+            Skip — go to the final document
+          </button>
+        </div>
       </StageShell>
     );
   }
 
   return (
-    <StageShell
-      title="Finish"
-      status={view.docx?.status === "ready" ? "Ready to download" : "Almost there"}
-    >
+    <FinishCard
+      pieceId={pieceId}
+      docx={docxArtifact}
+      pptx={pptxArtifact}
+      revisedPacket={revisedPacket}
+      onBackToFollowup={
+        view.current === "follow_up" && skipFollowup ? () => setSkipFollowup(false) : null
+      }
+    />
+  );
+}
+
+function FinishCard({
+  pieceId,
+  docx,
+  pptx,
+  revisedPacket,
+  onBackToFollowup,
+}: {
+  pieceId: string;
+  docx: FinalArtifact | null;
+  pptx: FinalArtifact | null;
+  revisedPacket: { id: string; run_id: string; status: string } | null;
+  /** Set when the student skipped follow-up locally and can change their mind. */
+  onBackToFollowup: (() => void) | null;
+}) {
+  const docxStatus = docx?.status ?? null;
+  const docxReady = docxStatus === "ready";
+  const pptxStatus = pptx?.status ?? null;
+
+  // One chip for the card: the document drives it until it's ready, then the
+  // (optional) presentation takes over.
+  const status = !docxReady
+    ? docxStatus === "pending" || docxStatus === "generating"
+      ? "Writing your document…"
+      : docxStatus === "failed"
+        ? "Something needs another try"
+        : "One step left"
+    : pptxStatus === "pending" || pptxStatus === "generating"
+      ? "Building your presentation…"
+      : pptxStatus === "failed"
+        ? "Something needs another try"
+        : pptxStatus === "ready"
+          ? "All materials ready"
+          : "Ready to download";
+  const failed = (!docxReady && docxStatus === "failed") || (docxReady && pptxStatus === "failed");
+
+  return (
+    <StageShell title="Finish" status={status} tone={failed ? "error" : undefined}>
       {revisedPacket && (
         <div className="space-y-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
           <p className="text-foreground">
@@ -428,10 +499,201 @@ function StageCard({
           </div>
         </div>
       )}
-      <p>
-        Create a final, editable document built from the research and your verified contributions.
-      </p>
+
+      <ArtifactFlow
+        pieceId={pieceId}
+        artifact={docx}
+        kind="docx"
+        secondaryAction={
+          onBackToFollowup ? (
+            <button type="button" onClick={onBackToFollowup} className={secondaryBtn}>
+              Back to follow-up questions
+            </button>
+          ) : null
+        }
+      />
+
+      {/* The presentation is offered only once the document exists — same
+          research, same verified words, so the document is the natural first
+          artifact and a failed presentation never blocks it. */}
+      {docxReady && (
+        <div className="border-t border-border pt-4">
+          <ArtifactFlow pieceId={pieceId} artifact={pptx} kind="pptx" secondaryAction={null} />
+        </div>
+      )}
     </StageShell>
+  );
+}
+
+const ARTIFACT_COPY = {
+  docx: {
+    noun: "document",
+    createBody:
+      "Create a final, editable Word document built from the research and your verified contributions — your own words stay verbatim, every source is preserved as a link.",
+    createLabel: "Create the final document",
+    generatingBody:
+      "The document is being written from the research and your verified contributions. This usually takes a few minutes — this page updates on its own, and you can close it.",
+    readyBody:
+      "Your final Word document is ready — the research findings, every source, and your own verified words, kept verbatim, in one editable file.",
+    downloadLabel: "Download the Word document",
+    opensIn: "The file opens in Word, Google Docs, or Pages.",
+  },
+  pptx: {
+    noun: "presentation",
+    createBody:
+      "Want slides too? Create a presentation from the same research and your verified contributions — one slide per key finding, sources preserved. Optional.",
+    createLabel: "Create the presentation",
+    generatingBody:
+      "The presentation is being built from the research and your verified contributions. This usually takes a few minutes — this page updates on its own, and you can close it.",
+    readyBody:
+      "Your presentation is ready — the findings, sources, and your own verified words as slides.",
+    downloadLabel: "Download the presentation",
+    opensIn: "The file opens in PowerPoint, Google Slides, or Keynote.",
+  },
+} as const;
+
+function ArtifactFlow({
+  pieceId,
+  artifact,
+  kind,
+  secondaryAction,
+}: {
+  pieceId: string;
+  /** Latest final_artifacts row of this kind, if any. */
+  artifact: FinalArtifact | null;
+  kind: "docx" | "pptx";
+  /** Extra button next to the create action (e.g. back to follow-up). */
+  secondaryAction: React.ReactNode;
+}) {
+  const queryClient = useQueryClient();
+  const createDocx = useServerFn(createFinalDocumentJob);
+  const createPptx = useServerFn(createPresentationJob);
+  const { balance } = useCreditBalance();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Idempotency seed; regenerated after every dispatch so "Try again" after a
+  // failed run creates a NEW run instead of resolving to the failed one.
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
+
+  const copy = ARTIFACT_COPY[kind];
+  const status = artifact?.status ?? null;
+  const generating = status === "pending" || status === "generating";
+  const ready = status === "ready";
+  const outOfCredits = balance !== null && balance < FINAL_ARTIFACT_COST;
+  const paywalled = error !== null && isInsufficientCreditsError(error);
+
+  async function create() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const createJob = kind === "docx" ? createDocx : createPptx;
+      await createJob({ data: { pieceId, requestId } });
+      await queryClient.invalidateQueries({ queryKey: ["project", pieceId] });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Could not start the ${copy.noun}`);
+    } finally {
+      setRequestId(crypto.randomUUID());
+      setBusy(false);
+    }
+  }
+
+  async function download() {
+    if (!artifact) return;
+    setError(null);
+    try {
+      window.location.assign(await artifactDownloadUrl(artifact));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Could not prepare the ${copy.noun} download`);
+    }
+  }
+
+  if (ready && artifact) {
+    return (
+      <div className="space-y-4">
+        <p className="text-foreground">{copy.readyBody}</p>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button type="button" onClick={download} className={primaryBtn}>
+            {copy.downloadLabel}
+          </button>
+        </div>
+        {error && (
+          <p
+            role="alert"
+            className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
+            {error}
+          </p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Downloading is free, as often as you like. {copy.opensIn}
+        </p>
+      </div>
+    );
+  }
+
+  if (generating && artifact) {
+    return (
+      <div className="space-y-4">
+        <p className="text-foreground">{copy.generatingBody}</p>
+        {artifact.run_id && (
+          <Link to="/runs/$runId" params={{ runId: artifact.run_id }} className={secondaryBtn}>
+            Watch progress
+          </Link>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {status === "failed" && (
+        <p className="text-foreground">
+          The {copy.noun} run didn't finish. The credit hold was released — you were not charged.
+          Try again below.
+        </p>
+      )}
+      <p className={status === "failed" ? undefined : "text-foreground"}>{copy.createBody}</p>
+
+      {(outOfCredits || paywalled) && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+          The {copy.noun} uses {FINAL_ARTIFACT_COST} credits
+          {balance !== null ? ` and you have ${balance}` : ""}.{" "}
+          <Link to="/billing" className="font-medium underline">
+            Get credits →
+          </Link>
+        </div>
+      )}
+      {error && !paywalled && (
+        <p
+          role="alert"
+          className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          {error}
+        </p>
+      )}
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <button
+          type="button"
+          onClick={create}
+          disabled={busy || outOfCredits}
+          aria-busy={busy}
+          className={primaryBtn}
+        >
+          {busy
+            ? "Starting…"
+            : status === "failed"
+              ? `Try again — ${FINAL_ARTIFACT_COST} credits`
+              : `${copy.createLabel} — ${FINAL_ARTIFACT_COST} credits`}
+        </button>
+        {secondaryAction}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {FINAL_ARTIFACT_COST} credits are held when the run starts and only kept if it completes — a
+        failed run releases the hold.
+      </p>
+    </div>
   );
 }
 
@@ -473,6 +735,90 @@ function StageShell({
         {children}
       </div>
     </section>
+  );
+}
+
+// Plain-language labels for the piece_events audit trail. Unknown events fall
+// back to a humanized event name so new backend events never render blank.
+const EVENT_LABELS: Record<string, string> = {
+  research_completed: "Research finished",
+  packet_completed: "Your packet was prepared",
+  pages_uploaded: "You returned pages",
+  dictation_submitted: "You dictated your thoughts",
+  return_read: "Your pages were read",
+  return_read_failed: "Your pages couldn't be read",
+  verification_completed: "You approved what was read",
+  followups_prepared: "You submitted follow-up questions",
+  followups_approved: "You approved your follow-up questions",
+  followup_started: "Follow-up research started",
+  followup_research_completed: "Follow-up research finished",
+  final_docx_started: "Final document started",
+  final_docx_completed: "Final document ready",
+  final_pptx_started: "Presentation started",
+  final_pptx_completed: "Presentation ready",
+};
+
+function eventLabel(ev: PieceEvent): string {
+  const known = EVENT_LABELS[ev.event];
+  if (known) return known;
+  const humanized = ev.event.replace(/_/g, " ");
+  return humanized.charAt(0).toUpperCase() + humanized.slice(1);
+}
+
+function ActivityHistory({ pieceId }: { pieceId: string }) {
+  // Fetched only when opened — the history is a reference view, not part of
+  // the stage model the hub polls for.
+  const [open, setOpen] = useState(false);
+  const {
+    data: events,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["piece-events", pieceId],
+    queryFn: () => listPieceEvents(pieceId),
+    enabled: open,
+  });
+
+  return (
+    <details
+      className="rounded-xl border border-border bg-card p-5 text-sm sm:p-6"
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+    >
+      <summary className="min-h-11 cursor-pointer list-none font-medium">
+        Activity history — everything that happened on this project
+      </summary>
+      <div className="mt-4">
+        {isLoading && <p className="text-muted-foreground">Loading the history…</p>}
+        {error && (
+          <p role="alert" className="text-destructive">
+            {error instanceof Error ? error.message : "Could not load the history."}
+          </p>
+        )}
+        {events && events.length === 0 && (
+          <p className="text-muted-foreground">Nothing recorded yet.</p>
+        )}
+        {events && events.length > 0 && (
+          <ol className="space-y-2">
+            {events.map((ev) => (
+              <li key={ev.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                <time
+                  dateTime={ev.created_at}
+                  className="shrink-0 tabular-nums text-xs text-muted-foreground"
+                >
+                  {new Date(ev.created_at).toLocaleString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                </time>
+                <span className="min-w-0 break-words">{eventLabel(ev)}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    </details>
   );
 }
 
