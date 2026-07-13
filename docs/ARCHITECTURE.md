@@ -106,7 +106,19 @@ Specification set: `docs/research-workflow/`.
   all built from `div`/`span` furniture so it consumes **zero** S{n}P{m}
   anchors (the counting rule is untouched). Layout spec:
   `docs/research-workflow/03-printable-packet.md`.
+- Page furniture for scan attribution: a document ref rides the `@top-right`
+  margin box on every page (`draft {runId8}` for longform,
+  `packet {packetId8} · v{n}` for packets) and a minimal symbol reminder
+  rides `@bottom-left` on pages after the first (the full markup key sits at
+  the top of page 1). See `docs/ARTIFACT-QUALITY-REVIEW.md`.
 - Everything targets **US Letter**. There is no A4 anywhere.
+- Final DOCX/PPTX artifacts are produced by external cloud agents from the
+  prompt builders in `supabase/functions/_shared/followup-final.ts` (which
+  encode the Office design system) and gated on fetch-back by the structural
+  OOXML validator `supabase/functions/_shared/ooxml.ts` (ZIP + required
+  parts + a document body that actually inflates / a plausible slide count).
+  Local reference samples: `tests/office-samples.ts` +
+  `tests/office-artifacts.test.ts` → `test-artifacts/office/`.
 
 ## Backend — Supabase (verified)
 

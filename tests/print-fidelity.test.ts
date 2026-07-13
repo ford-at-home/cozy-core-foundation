@@ -50,12 +50,18 @@ afterAll(async () => {
   await browser?.close();
 });
 
+// Every fixture prints with a document id, as the print route does with the
+// run id — the PDFs must carry the "draft {id8}" attribution on every page.
+const FIXTURE_DOCUMENT_ID = "f1de11f1-0000-4000-a000-000000000000";
+
 async function openFixture(source: string): Promise<Page> {
   const page = await browser.newPage();
   // The document must be self-contained; refuse the network so a fixture with
   // remote (or broken) images renders deterministically offline.
   await page.route(/^https?:\/\//, (route) => route.abort());
-  await page.setContent(buildPrintDocument(source), { waitUntil: "load" });
+  await page.setContent(buildPrintDocument(source, { documentId: FIXTURE_DOCUMENT_ID }), {
+    waitUntil: "load",
+  });
   await page.evaluate(() => document.fonts.ready);
   return page;
 }
@@ -135,6 +141,14 @@ describe.each(Object.entries(FIXTURES))("fixture: %s", (name, source) => {
 
       // Folio from the @page margin box.
       expect(squash(text)).toContain(squash(`Page 1 of ${totalPages}`));
+
+      // Per-page document identifier (top-right margin box): every scanned
+      // page must be attributable to its document.
+      const perPage = await extractText(pdf);
+      const docRef = squash(`draft ${FIXTURE_DOCUMENT_ID.slice(0, 8)}`);
+      for (let p = 0; p < perPage.totalPages; p++) {
+        expect(squash(perPage.text[p]), `page ${p + 1} lost the document ref`).toContain(docRef);
+      }
     } finally {
       await page.close();
     }
@@ -196,6 +210,26 @@ describe("multi-page behavior", () => {
       expect(squash(text[0])).not.toContain(headerText);
       for (let p = 1; p < totalPages; p++) {
         expect(squash(text[p])).toContain(headerText);
+      }
+    } finally {
+      await page.close();
+    }
+  });
+
+  it("repeats the symbol reminder on pages after the first, never on page 1", async () => {
+    const page = await openFixture(FIXTURES["long-document"]);
+    try {
+      const pdf = await getDocumentProxy(
+        new Uint8Array(await page.pdf({ preferCSSPageSize: true })),
+      );
+      const { totalPages, text } = await extractText(pdf);
+      const reminder = squash("✓ keep ✗ cut ~ rework ★ expand → move ? unsure");
+      // Page 1 carries the full legend instead (its Marks row also matches,
+      // so scope the check to the bottom-left box content being absent —
+      // the legend spells "rework (say how)", the reminder doesn't).
+      expect(squash(text[0])).not.toContain(reminder);
+      for (let p = 1; p < totalPages; p++) {
+        expect(squash(text[p]), `page ${p + 1} lost the symbol reminder`).toContain(reminder);
       }
     } finally {
       await page.close();
@@ -323,6 +357,15 @@ describe("research packet document", () => {
       // The header strip is uppercased by CSS; compare case-insensitively.
       expect(body.toUpperCase()).toContain(squash("Research packet fidelity").toUpperCase());
       expect(body).toContain(squash(`Page 1 of ${totalPages}`));
+
+      // Per-page attribution: the packet id + version rides the top-right
+      // margin box on every page, so any single photographed page can be
+      // matched to its packet and version.
+      const perPage = await extractText(pdf);
+      const docRef = squash(`packet ${OPTS.packetId.slice(0, 8)} · v1`);
+      for (let p = 0; p < perPage.totalPages; p++) {
+        expect(squash(perPage.text[p]), `page ${p + 1} lost the packet ref`).toContain(docRef);
+      }
     } finally {
       await page.close();
     }

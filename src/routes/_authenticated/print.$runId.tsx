@@ -205,8 +205,8 @@ function PrintPage() {
         version: packetInfo.version,
       });
     }
-    return buildPrintDocument(post);
-  }, [post, packetInfo]);
+    return buildPrintDocument(post, { documentId: runId });
+  }, [post, packetInfo, runId]);
 
   function openPreview() {
     setModalReady(false);

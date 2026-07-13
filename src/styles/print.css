@@ -34,6 +34,7 @@
     font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
     font-size: 8.5pt;
     letter-spacing: 0.05em;
+    white-space: nowrap;
     color: #666666;
     padding-left: 1in;
   }
@@ -51,6 +52,27 @@
     font-size: 8pt;
     letter-spacing: 0.05em;
     color: #999999;
+  }
+
+  /* Minimal markup reminder on pages after the first (the full legend sits at
+   * the top of page 1 — @page :first below turns this box off there). Must
+   * stay a single short line: it shares the bottom margin strip with the
+   * folio, so keep it small and nowrap (a wrapped reminder squeezes the
+   * folio into wrapping too). Content mirrors the "Marks" legend row /
+   * MARKUP.md symbols. */
+  @bottom-left {
+    content: "✓ keep ✗ cut ~ rework ★ expand → move ? unsure";
+    font-family: "Source Code Pro", Menlo, Consolas, monospace;
+    font-size: 6.5pt;
+    letter-spacing: 0;
+    white-space: nowrap;
+    color: #999999;
+  }
+}
+
+@page :first {
+  @bottom-left {
+    content: none;
   }
 }
 

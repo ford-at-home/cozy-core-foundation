@@ -13,14 +13,31 @@ This file is the source of truth for both the user's hand and the AI's interpret
 
 ### Symbols
 
-| Mark | Means            | Voice         |
-| ---- | ---------------- | ------------- |
-| ✓    | keep verbatim    | none          |
-| ✗    | cut              | none          |
-| ~    | rework           | say how       |
-| ★    | expand           | say with what |
-| →    | move             | say where     |
-| ?    | weak / challenge | optional      |
+| Mark | Means                     | Voice         |
+| ---- | ------------------------- | ------------- |
+| ✓    | keep verbatim             | none          |
+| ✗    | cut                       | none          |
+| ~    | rework                    | say how       |
+| ★    | expand                    | say with what |
+| →    | move                      | say where     |
+| ?    | weak / challenge / unsure | optional      |
+
+### Dials (signed adjustments)
+
+Short uppercase tokens written in the margin beside the affected block,
+**always signed**: `+` = more, `–` = less; double the sign for a strong push
+(`WC––` = much plainer).
+
+| Dial | Adjusts             | `+` means                  | `–` means            |
+| ---- | ------------------- | -------------------------- | -------------------- |
+| WC   | word choice         | richer, more specific      | plainer, simpler     |
+| REG  | register            | more formal                | more casual          |
+| VOI  | voice / personality | more of the author's voice | more neutral         |
+| RH   | rhythm              | more varied, punchier      | steadier, calmer     |
+
+A dial applies to the block it sits beside. Voice can narrow it to a word or
+phrase: _"WC– on S3P4 — 'optimize'"_. With no voice, the AI applies the dial
+to the whole block and reports the change.
 
 ### Numbered handles
 
@@ -92,9 +109,50 @@ Anything that requires more than one or two words of writing belongs in voice, n
 | **~**  | Rework / rephrase          | Yes (how)       |
 | **★**  | Expand here                | Yes (with what) |
 | **→**  | Move                       | Yes (where to)  |
-| **?**  | Weak / challenge / suspect | Optional (why)  |
+| **?**  | Weak / challenge / unsure  | Optional (why)  |
 
 Write symbols in the margin pointing at the affected text, or directly on it (e.g. strike-through for ✗).
+
+A margin symbol defaults to the **whole block** it sits beside (the block the
+pre-printed anchor labels). Underline or circle a word, phrase, or sentence and
+attach the symbol to that stroke to narrow the scope. Replacement text is
+written on paper directly: strike the old words and write the new ones above
+the line or in the margin, connected with a line or caret (`^`) at the
+insertion point — no symbol required. An unmarked block means "no change."
+
+### Dials (signed adjustments)
+
+Short uppercase tokens beside a block, **always signed**: `+` = more, `–` =
+less; doubled = a strong push (`WC––` = much plainer).
+
+| Dial    | Adjusts             | `+` means                  | `–` means        |
+| ------- | ------------------- | -------------------------- | ---------------- |
+| **WC**  | word choice         | richer, more specific      | plainer, simpler |
+| **REG** | register            | more formal                | more casual      |
+| **VOI** | voice / personality | more of the author's voice | more neutral     |
+| **RH**  | rhythm              | more varied, punchier      | steadier, calmer |
+
+A dial applies to the block it sits beside; voice can narrow it
+(_"WC– on S3P4 — 'optimize'"_). With no voice, the AI applies the dial to the
+whole block and reports its interpretation in the change log.
+
+### What not to mark
+
+To keep the page machine-readable after scanning:
+
+- Don't write over the pre-printed `S{n}P{m}` anchor labels or the page
+  furniture (header, folio) — they are how marks get located later.
+- Don't invent new symbols or single letters; an unknown mark is surfaced as
+  a question instead of being applied.
+- Don't leave floating marks: every symbol, dial, or directive should
+  visibly attach to a block, an underline/circle, or a handle. A mark that
+  touches nothing becomes an "Unresolved" item, not an edit.
+- Decorative doodles, brackets used as emphasis, and stray check-offs (e.g.
+  ticking blocks as you read) are indistinguishable from intent. A ✓ means
+  "keep verbatim" — don't use it as a reading progress mark.
+- A note you do NOT want applied should be struck through with a single X
+  before the page is returned; anything legible and unstruck is treated as
+  input.
 
 ### Pre-Printed Block Anchors (`S{n}P{m}`)
 

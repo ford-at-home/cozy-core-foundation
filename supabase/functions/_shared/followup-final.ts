@@ -125,6 +125,22 @@ ${jsonBlock("PRIOR_ANALYSIS", input.priorPacketAnalysis)}
 `;
 }
 
+function contributionsBlock(contributions: Array<{ kind: string; text: string }>): string {
+  const lines = contributions.map((c) => `- (${c.kind}) ${c.text}`).join("\n");
+  return `STUDENT CONTRIBUTIONS (reflections, beliefs, experiences, preferences —
+let these reshape emphasis and organization; never invent ones not listed):
+<<<CONTRIBUTIONS
+${lines || "(none)"}
+CONTRIBUTIONS>>>
+`;
+}
+
+// The document/slide design rules below are the product's Office visual
+// system (docs/research-workflow/06-final-artifacts.md, "Visual system" in
+// docs/ARTIFACT-QUALITY-REVIEW.md). tests/office-samples.ts is the reference
+// implementation — a generated sample is validated against these same rules
+// by tests/office-artifacts.test.ts. Change them together.
+
 export function buildFinalDocxPrompt(input: FinalArtifactPromptInput): string {
   const dir = `pieces/${input.pieceSlug}`;
   return `You are producing the FINAL DOCUMENT for a research piece as a fully-formed
@@ -141,18 +157,45 @@ Structure (mandatory):
    contributions, the date.
 2. Executive summary — 200–350 words in the student's voice (see VOICE).
 3. Body — the packet's major findings, integrated with any follow-up
-   evidence and re-cast in the student's voice. Preserve every source URL
-   as a Word hyperlink.
+   evidence (clearly marked as second-pass findings) and re-cast in the
+   student's voice. Preserve every source URL as a Word hyperlink.
 4. Verified responses — the student's own words (verbatim) framed by short
    editorial glue.
 5. Uncertainties and next steps — plainly stated.
-6. Sources — every URL from the packet + follow-up.
+6. Sources — every URL from the packet + follow-up, one per line, as real
+   hyperlinks.
+
+Document design (mandatory — the file must open clean in Word with zero
+manual cleanup):
+- US Letter page, portrait, 1in margins on all sides.
+- Use real Word paragraph styles for ALL text: Title on the title page,
+  Heading 1 for the numbered sections, Heading 2 for subsections (never
+  skip a level), Normal for body. Never fake a heading with bold direct
+  formatting; never switch fonts mid-document.
+- Typography: one serif family for everything (built-in Georgia or
+  Cambria is fine), body 11–12pt with line spacing ~1.15–1.4 (as a
+  multiple, never an exact height) and ~6–10pt space AFTER each paragraph
+  set in the style — never blank paragraphs as spacing, never two empty
+  paragraphs anywhere.
+- Color: near-black body text; at most ONE muted accent (deep green
+  #1F4D3A or burnt orange #B45309) used only for headings or thin rules.
+  Everything must survive grayscale printing.
+- Footer with a page number field on every page after the title page.
+- Tables (if any): one consistent style, real header row, no nested
+  tables, no table used for layout.
+- Set the document core properties: title = the piece title, author = the
+  student's name if known (else "Hardcopy Draft"), and the date.
+- Accessibility: correct heading order, alt text on any image, header
+  rows marked on tables.
+- Length: about 3–5 pages excluding Sources. Do not pad.
 
 Non-negotiables:
 - Never invent facts, statistics, quotes, or sources.
-- No emoji, no AI-tell filler.
+- No emoji, no AI-tell filler, no decorative clip art.
 - Keep the student's verified words verbatim; you may add editorial glue
   around them but do NOT paraphrase their responses.
+- Before committing, re-open the generated file with the same library and
+  confirm it parses; a corrupt artifact fails the whole run.
 
 Finally: commit the file to your working branch with message
 "final-docx(${input.pieceSlug}): final document". Do NOT open a PR.
@@ -166,6 +209,7 @@ ${input.styleText.trim() || "(neutral academic register)"}
 VOICE>>>
 
 ${verifiedBlock(input.verifiedResponses)}
+${contributionsBlock(input.studentContributions)}
 FOLLOWUP SUMMARY (may be empty):
 <<<FOLLOWUP
 ${input.followupSummary?.trim() || "(none)"}
@@ -187,7 +231,7 @@ export function buildFinalPptxPrompt(input: FinalArtifactPromptInput): string {
 Do NOT write any other deliverable in this run. Use a PPTX library available
 in your environment (e.g. \`pptxgenjs\` on npm or \`python-pptx\`).
 
-Slide plan (8–14 slides):
+Slide plan (8–12 slides):
 1. Title — piece title + student name if known.
 2. The research question and why it matters.
 3–6. Major findings (one per slide) with the strongest evidence and a source
@@ -198,12 +242,40 @@ Slide plan (8–14 slides):
 9. Follow-up findings (only if a follow-up summary is provided).
 10. Sources (list every URL).
 
+Slide design (mandatory — the deck must be presentable with zero manual
+cleanup):
+- 16:9 slide size (13.33 × 7.5 in).
+- Define ONE look and reuse it on every slide: warm cream background
+  (#F7F4EC) or white, charcoal text (#222222), and a single accent (deep
+  green #1F4D3A or burnt orange #B45309) used only for the title text or
+  one thin rule under it. No per-slide theme changes, no gradients, no
+  decorative shapes or unexplained icons.
+- Typography: slide titles 28–32pt, body 18–24pt, source lines 11–12pt.
+  Nothing below 11pt anywhere. One serif family for titles + one quiet
+  sans-serif (or the same serif) for body — never vary fonts per slide.
+- One idea per slide: the title is a short assertion (not a label like
+  "Finding 2"); at most ~40 words of body content (3–5 short bullets or
+  one short quote). Full prose goes in the speaker notes, never on the
+  slide. Do NOT paste document paragraphs onto slides.
+- Consistent geometry: identical title position on every slide; keep all
+  content at least 0.5in from every slide edge; nothing may overflow or
+  touch the edge.
+- Slide numbers bottom-right on every slide after the title slide.
+- The source line sits at the bottom of the slide it supports, small and
+  muted.
+- Speaker notes on every content slide: 2–5 sentences the student could
+  actually say, in the VOICE below.
+- Set the deck's core properties: title = the piece title, author = the
+  student's name if known (else "Hardcopy Draft").
+
 Non-negotiables:
 - Grayscale-safe: no color-only encoding of information.
 - No emoji.
 - Every source URL appears on the slide it supports AND on the Sources slide.
 - Keep the student's verified words verbatim in speaker notes; on slides you
   may paraphrase the headline but never the quote.
+- Before committing, re-open the generated file with the same library and
+  confirm it parses; a corrupt artifact fails the whole run.
 
 Finally: commit the file to your working branch with message
 "final-pptx(${input.pieceSlug}): final presentation". Do NOT open a PR.
@@ -211,12 +283,13 @@ Finally: commit the file to your working branch with message
 GOAL:
 ${input.goal?.trim() || "(none — infer from the packet)"}
 
-VOICE (inline; keep slide phrasing consistent with it):
+VOICE (inline; keep slide phrasing and the speaker notes consistent with it):
 <<<VOICE
 ${input.styleText.trim() || "(neutral academic register)"}
 VOICE>>>
 
 ${verifiedBlock(input.verifiedResponses)}
+${contributionsBlock(input.studentContributions)}
 FOLLOWUP SUMMARY (may be empty):
 <<<FOLLOWUP
 ${input.followupSummary?.trim() || "(none)"}
@@ -664,7 +737,7 @@ export async function persistFinalArtifactResult(
   if (!bytes) throw new Error(`final artifact missing at ${branchPath}`);
 
   // Structural gate: a corrupt or truncated binary must never go 'ready'.
-  const validation = validateOoxmlArtifact(bytes, isDocx ? "docx" : "pptx");
+  const validation = await validateOoxmlArtifact(bytes, isDocx ? "docx" : "pptx");
   if (!validation.ok) {
     const reason = `${filename} failed validation: ${validation.reason}`;
     await admin
