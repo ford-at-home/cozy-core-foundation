@@ -221,6 +221,9 @@ function WorkflowVisual() {
 }
 
 function Problem() {
+  return _Problem();
+}
+function _Problem() {
   return (
     <section className="border-t border-border/60 px-4 py-14 sm:py-20">
       <div className="mx-auto max-w-2xl space-y-4 text-center">
