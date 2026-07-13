@@ -63,5 +63,9 @@ jobs:
       # Deno expect an npm-managed node_modules/ when resolving npm type refs
       # (e.g. stripe's `/// <reference types="node" />`). This job never runs
       # npm ci, so tell Deno to use its own cache instead.
+      # --no-lock: without it, that same package.json makes Deno rewrite
+      # deno.lock with the whole npm dependency graph on every run (worktree
+      # churn locally, wasted work here). Test imports are version-pinned
+      # URLs, so the lockfile adds nothing for this suite.
       - name: Run tests
-        run: deno test --allow-env --node-modules-dir=none supabase/functions/_tests/
+        run: deno test --allow-env --node-modules-dir=none --no-lock supabase/functions/_tests/

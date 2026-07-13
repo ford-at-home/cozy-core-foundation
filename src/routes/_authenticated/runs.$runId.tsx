@@ -204,16 +204,31 @@ function RunDetailPage() {
             <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm">
               Research complete.{" "}
               {nextRunId ? (
-                <>
-                  The piece is now being composed from this report in your voice —{" "}
-                  <Link
-                    to="/runs/$runId"
-                    params={{ runId: nextRunId }}
-                    className="font-medium underline"
-                  >
-                    follow the compose run →
-                  </Link>
-                </>
+                isPacketWorkflow(run) ? (
+                  <>
+                    The packet is now being prepared from this report —{" "}
+                    <Link
+                      to="/runs/$runId"
+                      params={{ runId: nextRunId }}
+                      className="font-medium underline"
+                    >
+                      follow the packet run →
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    The piece is now being composed from this report in your voice —{" "}
+                    <Link
+                      to="/runs/$runId"
+                      params={{ runId: nextRunId }}
+                      className="font-medium underline"
+                    >
+                      follow the compose run →
+                    </Link>
+                  </>
+                )
+              ) : isPacketWorkflow(run) ? (
+                "The packet run is being prepared; it will appear on your dashboard within a couple of minutes."
               ) : (
                 "The compose run is being prepared; it will appear on your dashboard within a couple of minutes."
               )}
@@ -498,6 +513,16 @@ function ActionsPanel({ run }: { run: AgentRun }) {
         </p>
       )}
     </section>
+  );
+}
+
+/** A research run that will chain into a packet run (docs/research-workflow/). */
+function isPacketWorkflow(run: AgentRun): boolean {
+  return (
+    !!run.input &&
+    typeof run.input === "object" &&
+    !Array.isArray(run.input) &&
+    (run.input as Record<string, unknown>).workflow === "research_packet"
   );
 }
 
