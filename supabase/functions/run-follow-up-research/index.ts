@@ -11,6 +11,8 @@ import {
   CREDIT_COST, creditsEnforced, getBalance, reserveCreditsForRun,
 } from "../_shared/credits.ts";
 import { advanceStage, logPieceEvent } from "../_shared/workflow.ts";
+import { dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
+import { buildFollowUpPrompt, loadPriorPacketContext } from "../_shared/followup-final.ts";
 
 const FN = "run-follow-up-research";
 const COST = 2;
@@ -63,6 +65,36 @@ Deno.serve(serve(FN, async (req, rid) => {
 
   await advanceStage(admin, { pieceId: packet.piece_id, to: "follow_up_research_running" });
   await logPieceEvent(admin, { pieceId: packet.piece_id, userId, event: "followup_started", metadata: { runId: run.id } });
+
+  // Build the follow-up research prompt from the piece slug, prior packet
+  // analysis, the approved questions, and verified student responses, then
+  // dispatch to the Cursor cloud-agent provider. `dispatchRun` handles
+  // insert-before-dispatch bookkeeping and releases the credit hold on a
+  // definitive 4xx rejection.
+  const { data: piece } = await admin
+    .from("pieces").select("slug").eq("id", packet.piece_id).maybeSingle();
+  const ctx = await loadPriorPacketContext(admin, packet.piece_id);
+  const prompt = buildFollowUpPrompt({
+    pieceSlug: piece?.slug ?? "piece",
+    priorVersion: packet.version ?? 1,
+    priorPacketAnalysis: ctx.packet?.analysis ?? null,
+    approvedQuestions: ctx.approvedQuestions,
+    verifiedResponses: ctx.verifiedResponses,
+    studentContributions: ctx.studentContributions,
+  });
+  // Persist the priorPacketId on the run row so the persistor can supersede
+  // the correct packet even if a newer version is inserted later.
+  await admin.from("agent_runs").update({
+    input: { packetId, priorVersion: packet.version ?? 1, priorPacketId: packet.id, kind: "followup_research" },
+  }).eq("id", run.id);
+  await dispatchRun({
+    admin,
+    provider: resolveProvider(),
+    runId: run.id,
+    prompt,
+    ref: Deno.env.get("AGENT_REPO_REF") ?? "main",
+    autoCreatePr: false,
+  });
   return j({ runId: run.id, packetId, cost: COST }, 201, rid);
 }));
 // Referenced imports for tree-shakers.
