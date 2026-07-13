@@ -296,23 +296,58 @@ function FirstProduct() {
             {brand.product.descriptor}
           </p>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            It helps you produce essays, reports, proposals, research briefs, speeches, chapters —
-            thoughtful long-form work. You set your voice once; every draft is prepared in it, and
-            every revision carries your marks forward.
+            Draft a piece in your voice, or study a subject and write from it — the same loop
+            either way. Every project ends in a real artifact: a merged draft in your repo, a Word
+            document, or a class presentation.
           </p>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Signing up includes three credits. A finished draft uses one; starting with deep
-            research uses two. Printing and marking up what you've made is always free, and nothing
-            is charged for work that fails.
+            Signing up includes three credits. A prepared draft or packet uses one; a focused
+            follow-up research pass uses two; the Word document and presentation each use their
+            own credits when you create them. Printing, reviewing, correcting, dictating, and
+            downloading are free — and nothing is charged for work that fails.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link to="/auth" className={`${primaryCta} w-full sm:w-auto`}>
-              Start a working draft
+              Start a project
             </Link>
             <p className="text-xs text-muted-foreground">
               A working name — the label may change; the loop won't.
             </p>
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AICompact() {
+  return (
+    <section className="border-t border-border/60 px-4 py-14 sm:py-20">
+      <div className="mx-auto grid max-w-3xl gap-8 sm:grid-cols-2">
+        <div className="space-y-3">
+          <Kicker>What AI does</Kicker>
+          <ul className="space-y-2">
+            {AI_WILL_DO.map((item) => (
+              <li key={item} className="flex gap-2 text-sm leading-relaxed text-foreground">
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" aria-hidden />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="space-y-3">
+          <Kicker>What AI doesn't do</Kicker>
+          <ul className="space-y-2">
+            {AI_WONT_DO.map((item) => (
+              <li key={item} className="flex gap-2 text-sm leading-relaxed text-muted-foreground">
+                <span
+                  className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/40"
+                  aria-hidden
+                />
+                {item}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </section>
