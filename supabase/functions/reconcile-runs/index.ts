@@ -33,10 +33,12 @@ import { releaseRunCredits, settleRunCredits, sweepStaleReservations } from "../
 import { reconcilePurchases } from "../_shared/stripe-reconcile.ts";
 import { persistPacketResult } from "../_shared/packet.ts";
 import {
+  FinalArtifactInvalidError,
   persistFinalArtifactResult,
   persistFollowUpResult,
   settleFinalArtifactFailure,
 } from "../_shared/followup-final.ts";
+import { sweepStaleAnalyzingPages } from "../_shared/pages.ts";
 import { advanceStage, logPieceEvent } from "../_shared/workflow.ts";
 import { workflowStageForCompletedKind, workflowStageForFailedKind } from "../_shared/complete.ts";
 
@@ -128,6 +130,20 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Safety net: page images stuck 'analyzing' (crash between status flip and
+  // settle in analyze-returned-page) are failed with retake guidance so the
+  // return can settle and the client can offer a retry.
+  let stalePagesSwept = 0;
+  try {
+    stalePagesSwept = await sweepStaleAnalyzingPages(admin);
+  } catch (err) {
+    logEvent(FN, "error", {
+      requestId: rid,
+      event: "stale_page_sweep_failed",
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+
   // Stripe-vs-ledger reconciliation: heal paid-but-ungranted purchases and
   // close out expired sessions. No-op until STRIPE_SECRET_KEY is configured.
   let purchases = { healed: 0, expired: 0, flagged: 0 };
@@ -147,10 +163,11 @@ Deno.serve(async (req) => {
     scanned: open?.length ?? 0,
     summary,
     reservationsResolved,
+    stalePagesSwept,
     purchases,
   });
   return jsonResponse(
-    { scanned: open?.length ?? 0, summary, reservationsResolved, purchases },
+    { scanned: open?.length ?? 0, summary, reservationsResolved, stalePagesSwept, purchases },
     200,
     rid,
   );
@@ -306,7 +323,29 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
       } else if (run.kind === "followup_research") {
         await persistFollowUpResult(admin, run, result);
       } else if (run.kind === "final_docx" || run.kind === "final_pptx") {
-        await persistFinalArtifactResult(admin, run, piece?.slug ?? "piece");
+        try {
+          await persistFinalArtifactResult(admin, run, piece?.slug ?? "piece");
+        } catch (err) {
+          if (!(err instanceof FinalArtifactInvalidError)) throw err;
+          // The branch content is immutable, so re-sweeping can never heal a
+          // corrupt binary: fail the run terminally (awaiting_fetch → failed
+          // is legal) and release the credit hold. The artifact row was
+          // already settled 'failed' by the persist function.
+          await admin
+            .from("agent_runs")
+            .update({
+              status: "failed",
+              error: `The generated file was invalid and was not published. ${err.message}`,
+              completed_at: new Date().toISOString(),
+            })
+            .eq("id", run.id);
+          await releaseRunCredits(admin, run, "final artifact failed validation", "reconciler");
+          const failStage = workflowStageForFailedKind(run.kind);
+          if (failStage && run.piece_id) {
+            await advanceStage(admin, { pieceId: run.piece_id, to: failStage });
+          }
+          return;
+        }
       }
       await admin
         .from("agent_runs")

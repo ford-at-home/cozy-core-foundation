@@ -11,7 +11,8 @@
 // deno-lint-ignore-file no-explicit-any
 import { serve, authenticate, j, e } from "../_shared/http.ts";
 import { logEvent } from "../_shared/observability.ts";
-import { advanceStage, logPieceEvent } from "../_shared/workflow.ts";
+import { advanceStage } from "../_shared/workflow.ts";
+import { settleReturnStatus } from "../_shared/pages.ts";
 import { recordInference } from "../_shared/usage.ts";
 import {
   blocksToRows,
@@ -52,6 +53,12 @@ Deno.serve(
     } | null;
     const packet = ret?.packets ?? null;
 
+    // Everything that can fail without provider involvement is checked BEFORE
+    // the page is flipped to 'analyzing', so no early return can strand it.
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY)
+      return e(FN, 500, "LOVABLE_API_KEY missing", { requestId: rid, code: "env_missing" });
+
     const { data: signed } = await admin.storage
       .from("packet-returns")
       .createSignedUrl(page.storage_path, 300);
@@ -77,10 +84,6 @@ Deno.serve(
     if (packet?.piece_id) {
       await advanceStage(admin, { pieceId: packet.piece_id, to: "recognition_running" });
     }
-
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY)
-      return e(FN, 500, "LOVABLE_API_KEY missing", { requestId: rid, code: "env_missing" });
 
     // Question context so responses come back linked to their question.
     let questions: RecognitionQuestionContext[] = [];
@@ -212,45 +215,3 @@ Deno.serve(
     return j({ pageImageId, blocksInserted: rows.length, quality: recognition.quality }, 200, rid);
   }),
 );
-
-/**
- * Keep packet_returns.status truthful: once no page is still uploaded or
- * analyzing, the return is 'ready' (≥1 readable page) or 'failed'. Settling
- * logs a piece event so the activity history shows when the pages were read.
- */
-async function settleReturnStatus(
-  admin: any,
-  returnId: string | null,
-  ctx?: { pieceId: string | null; userId: string },
-): Promise<void> {
-  if (!returnId) return;
-  const { data: pages } = await admin
-    .from("page_images")
-    .select("status")
-    .eq("return_id", returnId);
-  const all = (pages ?? []) as Array<{ status: string }>;
-  if (all.length === 0) return;
-  const pending = all.some((p) => p.status === "uploaded" || p.status === "analyzing");
-  if (pending) return;
-  const analyzed = all.filter((p) => p.status === "analyzed").length;
-  const status = analyzed > 0 ? "ready" : "failed";
-  const { data: updated } = await admin
-    .from("packet_returns")
-    .update({
-      status,
-      submitted_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", returnId)
-    .neq("status", status)
-    .select("id");
-  // Log only on the transition (the .neq guard makes re-analysis a no-op).
-  if (ctx?.pieceId && (updated ?? []).length > 0) {
-    await logPieceEvent(admin, {
-      pieceId: ctx.pieceId,
-      userId: ctx.userId,
-      event: status === "ready" ? "return_read" : "return_read_failed",
-      metadata: { returnId, pagesAnalyzed: analyzed, pagesTotal: all.length },
-    });
-  }
-}

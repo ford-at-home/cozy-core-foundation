@@ -15,6 +15,7 @@ import {
 } from "../_shared/credits.ts";
 import { advanceStage, logPieceEvent } from "../_shared/workflow.ts";
 import { dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
+import { ensureRunSession } from "../_shared/usage.ts";
 import { buildFollowUpPrompt, loadPriorPacketContext } from "../_shared/followup-final.ts";
 
 const FN = "run-follow-up-research";
@@ -81,12 +82,20 @@ Deno.serve(
       })
       .select("id")
       .single();
-    if (runErr)
+    if (runErr) {
+      // Unique violation = a concurrent retry won the race; return its run.
+      const { data: raced } = await admin
+        .from("agent_runs")
+        .select("id")
+        .eq("idempotency_key", idempotencyKey)
+        .maybeSingle();
+      if (raced) return j({ runId: raced.id, idempotent: true }, 202, rid);
       return e(FN, 500, "Failed to create run", {
         requestId: rid,
         code: "insert_failed",
         cause: runErr,
       });
+    }
 
     const res = await reserveCreditsForRun(admin, {
       userId,
@@ -98,6 +107,16 @@ Deno.serve(
       await admin.from("agent_runs").update({ status: "failed", error: res.code }).eq("id", run.id);
       return e(FN, 402, "Not enough credits", { requestId: rid, code: res.code });
     }
+
+    // Attach a session BEFORE dispatch — recordInference silently drops cost
+    // rows for runs without a session_id (usage.ts), which would leave this
+    // run's provider spend unrecorded.
+    await ensureRunSession(admin, {
+      runId: run.id,
+      userId,
+      pieceId: packet.piece_id,
+      provider: "cursor",
+    });
 
     await advanceStage(admin, { pieceId: packet.piece_id, to: "follow_up_research_running" });
     await logPieceEvent(admin, {

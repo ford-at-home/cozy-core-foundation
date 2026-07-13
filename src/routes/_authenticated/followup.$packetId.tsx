@@ -631,8 +631,10 @@ function ApprovedPanel({
   const [running, setRunning] = useState(false);
   const [reopening, setReopening] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Idempotency seed: stable per mount so a double-tap can't dispatch twice.
-  const requestId = useMemo(() => crypto.randomUUID(), []);
+  // Idempotency seed; regenerated after every dispatch so "run again" after a
+  // failed run creates a NEW run instead of resolving to the failed one
+  // (same pattern as the Finish card on the project page).
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
 
   const outOfCredits = balance !== null && balance < FOLLOWUP_RESEARCH_COST;
   const paywalled = error !== null && isInsufficientCreditsError(error);
@@ -646,6 +648,7 @@ function ApprovedPanel({
       router.navigate({ to: "/project/$pieceId", params: { pieceId: onDispatched } });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start the research");
+      setRequestId(crypto.randomUUID());
       setRunning(false);
     }
   }

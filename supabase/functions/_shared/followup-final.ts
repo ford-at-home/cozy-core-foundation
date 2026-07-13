@@ -13,7 +13,21 @@
 
 // deno-lint-ignore-file no-explicit-any
 import { fetchBinaryFromBranch } from "./complete.ts";
+import { validateOoxmlArtifact } from "./ooxml.ts";
 import { parsePacketAnalysis, parsePacketQuestions } from "./packet.ts";
+
+/**
+ * The fetched final-artifact binary failed structural validation. Terminal
+ * for the run: the branch content is immutable, so re-fetching can never
+ * heal it — callers must fail the run instead of leaving it in
+ * awaiting_fetch for an eternal re-sweep.
+ */
+export class FinalArtifactInvalidError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "FinalArtifactInvalidError";
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Prompt inputs
@@ -648,6 +662,28 @@ export async function persistFinalArtifactResult(
 
   const bytes = await fetchBinaryFromBranch(branchPath, run.branch);
   if (!bytes) throw new Error(`final artifact missing at ${branchPath}`);
+
+  // Structural gate: a corrupt or truncated binary must never go 'ready'.
+  const validation = validateOoxmlArtifact(bytes, isDocx ? "docx" : "pptx");
+  if (!validation.ok) {
+    const reason = `${filename} failed validation: ${validation.reason}`;
+    await admin
+      .from("final_artifacts")
+      .update({
+        status: "failed",
+        provenance: {
+          branch: run.branch,
+          source_path: branchPath,
+          bytes: bytes.byteLength,
+          validation_error: validation.reason,
+          failed_at: new Date().toISOString(),
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("run_id", run.id)
+      .neq("status", "ready");
+    throw new FinalArtifactInvalidError(reason);
+  }
 
   const storagePath = `${run.user_id}/${run.piece_id}/${filename}`;
   const { error: upErr } = await admin.storage

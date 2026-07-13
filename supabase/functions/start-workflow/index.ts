@@ -213,6 +213,9 @@ async function handle(req: Request, rid: string): Promise<Response> {
     .select("id")
     .single();
   if (insertErr || !inserted) {
+    // Either way this request's freshly created piece has no run and never
+    // will — delete it so the dashboard doesn't accumulate empty orphans.
+    await admin.from("pieces").delete().eq("id", piece.id);
     // Unique violation = a concurrent retry won the race; return its run.
     const { data: existing } = await admin
       .from("agent_runs")
