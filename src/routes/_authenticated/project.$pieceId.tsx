@@ -601,7 +601,7 @@ function ArtifactFlow({
     try {
       window.location.assign(await artifactDownloadUrl(artifact));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not prepare the download");
+      setError(err instanceof Error ? err.message : `Could not prepare the ${copy.noun} download`);
     }
   }
 
