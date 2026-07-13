@@ -32,6 +32,11 @@ Deno.serve(serve(FN, async (req, rid) => {
 
   await admin.from("page_images").update({ status: "analyzing", updated_at: new Date().toISOString() }).eq("id", pageImageId);
 
+  // Advance FSM into recognition_running before the AI call so the intermediate
+  // stage is observable; responses_need_review is set after blocks are stored.
+  const pieceIdEarly = (page as any).packet_returns?.packets?.piece_id;
+  if (pieceIdEarly) await advanceStage(admin, { pieceId: pieceIdEarly, to: "recognition_running" });
+
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) return e(FN, 500, "LOVABLE_API_KEY missing", { requestId: rid, code: "env_missing" });
 
@@ -78,8 +83,7 @@ Never invent text; if unreadable, omit the block. Prefer complete words even at 
   if (rows.length > 0) await admin.from("recognized_blocks").insert(rows);
   await admin.from("page_images").update({ status: "analyzed", updated_at: new Date().toISOString() }).eq("id", pageImageId);
 
-  const pieceId = (page as any).packet_returns?.packets?.piece_id;
-  if (pieceId) await advanceStage(admin, { pieceId, to: "responses_need_review" });
+  if (pieceIdEarly) await advanceStage(admin, { pieceId: pieceIdEarly, to: "responses_need_review" });
 
   return j({ pageImageId, blocksInserted: rows.length }, 200, rid);
 }));
