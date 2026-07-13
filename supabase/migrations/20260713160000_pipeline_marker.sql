@@ -1,0 +1,16 @@
+-- Pipeline marker migration (audit P0.2 / plan phases C2+L3).
+--
+-- Purpose: determine whether a Cursor-authored migration pushed to main is
+-- ever applied to the connected Supabase database. Ten earlier hand-authored
+-- migrations in this directory were never applied (the live schema comes
+-- from Lovable-generated UUID-named migrations only), so before any real
+-- schema change can be scheduled, this no-op file tests the pipeline.
+--
+-- Expected outcome: the Lovable agent (work item WI-0006) checks
+-- supabase_migrations.schema_migrations for this version after the next
+-- deploy/sync cycle and reports the result to
+-- docs/coordination/lovable/outbox/. If it does not auto-apply, Lovable
+-- documents and executes the manual procedure instead.
+--
+-- This migration intentionally has no schema effect.
+select 1;
