@@ -43,7 +43,7 @@ type GeneratedBrief = { path?: string; content: string };
 const BRIEF_TAB = "__brief__";
 
 const RUN_COLUMNS =
-  "id, user_id, piece_id, session_id, provider, total_cost_usd, status, kind, input, result, error, branch, created_at, dispatched_at, completed_at";
+  "id, user_id, piece_id, session_id, provider, total_cost_usd, status, kind, input, result, error, branch, external_agent_id, created_at, dispatched_at, completed_at";
 
 /** Prefer the more advanced lifecycle snapshot so a slow initial fetch cannot
  *  overwrite a newer realtime UPDATE (e.g. completed → running). */
