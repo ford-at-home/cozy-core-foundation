@@ -235,7 +235,7 @@ const HANDWRITING_GUIDANCE_HTML = `
 const RETURN_INSTRUCTIONS_HTML = `
 <div class="packet-section packet-return">
   <div class="packet-section-title">Returning this packet</div>
-  <div class="handwriting-guidance-body">When you have read, annotated, and answered on paper: photograph each completed page (one page per photo works best — whole page in frame, no glare, page number visible), then upload the photos in the app. Or dictate your answers, referencing page and question numbers. Blank space is fine; answer what earned your attention.</div>
+  <div class="handwriting-guidance-body">When you have read, annotated, and answered on paper, open your project in the app and choose <strong>Return your work</strong>. Photograph each completed page — one page per photo works best: whole page in frame, no glare, page number visible. Or dictate your answers out loud, saying the page or question number first ("Question 3: …"). You can mix both. Returning is free, and you will check everything the system read before it is used anywhere.</div>
 </div>`;
 
 function packetHeaderHtml(opts: PacketPrintOptions): string {

@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { createCheckout } from "@/lib/billing.functions";
-import { useCreditBalance } from "@/lib/use-credits";
+import { CREDIT_COST, useCreditBalance } from "@/lib/use-credits";
 import { Skeleton } from "@/components/ui/skeleton";
 import { brand, pageTitle } from "@/config/brand";
 
@@ -157,8 +157,8 @@ function BillingPage() {
         </p>
         <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Billing</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          Each generation uses 1 credit; a deep-research start uses 2. Credits are only consumed
-          when a generation finishes — failures release the hold.
+          One credit is one completed generation. Credits are only consumed when the work finishes —
+          if a generation fails, the hold is released and you are not charged.
         </p>
       </div>
 
@@ -201,6 +201,36 @@ function BillingPage() {
         <p className="mt-1 font-serif text-4xl tabular-nums">
           {balanceLoading ? "…" : (balance ?? 0)}{" "}
           <span className="text-base text-muted-foreground">credit{balance === 1 ? "" : "s"}</span>
+        </p>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="font-serif text-2xl">What credits buy</h2>
+        <div className="overflow-hidden rounded-xl border border-border bg-card">
+          <table className="w-full text-sm">
+            <tbody>
+              {[
+                ["Research a topic and build your packet (or draft)", CREDIT_COST.research],
+                ["Draft or packet from research you bring", CREDIT_COST.compose],
+                ["New proposal, final draft, or revision", CREDIT_COST.resynth],
+                ["Follow-up research (revised packet included)", CREDIT_COST.followup],
+                ["Final paper (.docx)", CREDIT_COST.document],
+                ["Class presentation (.pptx)", CREDIT_COST.presentation],
+              ].map(([label, cost]) => (
+                <tr key={label as string} className="border-b border-border/60 last:border-0">
+                  <td className="px-4 py-3 sm:px-5">{label}</td>
+                  <td className="px-4 py-3 text-right font-mono tabular-nums sm:px-5">
+                    {cost} credit{cost === 1 ? "" : "s"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Always free: reviewing and editing questions, printing, returning your pages, dictation,
+          checking what we read, skipping follow-up research, downloads and re-downloads, and
+          retrying anything that failed.
         </p>
       </section>
 

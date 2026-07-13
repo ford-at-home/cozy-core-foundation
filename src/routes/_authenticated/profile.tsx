@@ -3,6 +3,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { getMyProfile, saveMyProfile } from "@/lib/profile.functions";
+import {
+  deleteHandwritingProfile,
+  enableHandwritingProfile,
+  getHandwritingProfile,
+  type HandwritingProfile,
+} from "@/lib/returns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { brand, pageTitle } from "@/config/brand";
@@ -595,6 +601,95 @@ function ProfilePage() {
             </div>
           </>
         )}
+      </div>
+
+      <HandwritingProfileSection />
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Handwriting adaptation (Phase 3, minimal): consent-gated, built only from
+// corrections the student confirms during verification, deletable any time.
+// Deleting stops adaptation immediately; past work is untouched.
+
+function HandwritingProfileSection() {
+  const [profile, setProfile] = useState<HandwritingProfile | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    getHandwritingProfile()
+      .then((p) => {
+        if (alive) setProfile(p);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (alive) setLoaded(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  async function toggle() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      if (profile) {
+        await deleteHandwritingProfile();
+        setProfile(null);
+      } else {
+        await enableHandwritingProfile();
+        setProfile(await getHandwritingProfile());
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update the setting");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!loaded) return null;
+
+  return (
+    <div className="space-y-4 rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm sm:p-7">
+      <div>
+        <h2 className="font-serif text-2xl">Handwriting adaptation</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          When you correct how we read your handwriting, we can remember those corrections to read
+          your writing better next time. This is optional, uses only corrections you confirmed
+          yourself, and you can delete it any time — deleting stops adaptation immediately and never
+          touches past work.
+        </p>
+      </div>
+      {error && (
+        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-muted-foreground">
+          {profile
+            ? `On since ${new Date(profile.consent_at).toLocaleDateString()}${profile.profile_text ? " — learning from your corrections" : " — no corrections learned yet"}.`
+            : "Off — we read each return fresh, with no memory of past corrections."}
+        </p>
+        <button
+          type="button"
+          onClick={toggle}
+          disabled={busy}
+          className={
+            "inline-flex min-h-11 w-full items-center justify-center rounded-md px-5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto " +
+            (profile
+              ? "border border-border text-muted-foreground hover:text-destructive hover:border-destructive/50"
+              : "bg-primary text-primary-foreground hover:bg-primary/90")
+          }
+        >
+          {busy ? "Saving…" : profile ? "Turn off & delete" : "Turn on"}
+        </button>
       </div>
     </div>
   );

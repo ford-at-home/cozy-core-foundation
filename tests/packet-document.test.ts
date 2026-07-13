@@ -108,8 +108,11 @@ describe("buildPacketPrintDocument", () => {
 
   it("includes return instructions with the photo and dictation paths", () => {
     expect(doc).toContain("Returning this packet");
-    expect(doc).toContain("photograph each completed page");
+    expect(doc).toContain("Photograph each completed page");
     expect(doc).toContain("Or dictate your answers");
+    // The instructions point at the real flow and promise verification.
+    expect(doc).toContain("Return your work");
+    expect(doc).toContain("check everything the system read");
   });
 
   it("escapes question text (user content) for HTML", () => {

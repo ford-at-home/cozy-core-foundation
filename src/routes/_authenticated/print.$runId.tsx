@@ -318,7 +318,8 @@ function PrintPage() {
               setIframeError(null);
             }}
             onError={() => {
-              const msg = "Failed to render the print preview.";
+              const msg =
+                "Could not build the print preview. Reload to try again — printing is free.";
               console.error("[print] main iframe onError", { runId });
               setIframeError(msg);
               toast.error(msg);
@@ -384,7 +385,8 @@ function PrintPage() {
                   setModalError(null);
                 }}
                 onError={() => {
-                  const msg = "Failed to render the print preview.";
+                  const msg =
+                    "Could not build the print preview. Reload to try again — printing is free.";
                   console.error("[print] modal iframe onError", { runId });
                   setModalError(msg);
                   toast.error(msg);

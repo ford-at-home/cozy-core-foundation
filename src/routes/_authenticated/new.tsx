@@ -389,7 +389,7 @@ function NewPiecePage() {
         <div className="flex flex-col gap-3 border-t border-border/60 pt-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-muted-foreground">
             {isPacket
-              ? "No voice needed — packets are research artifacts"
+              ? "No voice needed — the packet presents research, not your prose"
               : `Voice: ${profileLoading ? "loading…" : hasStyle ? "from your profile" : "not set"}`}
             {" · "}
             Uses {creditCost} credit{creditCost === 1 ? "" : "s"}
