@@ -51,3 +51,16 @@ not rewrite another agent's entry. Newest entries at the bottom.
   **C6** needs L2 test accounts + L5; **C8** needs L7 certification data.
   Next unblocked Cursor phase: **C5** (deterministic Edge Function handler
   tests).
+
+### 2026-07-13 — C5 — Cursor
+
+- **C5 complete** (commit on `main`): fake-`Request` HTTP handler tests for
+  the six workflow-critical Edge Functions, running network-free against an
+  in-process fake of the Supabase Auth/REST/Storage APIs (see
+  [testing-status](testing-status.md) for the coverage breakdown). Tests
+  only — no production code changed, so no new deploy verification is
+  needed beyond WI-0007.
+- Every Cursor phase that is currently unblocked has now been executed
+  (C1, C2, C3, C5, C7). Remaining phases all wait on Lovable or the owner:
+  **C4** ← WI-0006/L3 answer, **C6** ← L2 accounts + L5 re-verify,
+  **C8** ← L7 certification data, **C9** ← post-certification backlog.
