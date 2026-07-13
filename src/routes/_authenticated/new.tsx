@@ -7,6 +7,7 @@ import { getMyProfile } from "@/lib/profile.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { brand, pageTitle } from "@/config/brand";
 import { CREDIT_COST, isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
+import { MODE_COPY } from "@/config/workflow-copy";
 
 // New draft: paste research, optionally steer with a goal, and prepare a
 // draft. Voice is NOT an input here — it comes from the signed-in user's
@@ -184,41 +185,32 @@ function NewDraftPage() {
           {brand.product.name}
         </p>
         <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">
-          {isPacket ? "New research packet" : "New draft"}
+          New project
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          {isPacket ? (
-            <>
-              Start with a question. {brand.company.name} researches the subject and prepares a
-              packet you can print, read, and mark by hand. Return your pages or dictate your
-              thoughts, review what the system understood, then create a final document and
-              presentation shaped by your own reasoning.
-            </>
-          ) : (
-            <>
-              Bring your research, and AI prepares a structured working draft from it — written in
-              your voice, taken from{" "}
-              <Link to="/profile" className="underline hover:text-foreground">
-                your profile
-              </Link>
-              . When it's ready, print it and continue by hand.
-            </>
-          )}
+          What are you starting? Both modes follow the same loop — explore, print, think, return,
+          refine, finish — and end in a real artifact.
         </p>
       </div>
 
       <div
-        className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2"
         role="tablist"
         aria-label="What to prepare"
       >
-        <ModeButton
-          label="Working draft"
+        <IntentCard
+          label={MODE_COPY.longform.label}
+          intent={MODE_COPY.longform.intent}
+          outcome={MODE_COPY.longform.outcome}
+          arc={MODE_COPY.longform.arc}
           active={workflow === "longform"}
           onClick={() => setWorkflow("longform")}
         />
-        <ModeButton
-          label="Research packet"
+        <IntentCard
+          label={MODE_COPY.research_packet.label}
+          intent={MODE_COPY.research_packet.intent}
+          outcome={MODE_COPY.research_packet.outcome}
+          arc={MODE_COPY.research_packet.arc}
           active={workflow === "research_packet"}
           onClick={() => setWorkflow("research_packet")}
         />
