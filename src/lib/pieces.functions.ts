@@ -16,10 +16,29 @@ export const runPieceAction = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: PieceActionInput) => data ?? {})
   .handler(async ({ data, context }): Promise<{ runId: string; pieceId: string }> => {
-    const { data: result, error } = await context.supabase.functions.invoke(
-      "piece-action",
-      { body: data },
-    );
+    const { data: result, error } = await context.supabase.functions.invoke("piece-action", {
+      body: data,
+    });
     if (error) throw new Error(await extractEdgeError(error, "piece-action"));
     return result as { runId: string; pieceId: string };
+  });
+
+export type ApproveRevisionResult = {
+  ok: true;
+  alreadyMerged?: boolean;
+  prUrl: string | null;
+  prNumber?: number;
+  mergedAt?: string;
+};
+
+/** Approve & squash-merge the revision run's GitHub PR from inside the app. */
+export const approveRevisionPr = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { runId: string }) => data)
+  .handler(async ({ data, context }): Promise<ApproveRevisionResult> => {
+    const { data: result, error } = await context.supabase.functions.invoke("approve-revision", {
+      body: data,
+    });
+    if (error) throw new Error(await extractEdgeError(error, "approve-revision"));
+    return result as ApproveRevisionResult;
   });

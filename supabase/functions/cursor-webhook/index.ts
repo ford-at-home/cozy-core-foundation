@@ -21,6 +21,14 @@ import {
 } from "../_shared/complete.ts";
 import { recordInference, cursorInferenceUsage } from "../_shared/usage.ts";
 import { releaseRunCredits, settleRunCredits } from "../_shared/credits.ts";
+import { persistPacketResult } from "../_shared/packet.ts";
+import {
+  persistFinalArtifactResult,
+  persistFollowUpResult,
+  settleFinalArtifactFailure,
+} from "../_shared/followup-final.ts";
+import { advanceStage, logPieceEvent } from "../_shared/workflow.ts";
+import { workflowStageForCompletedKind } from "../_shared/complete.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("method not allowed", { status: 405 });
@@ -92,6 +100,7 @@ Deno.serve(async (req) => {
 
     if (update.status === "failed") {
       await releaseRunCredits(admin, run, "agent reported failure", "cursor-webhook");
+      await settleFinalArtifactFailure(admin, run);
     }
 
     if (update.status === "awaiting_fetch") {
@@ -135,6 +144,16 @@ Deno.serve(async (req) => {
         const slug = piece?.slug;
         const result = slug ? await fetchRunResult({ ...run, branch } as RunRow, slug) : null;
         if (result) {
+          // Packet runs: persist packets + packet_questions BEFORE completion
+          // (idempotent). A throw leaves the run in awaiting_fetch, and the
+          // reconciler retries the whole fetch+persist.
+          if (run.kind === "packet") {
+            await persistPacketResult(admin, run, result);
+          } else if (run.kind === "followup_research") {
+            await persistFollowUpResult(admin, run, result);
+          } else if (run.kind === "final_docx" || run.kind === "final_pptx") {
+            await persistFinalArtifactResult(admin, run, slug ?? "piece");
+          }
           await admin
             .from("agent_runs")
             .update({
@@ -156,6 +175,18 @@ Deno.serve(async (req) => {
                 updated_at: new Date().toISOString(),
               })
               .eq("id", run.piece_id);
+            const nextStage = workflowStageForCompletedKind(run.kind);
+            if (nextStage) {
+              await advanceStage(admin, { pieceId: run.piece_id, to: nextStage });
+            }
+            // Activity history: every completed run on a piece is an event,
+            // whether or not it maps to an FSM hop (research/packet don't).
+            await logPieceEvent(admin, {
+              pieceId: run.piece_id,
+              userId: run.user_id,
+              event: `${run.kind}_completed`,
+              metadata: { runId: run.id },
+            });
           }
         }
       } catch (err) {

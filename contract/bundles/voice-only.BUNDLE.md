@@ -4,7 +4,7 @@ description: Voice and structure pass on a long-form draft without any paper mar
 mode: polish
 reads:
   - references/STORYTELLING.md
-voice: required  # synthesize resolves from brief.md's Voice field; ~/.me/voices/<name>.md + <name>.anti.md
+voice: required # synthesize resolves from brief.md's Voice field; ~/.me/voices/<name>.md + <name>.anti.md
 triggers:
   - "refactor this draft"
   - "refactor this in my voice"
@@ -63,10 +63,10 @@ Two modes, auto-detected from inputs:
 
 ## References composed
 
-| File | Role |
-|---|---|
-| `~/.me/voices/<name>.md` | The voice. Resolved from `brief.md`'s `Voice:` field. Accent layers applied sparingly per the voice file's "Accent layers" section. Loaded every invocation. |
-| `~/.me/voices/<name>.anti.md` | Paired anti-slop catalog. Scrubbed every invocation — even without an explicit SLOP directive, this bundle removes AI tells as part of normal voice work. Loaded if present. |
+| File                                                          | Role                                                                                                                                                                                                               |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `~/.me/voices/<name>.md`                                      | The voice. Resolved from `brief.md`'s `Voice:` field. Accent layers applied sparingly per the voice file's "Accent layers" section. Loaded every invocation.                                                       |
+| `~/.me/voices/<name>.anti.md`                                 | Paired anti-slop catalog. Scrubbed every invocation — even without an explicit SLOP directive, this bundle removes AI tells as part of normal voice work. Loaded if present.                                       |
 | [`references/STORYTELLING.md`](../references/STORYTELLING.md) | Piece architecture (translated Chappelle). Governs top-down restructure: where to start, what the reader thinks they're reading, when to move the target, how the closer reframes the rest. Read every invocation. |
 
 If the brief is missing a `Voice:` field or the named voice does not exist at `<repo>/.me/voices/<name>.md` or `~/.me/voices/<name>.md`, this bundle stops. See `../SKILL.md` for the resolution rule (in this product the voice arrives inline — `contract/README.md` override 1).

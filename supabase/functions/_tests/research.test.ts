@@ -52,7 +52,10 @@ function fakeAdmin(handlers: {
               return {
                 maybeSingle() {
                   calls.push({ table, op: "select", filter: [k, v] });
-                  return Promise.resolve({ data: handlers.maybeSingle(table, [k, v]), error: null });
+                  return Promise.resolve({
+                    data: handlers.maybeSingle(table, [k, v]),
+                    error: null,
+                  });
                 },
               };
             },
@@ -138,7 +141,8 @@ Deno.test("research completion chains exactly one compose run and dispatches it"
     // Research run completed with the report + pointer to the chained run.
     const completion = calls.find(
       (c) =>
-        c.table === "agent_runs" && c.op === "update" &&
+        c.table === "agent_runs" &&
+        c.op === "update" &&
         (c.payload as any)?.status === "completed" &&
         c.filter?.[1] === "run-research-1",
     );
@@ -153,12 +157,59 @@ Deno.test("research completion chains exactly one compose run and dispatches it"
     // The chained compose run was dispatched (stub provider -> queued).
     const dispatched = calls.find(
       (c) =>
-        c.table === "agent_runs" && c.op === "update" &&
+        c.table === "agent_runs" &&
+        c.op === "update" &&
         (c.payload as any)?.status === "queued" &&
         c.filter?.[1] === "run-compose-1",
     );
     assert(dispatched, "chained compose run was not dispatched");
     assert(String((dispatched!.payload as any).external_agent_id).startsWith("bc_stub_"));
+  } finally {
+    restore();
+  }
+});
+
+Deno.test("research_packet workflow chains a packet run and needs no voice", async () => {
+  const restore = stubParallel(PARALLEL_DONE);
+  try {
+    const { admin, calls } = fakeAdmin({
+      maybeSingle: (table) => {
+        // Empty voice: packets are research artifacts, not authored prose.
+        if (table === "profiles") return { style_text: "", image_style: "" };
+        if (table === "pieces") return { slug: "test-topic-abc123" };
+        return null;
+      },
+      insertSingle: (table, payload) => {
+        if (table === "sessions") return { data: { id: "session-1" }, error: null };
+        assertEquals(table, "agent_runs");
+        const p = payload as Record<string, unknown>;
+        assertEquals(p.kind, "packet");
+        assertEquals(p.idempotency_key, "packet:user-1:research:run-research-1");
+        assertEquals(p.parent_run_id, "run-research-1");
+        assertEquals((p.input as Record<string, unknown>).workflow, "research_packet");
+        return { data: { id: "run-packet-1" }, error: null };
+      },
+    });
+
+    await reconcileResearch(admin, {
+      ...RESEARCH_RUN,
+      input: { ...RESEARCH_RUN.input, workflow: "research_packet" },
+    });
+
+    const completion = calls.find(
+      (c) =>
+        c.table === "agent_runs" && c.op === "update" && (c.payload as any)?.status === "completed",
+    );
+    assert(completion, "research run was not marked completed");
+    assertEquals((completion!.payload as any).result.nextRunId, "run-packet-1");
+
+    const dispatched = calls.find(
+      (c) =>
+        c.op === "update" &&
+        (c.payload as any)?.status === "queued" &&
+        c.filter?.[1] === "run-packet-1",
+    );
+    assert(dispatched, "chained packet run was not dispatched");
   } finally {
     restore();
   }
@@ -178,14 +229,18 @@ Deno.test("re-sweep after a crash does not chain a second compose run", async ()
       // Unique violation: the chain already exists from the previous sweep.
       insertSingle: () => ({
         data: null,
-        error: { message: 'duplicate key value violates unique constraint "agent_runs_idempotency_key_key"' },
+        error: {
+          message:
+            'duplicate key value violates unique constraint "agent_runs_idempotency_key_key"',
+        },
       }),
     });
 
     await reconcileResearch(admin, { ...RESEARCH_RUN });
 
     const completion = calls.find(
-      (c) => c.table === "agent_runs" && c.op === "update" && (c.payload as any)?.status === "completed",
+      (c) =>
+        c.table === "agent_runs" && c.op === "update" && (c.payload as any)?.status === "completed",
     );
     assert(completion, "research run should still converge to completed");
     assertEquals((completion!.payload as any).result.nextRunId, "run-compose-1");
@@ -216,9 +271,7 @@ Deno.test("empty voice at chain time fails the run with guidance, keeping the re
 
     await reconcileResearch(admin, { ...RESEARCH_RUN });
 
-    const failed = calls.find(
-      (c) => c.op === "update" && (c.payload as any)?.status === "failed",
-    );
+    const failed = calls.find((c) => c.op === "update" && (c.payload as any)?.status === "failed");
     assert(failed, "run should fail when the voice is empty");
     assert(String((failed!.payload as any).error).includes("voice profile"));
     // The report is not lost: it is stored on the failed run.

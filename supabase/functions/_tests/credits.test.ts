@@ -167,21 +167,27 @@ Deno.test("sweep releases holds for failed runs and settles completed ones", asy
   });
   const resolved = await sweepStaleReservations(admin);
   assertEquals(resolved, 2);
-  assertEquals(rpcCalls.map((c) => [c.name, c.args._run_id]), [
-    ["release_reservation", "failed-run"],
-    ["settle_reservation", "done-run"],
-  ]);
+  assertEquals(
+    rpcCalls.map((c) => [c.name, c.args._run_id]),
+    [
+      ["release_reservation", "failed-run"],
+      ["settle_reservation", "done-run"],
+    ],
+  );
 });
 
-Deno.test("sweep leaves a completed research parent alone while its chained run is live", async () => {
-  const { admin, rpcCalls } = fakeAdmin({
-    heldReservations: [{ run_id: "research-1", agent_runs: { status: "completed" } }],
-    childRuns: { "research-1": { id: "compose-1", status: "running" } },
-  });
-  const resolved = await sweepStaleReservations(admin);
-  assertEquals(resolved, 0);
-  assertEquals(rpcCalls.length, 0);
-});
+Deno.test(
+  "sweep leaves a completed research parent alone while its chained run is live",
+  async () => {
+    const { admin, rpcCalls } = fakeAdmin({
+      heldReservations: [{ run_id: "research-1", agent_runs: { status: "completed" } }],
+      childRuns: { "research-1": { id: "compose-1", status: "running" } },
+    });
+    const resolved = await sweepStaleReservations(admin);
+    assertEquals(resolved, 0);
+    assertEquals(rpcCalls.length, 0);
+  },
+);
 
 Deno.test("sweep releases the parent's hold when the chained run failed", async () => {
   const { admin, rpcCalls } = fakeAdmin({

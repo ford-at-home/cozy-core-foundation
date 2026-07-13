@@ -1,4 +1,5 @@
 <!-- LOVABLE:BEGIN -->
+
 > [!IMPORTANT]
 > This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
 > published git history — force pushing, or rebasing/amending/squashing commits
@@ -7,71 +8,135 @@
 >
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
+
 <!-- LOVABLE:END -->
 
-# Hardcopy Tools — agent guide
+# Agent instructions — Hardcopy Tools
 
-This repository is **Hardcopy Tools** (first product: **Hardcopy Draft**): a
-TanStack Start + Supabase app that prepares long-form drafts in the user's
-voice, prints them for pen markup, and turns dictated annotations into a final
-version. Generation is metered by a credit ledger backed by Stripe Checkout.
+This file is the permanent instruction layer for coding agents working on this
+repository (company **Hardcopy Tools**, product **Hardcopy Draft** — both from
+`src/config/brand.ts`; "Compose" survives only as an internal codename in
+older identifiers). Procedures live in skills (`.cursor/skills/`); this file
+holds the rules that always apply and the router that selects skills.
 
-Start with [README.md](README.md) for the verified architecture map,
-configuration inventory, and test commands.
+## Rules (always apply)
+
+1. **Inspect before modifying.** Read `docs/ARCHITECTURE.md` and the affected
+   files before changing anything. Reuse the existing implementation; never
+   create a parallel second one.
+2. **Do not expand scope.** No new features, dependencies, or refactors beyond
+   what the task explicitly asks for.
+3. **Preserve the visual identity and brand voice.** Editorial dark theme,
+   tokens in `src/styles.css`, shadcn/ui components. Do not introduce new
+   colors, fonts, or a `tailwind.config.*` file (this is Tailwind v4
+   CSS-first). Product/company names come from `src/config/brand.ts` — never
+   hardcode them in UI copy; copy conventions live in `docs/brand/`.
+4. **Mobile is the primary interface.** Every UI change must work at 375px
+   width first. Interactive elements keep `min-h-11` touch targets and
+   safe-area padding conventions.
+5. **Printable artifacts are fixed-layout US Letter documents**, not
+   responsive pages. Never assume A4. The S{n}P{m} anchor rule is defined in
+   `src/styles/print.css`, `contract/references/MARKUP.md`, and
+   `tests/anchor-reference.ts` — change all three together or none.
+6. **Secrets stay server-side.** Only `VITE_`-prefixed publishable values may
+   reach client code. `SUPABASE_SERVICE_ROLE_KEY` and provider API keys are
+   used only in `*.server.ts` files, API routes, and Edge Functions.
+7. **Never trust the client** for authorization, ownership, prices, costs, or
+   run status. Mutations to `pieces`/`agent_runs` go through Edge Functions;
+   client UPDATE on those tables is revoked by design.
+8. **Database changes are migrations** in `supabase/migrations/` (timestamped
+   SQL). New tables get RLS enabled with policies in the same migration. Never
+   weaken or drop an RLS policy to make a query work.
+9. **Idempotency is mandatory** for run dispatch, webhook processing, cost
+   recording, and credit operations. Respect the state machine in
+   `supabase/functions/_shared/state.ts`; never write run statuses that bypass
+   its transition guard. For credits and Stripe, the money rules in
+   `docs/BILLING.md` are non-negotiable: append-only ledger, webhook-only
+   grants, SECURITY DEFINER balance functions, no client-supplied prices.
+10. **Never edit generated files**: `src/routeTree.gen.ts`,
+    `src/integrations/supabase/types.ts`, `src/integrations/lovable/`.
+11. **Never claim external work was done.** Lovable Cloud, the Supabase
+    dashboard, and provider platforms are not reachable from this repo. List
+    required manual steps explicitly instead (format: `docs/RUNBOOK.md`).
+12. **Run validation before declaring work complete**: `npm run lint`,
+    `npm run typecheck`, `npm test`, `npm run build`, plus the task-specific
+    checks the selected skill requires.
 
 ## Skill router
 
-Each domain has one authoritative document. Route yourself by the boundary a
-task touches — and read **every** relevant document, not just the most obvious
-one.
+Skills live in `.cursor/skills/<name>/SKILL.md`. Select using this table:
 
-| Domain | Authoritative doc | Key code |
-|---|---|---|
-| Payments, credits, ledger, refunds | [docs/BILLING.md](docs/BILLING.md) | `supabase/functions/_shared/credits.ts`, `supabase/functions/stripe-webhook/`, `supabase/migrations/20260712140000_credit_ledger.sql` |
-| Agent pipeline, edge functions, reconciler, ops | [docs/RUNBOOK.md](docs/RUNBOOK.md) | `supabase/functions/`, `supabase/functions/_shared/state.ts` |
-| Print, PDF, markup contract, anchors | [contract/README.md](contract/README.md) + [contract/references/MARKUP.md](contract/references/MARKUP.md) | `src/lib/print-document.ts`, `src/styles/print.css`, `tests/print-fidelity.test.ts` |
-| Synthesize contract (what cloud agents follow) | [contract/SKILL.md](contract/SKILL.md) with the overrides in [contract/README.md](contract/README.md) | `supabase/functions/_shared/prompt.ts` |
-| Brand, naming, UI copy | [docs/brand/BRAND.md](docs/brand/BRAND.md), [docs/brand/NAMING.md](docs/brand/NAMING.md), [docs/brand/UI-COPY-MAP.md](docs/brand/UI-COPY-MAP.md) | `src/config/brand.ts` |
-| Frontend routing conventions | [src/routes/README.md](src/routes/README.md) | `src/routes/` |
-| Configuration and environment variables | [README.md](README.md) (Configuration inventory) | `supabase/config.toml`, `.env` |
+| When the task involves…                                                               | Use                                            |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| unfamiliar architecture, finding where something lives, starting any non-trivial task | `repository-orientation`                       |
+| mobile layout, responsive behavior, UI polish, touch/keyboard/viewport issues         | `mobile-ui-polish`                             |
+| the print view, PDF download, page layout, S{n}P{m} anchors, pagination               | `print-artifact-fidelity`                      |
+| schema, migrations, RLS, Edge Functions, Supabase config, backend secrets             | `supabase-change`                              |
+| run dispatch, webhooks, the reconciler, run states, idempotency, cost accounting      | `run-orchestration-change`                     |
+| credits, the ledger, reservations, Stripe checkout or webhooks, purchases, the paywall | `billing-and-credits`                          |
+| release checks, failure/loading/retry behavior, resilience, pre-merge review          | `production-readiness`                         |
 
-### Multi-skill rule
+Rules for using the router:
 
-**When a task touches more than one architectural boundary, use every relevant
-skill — not only the most obvious one.** Before making changes, state which
-docs you selected, why each applies, and which validation steps each imposes.
+- **When a task touches more than one architectural boundary, use every
+  relevant skill — not just the most obvious one.** The boundaries are: UI
+  (mobile), print/PDF, Supabase schema, run orchestration, billing, brand,
+  release readiness. Common combinations:
 
-Common crossings:
+  | Task                                     | Required skills                                                                             |
+  | ---------------------------------------- | ------------------------------------------------------------------------------------------- |
+  | modify artifact generation               | `print-artifact-fidelity` + `run-orchestration-change` + `billing-and-credits`               |
+  | change checkout or paywall UI            | `billing-and-credits` + `mobile-ui-polish`                                                   |
+  | add a new billable artifact type         | `repository-orientation` + `billing-and-credits` + `run-orchestration-change` + `print-artifact-fidelity` |
+  | change Supabase billing schema           | `supabase-change` + `billing-and-credits`                                                    |
+  | prepare a release                        | `production-readiness` + every domain skill the release touches                              |
+  | landing-page pricing or credit copy      | `docs/brand/` guidance + `billing-and-credits` (claims must match implemented billing)       |
 
-| Task | Required reading |
-|---|---|
-| Modify artifact/draft generation | RUNBOOK (pipeline + state machine) + BILLING (reserve/settle/release boundaries) + contract/README |
-| Change checkout, paywall, or billing UI | BILLING + brand docs (UI-COPY-MAP tone rules) |
-| Add a new billable action | BILLING (`CREDIT_COST` in `_shared/credits.ts` **and** its mirror `src/lib/use-credits.ts`) + RUNBOOK + brand docs for copy |
-| Change the billing schema | BILLING + RUNBOOK + `supabase/migrations/` (append-only ledger invariants) |
-| Touch print output or MARKUP anchors | contract/README + MARKUP.md + `src/styles/print.css` (the counting rules must stay in sync; `npm test` pins them) |
-| Change landing or pricing copy | brand docs + BILLING (copy must match the implemented credit model) |
-| Prepare a release | README (test commands) + BILLING (Stripe checklist) + RUNBOOK (secrets, cron) |
+- Beyond that, use the **smallest sufficient set** — don't read skills whose
+  boundary the task genuinely does not cross.
+- **Read each selected skill file completely before changing code.**
+- Task-specific instructions override skill defaults when explicitly stated.
+- If no skill fits and the work is specialized or recurring, say so in your
+  final report (see `docs/AGENT-PROMPTS.md` → Maintenance) rather than
+  improvising silently.
 
-### Invariants that cross boundaries
+## Mandatory workflow
 
-- **Money → credits only via the Stripe webhook.** The `/billing?status=success`
-  redirect is cosmetic; never grant from the client.
-- **Reserve before dispatch; settle on success; release on failure.** Printing,
-  re-printing, and Save-as-PDF of an existing draft never consume credits.
-- `CREDIT_COST` lives in `supabase/functions/_shared/credits.ts`; the frontend
-  mirror in `src/lib/use-credits.ts` must match (a Vitest test enforces this).
-- The `S{n}P{m}` anchor counting rule must be identical in
-  `contract/references/MARKUP.md`, `src/styles/print.css`, and
-  `tests/anchor-reference.ts` (print-fidelity tests enforce this).
-- Brand strings flow from `src/config/brand.ts`; do not hard-code product names.
+Before editing:
 
-## Test commands
+1. Read this file.
+2. Read `docs/ARCHITECTURE.md`.
+3. Identify applicable skills from the router above.
+4. Read those skill files completely.
+5. State which skills you are applying and why.
+6. Follow their procedures and validation requirements.
 
-| Suite | Command | Needs |
-|---|---|---|
-| Frontend + print fidelity (Vitest) | `npm test` | Playwright Chromium (`npx playwright install chromium`) |
-| Edge-function unit tests (Deno) | `npm run test:edge` (= `deno test --allow-env supabase/functions/_tests/`) | Deno |
-| SQL ledger invariants | `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/credits.test.sql` | Postgres with migrations applied |
-| Credit concurrency race | `DATABASE_URL=... supabase/tests/credit-concurrency.sh` | Postgres |
-| Lint | `npm run lint` | — |
+## Final report contract
+
+Every implementation agent's final response must include:
+
+```
+Skills used:
+- <skill> — <one line: why>
+Validation completed:
+- <command or check> — <result>
+Manual actions still required:
+- <action or "None">
+Known limitations:
+- <limitation or "None">
+```
+
+Validation lines must name real commands or concrete checks that were actually
+run — "reviewed the result" does not count.
+
+## Reviewer subagents
+
+Read-only specialist reviewers are defined in `.cursor/agents/`. Use them for
+independent review of high-risk changes (the implementing agent should not be
+the only one declaring its own billing-adjacent or layout-critical work sound):
+
+| Subagent                     | Reviews                                                                |
+| ---------------------------- | ---------------------------------------------------------------------- |
+| `mobile-ux-reviewer`         | touch targets, overflow, safe areas, keyboard/zoom behavior            |
+| `print-layout-reviewer`      | page geometry, anchor sync, pagination, PDF config                     |
+| `backend-integrity-reviewer` | RLS, idempotency, secret boundaries, state-machine and cost invariants |

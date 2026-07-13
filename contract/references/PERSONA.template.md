@@ -1,7 +1,7 @@
 # Persona: <persona-name>
 
 > A persona is a single named reader. Not a demographic, not a segment —
-> one human, real or hypothetical, that this piece is being written *for*.
+> one human, real or hypothetical, that this piece is being written _for_.
 >
 > Save filled-in personas to `~/.me/personas/<persona-name>.md` and reference
 > them by name in your `brief.md`.
@@ -27,9 +27,9 @@ you don't re-explain it; specific enough that you DO explain things outside
 this baseline.
 -->
 
-- 
-- 
-- 
+-
+-
+-
 
 ## What they don't believe yet
 
@@ -39,9 +39,9 @@ written for this persona has to address one of these. Three to five bullets.
 Be honest — what would they push back on?
 -->
 
-- 
-- 
-- 
+-
+-
+-
 
 ## How they read
 
@@ -52,9 +52,9 @@ Their reading posture and constraints. Two or three bullets. Examples:
 - Will close any post that opens with "In today's fast-paced world."
 -->
 
-- 
-- 
-- 
+-
+-
+-
 
 ## What they care about
 
@@ -64,9 +64,9 @@ Not their stated values — their revealed values. This is the field that lets
 the writer choose between two equally true sentences. Three to five bullets.
 -->
 
-- 
-- 
-- 
+-
+-
+-
 
 ## How to lose them
 
@@ -78,6 +78,6 @@ a piece, would cause them to disengage. Two or three bullets. Examples:
 - Authority appeals to vendors they've already been burned by.
 -->
 
-- 
-- 
-- 
+-
+-
+-

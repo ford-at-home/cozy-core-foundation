@@ -9,10 +9,12 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:edge": "deno test --allow-env supabase/functions/_tests/"
+    "test:functions": "deno test --allow-env --node-modules-dir=none --no-lock supabase/functions/_tests/",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@fontsource/source-code-pro": "^5.2.7",

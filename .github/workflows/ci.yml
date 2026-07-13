@@ -2,35 +2,70 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 jobs:
-  vitest:
-    name: Frontend + print fidelity (Vitest)
+  checks:
+    name: Lint, typecheck, build, guard scripts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm test
-      - name: Upload print-fidelity artifacts
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: print-artifacts
-          path: test-artifacts/print/
-          if-no-files-found: ignore
 
-  edge:
-    name: Edge functions (Deno)
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # The print-fidelity suite drives a real Chromium (playwright).
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Vitest (markdown + print fidelity)
+        run: npm test
+
+      # Build env vars: publishable values only (see docs/CONFIGURATION.md).
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://dlaojinagezrlbwyritd.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY || 'ci-placeholder-publishable-key' }}
+
+      - name: Secret scan (source + built assets)
+        run: bash scripts/check-secrets.sh
+
+      - name: Migration RLS check
+        run: bash scripts/check-migrations.sh
+
+      - name: Print contract sync check
+        run: bash scripts/check-print-contract.sh
+
+  edge-function-tests:
+    name: Edge function tests (Deno)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - run: deno test --allow-env supabase/functions/_tests/
+
+      # --node-modules-dir=none: the repo root has a package.json, which makes
+      # Deno expect an npm-managed node_modules/ when resolving npm type refs
+      # (e.g. stripe's `/// <reference types="node" />`). This job never runs
+      # npm ci, so tell Deno to use its own cache instead.
+      # --no-lock: without it, that same package.json makes Deno rewrite
+      # deno.lock with the whole npm dependency graph on every run (worktree
+      # churn locally, wasted work here). Test imports are version-pinned
+      # URLs, so the lockfile adds nothing for this suite.
+      - name: Run tests
+        run: deno test --allow-env --node-modules-dir=none --no-lock supabase/functions/_tests/

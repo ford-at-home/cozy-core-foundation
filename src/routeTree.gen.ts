@@ -21,7 +21,12 @@ import { Route as AuthenticatedBillingRouteImport } from './routes/_authenticate
 import { Route as ApiPublicGenerateImageRouteImport } from './routes/api/public/generate-image'
 import { Route as AuthenticatedSessionsSessionIdRouteImport } from './routes/_authenticated/sessions.$sessionId'
 import { Route as AuthenticatedRunsRunIdRouteImport } from './routes/_authenticated/runs.$runId'
+import { Route as AuthenticatedReviewReturnIdRouteImport } from './routes/_authenticated/review.$returnId'
+import { Route as AuthenticatedReturnPacketIdRouteImport } from './routes/_authenticated/return.$packetId'
+import { Route as AuthenticatedProjectPieceIdRouteImport } from './routes/_authenticated/project.$pieceId'
 import { Route as AuthenticatedPrintRunIdRouteImport } from './routes/_authenticated/print.$runId'
+import { Route as AuthenticatedPacketRunIdRouteImport } from './routes/_authenticated/packet.$runId'
+import { Route as AuthenticatedFollowupPacketIdRouteImport } from './routes/_authenticated/followup.$packetId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -83,11 +88,41 @@ const AuthenticatedRunsRunIdRoute = AuthenticatedRunsRunIdRouteImport.update({
   path: '/runs/$runId',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedReviewReturnIdRoute =
+  AuthenticatedReviewReturnIdRouteImport.update({
+    id: '/review/$returnId',
+    path: '/review/$returnId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedReturnPacketIdRoute =
+  AuthenticatedReturnPacketIdRouteImport.update({
+    id: '/return/$packetId',
+    path: '/return/$packetId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProjectPieceIdRoute =
+  AuthenticatedProjectPieceIdRouteImport.update({
+    id: '/project/$pieceId',
+    path: '/project/$pieceId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedPrintRunIdRoute = AuthenticatedPrintRunIdRouteImport.update({
   id: '/print/$runId',
   path: '/print/$runId',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPacketRunIdRoute =
+  AuthenticatedPacketRunIdRouteImport.update({
+    id: '/packet/$runId',
+    path: '/packet/$runId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedFollowupPacketIdRoute =
+  AuthenticatedFollowupPacketIdRouteImport.update({
+    id: '/followup/$packetId',
+    path: '/followup/$packetId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -98,7 +133,12 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/sessions': typeof AuthenticatedSessionsRouteWithChildren
   '/api/transcribe': typeof ApiTranscribeRoute
+  '/followup/$packetId': typeof AuthenticatedFollowupPacketIdRoute
+  '/packet/$runId': typeof AuthenticatedPacketRunIdRoute
   '/print/$runId': typeof AuthenticatedPrintRunIdRoute
+  '/project/$pieceId': typeof AuthenticatedProjectPieceIdRoute
+  '/return/$packetId': typeof AuthenticatedReturnPacketIdRoute
+  '/review/$returnId': typeof AuthenticatedReviewReturnIdRoute
   '/runs/$runId': typeof AuthenticatedRunsRunIdRoute
   '/sessions/$sessionId': typeof AuthenticatedSessionsSessionIdRoute
   '/api/public/generate-image': typeof ApiPublicGenerateImageRoute
@@ -112,7 +152,12 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/sessions': typeof AuthenticatedSessionsRouteWithChildren
   '/api/transcribe': typeof ApiTranscribeRoute
+  '/followup/$packetId': typeof AuthenticatedFollowupPacketIdRoute
+  '/packet/$runId': typeof AuthenticatedPacketRunIdRoute
   '/print/$runId': typeof AuthenticatedPrintRunIdRoute
+  '/project/$pieceId': typeof AuthenticatedProjectPieceIdRoute
+  '/return/$packetId': typeof AuthenticatedReturnPacketIdRoute
+  '/review/$returnId': typeof AuthenticatedReviewReturnIdRoute
   '/runs/$runId': typeof AuthenticatedRunsRunIdRoute
   '/sessions/$sessionId': typeof AuthenticatedSessionsSessionIdRoute
   '/api/public/generate-image': typeof ApiPublicGenerateImageRoute
@@ -128,7 +173,12 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/sessions': typeof AuthenticatedSessionsRouteWithChildren
   '/api/transcribe': typeof ApiTranscribeRoute
+  '/_authenticated/followup/$packetId': typeof AuthenticatedFollowupPacketIdRoute
+  '/_authenticated/packet/$runId': typeof AuthenticatedPacketRunIdRoute
   '/_authenticated/print/$runId': typeof AuthenticatedPrintRunIdRoute
+  '/_authenticated/project/$pieceId': typeof AuthenticatedProjectPieceIdRoute
+  '/_authenticated/return/$packetId': typeof AuthenticatedReturnPacketIdRoute
+  '/_authenticated/review/$returnId': typeof AuthenticatedReviewReturnIdRoute
   '/_authenticated/runs/$runId': typeof AuthenticatedRunsRunIdRoute
   '/_authenticated/sessions/$sessionId': typeof AuthenticatedSessionsSessionIdRoute
   '/api/public/generate-image': typeof ApiPublicGenerateImageRoute
@@ -144,7 +194,12 @@ export interface FileRouteTypes {
     | '/profile'
     | '/sessions'
     | '/api/transcribe'
+    | '/followup/$packetId'
+    | '/packet/$runId'
     | '/print/$runId'
+    | '/project/$pieceId'
+    | '/return/$packetId'
+    | '/review/$returnId'
     | '/runs/$runId'
     | '/sessions/$sessionId'
     | '/api/public/generate-image'
@@ -158,7 +213,12 @@ export interface FileRouteTypes {
     | '/profile'
     | '/sessions'
     | '/api/transcribe'
+    | '/followup/$packetId'
+    | '/packet/$runId'
     | '/print/$runId'
+    | '/project/$pieceId'
+    | '/return/$packetId'
+    | '/review/$returnId'
     | '/runs/$runId'
     | '/sessions/$sessionId'
     | '/api/public/generate-image'
@@ -173,7 +233,12 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/_authenticated/sessions'
     | '/api/transcribe'
+    | '/_authenticated/followup/$packetId'
+    | '/_authenticated/packet/$runId'
     | '/_authenticated/print/$runId'
+    | '/_authenticated/project/$pieceId'
+    | '/_authenticated/return/$packetId'
+    | '/_authenticated/review/$returnId'
     | '/_authenticated/runs/$runId'
     | '/_authenticated/sessions/$sessionId'
     | '/api/public/generate-image'
@@ -273,11 +338,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRunsRunIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/review/$returnId': {
+      id: '/_authenticated/review/$returnId'
+      path: '/review/$returnId'
+      fullPath: '/review/$returnId'
+      preLoaderRoute: typeof AuthenticatedReviewReturnIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/return/$packetId': {
+      id: '/_authenticated/return/$packetId'
+      path: '/return/$packetId'
+      fullPath: '/return/$packetId'
+      preLoaderRoute: typeof AuthenticatedReturnPacketIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/project/$pieceId': {
+      id: '/_authenticated/project/$pieceId'
+      path: '/project/$pieceId'
+      fullPath: '/project/$pieceId'
+      preLoaderRoute: typeof AuthenticatedProjectPieceIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/print/$runId': {
       id: '/_authenticated/print/$runId'
       path: '/print/$runId'
       fullPath: '/print/$runId'
       preLoaderRoute: typeof AuthenticatedPrintRunIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/packet/$runId': {
+      id: '/_authenticated/packet/$runId'
+      path: '/packet/$runId'
+      fullPath: '/packet/$runId'
+      preLoaderRoute: typeof AuthenticatedPacketRunIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/followup/$packetId': {
+      id: '/_authenticated/followup/$packetId'
+      path: '/followup/$packetId'
+      fullPath: '/followup/$packetId'
+      preLoaderRoute: typeof AuthenticatedFollowupPacketIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
   }
@@ -302,7 +402,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedNewRoute: typeof AuthenticatedNewRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedSessionsRoute: typeof AuthenticatedSessionsRouteWithChildren
+  AuthenticatedFollowupPacketIdRoute: typeof AuthenticatedFollowupPacketIdRoute
+  AuthenticatedPacketRunIdRoute: typeof AuthenticatedPacketRunIdRoute
   AuthenticatedPrintRunIdRoute: typeof AuthenticatedPrintRunIdRoute
+  AuthenticatedProjectPieceIdRoute: typeof AuthenticatedProjectPieceIdRoute
+  AuthenticatedReturnPacketIdRoute: typeof AuthenticatedReturnPacketIdRoute
+  AuthenticatedReviewReturnIdRoute: typeof AuthenticatedReviewReturnIdRoute
   AuthenticatedRunsRunIdRoute: typeof AuthenticatedRunsRunIdRoute
 }
 
@@ -312,7 +417,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedNewRoute: AuthenticatedNewRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedSessionsRoute: AuthenticatedSessionsRouteWithChildren,
+  AuthenticatedFollowupPacketIdRoute: AuthenticatedFollowupPacketIdRoute,
+  AuthenticatedPacketRunIdRoute: AuthenticatedPacketRunIdRoute,
   AuthenticatedPrintRunIdRoute: AuthenticatedPrintRunIdRoute,
+  AuthenticatedProjectPieceIdRoute: AuthenticatedProjectPieceIdRoute,
+  AuthenticatedReturnPacketIdRoute: AuthenticatedReturnPacketIdRoute,
+  AuthenticatedReviewReturnIdRoute: AuthenticatedReviewReturnIdRoute,
   AuthenticatedRunsRunIdRoute: AuthenticatedRunsRunIdRoute,
 }
 

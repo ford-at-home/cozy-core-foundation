@@ -6,24 +6,30 @@ compose. New users get 3 credits on signup. Credits are held when a
 generation is dispatched and **consumed only when it completes**; failed,
 cancelled, and stuck runs release the hold automatically.
 
-**What is billable, precisely:** dispatching a generation (compose,
-deep-research start, resynth, ready, revise — costs in
-`supabase/functions/_shared/credits.ts` `CREDIT_COST`, mirrored in
-`src/lib/use-credits.ts`). Viewing a finished run, printing it, re-printing
-it, and Save-as-PDF are **never** billable — the artifact was paid for when
-its generation settled. Regenerating (a new resynth/ready/revise/compose) is
-a new generation and reserves again.
+## What costs what
 
-## Two credit systems (do not conflate)
+| Action                                                        | Credits | Reserved by                                              |
+| ------------------------------------------------------------- | ------- | -------------------------------------------------------- |
+| Compose from pasted research (`compose`)                      | 1       | `start-workflow` (`CREDIT_COST` in `_shared/credits.ts`) |
+| Deep research + chained compose or packet (`research`)        | 2       | `start-workflow`                                         |
+| Resynthesize / finalize / revise (`resynth`/`ready`/`revise`) | 1       | `piece-action`                                           |
+| Follow-up research pass (`followup_research`)                 | 2       | `run-follow-up-research` (`COST` const)                  |
+| Final Word document (`final_docx`)                            | 2       | `create-final-document-job` (`COST` const)               |
+| Presentation (`final_pptx`)                                   | 2       | `create-presentation-job` (`COST` const)                 |
 
-- **App credits** — this document: `credit_ledger` / `credit_accounts`,
-  purchased on `/billing`, spent on generations.
-- **Operator workspace allowance** — the Lovable AI gateway key
-  (`LOVABLE_API_KEY`) pays for dictation transcription, PDF OCR, and image
-  generation. When the gateway returns 402, that is the **operator's**
-  balance, not the user's; the UI shows a temporary-unavailability message
-  and must never point users to `/billing` for it. (Cost telemetry in
-  `/sessions` is USD accounting for the operator, also not user credits.)
+Client mirrors of these numbers (display only, never authoritative):
+`CREDIT_COST` in `src/lib/use-credits.ts`, `FOLLOWUP_RESEARCH_COST` in
+`src/lib/followup.functions.ts`, `FINAL_ARTIFACT_COST` in
+`src/lib/final-artifacts.functions.ts`. `tests/billing-boundaries.test.ts`
+fails when a mirror drifts from its server source. Every billable button
+states its cost before dispatch.
+
+**Free, always:** printing and reprinting packets, returning work (photo
+uploads, dictation), handwriting recognition, verification and corrections,
+follow-up question submission/refinement/approval, downloads of finished
+artifacts, and system retries. Recognition and transcription bill Lovable
+workspace AI credits (provider cost, recorded as `inferences`), never the
+student's generation credits.
 
 ## Money rules (do not break these)
 
@@ -57,12 +63,12 @@ a new generation and reserves again.
 
 Set in **Supabase Edge Function secrets** (Lovable Cloud → backend secrets):
 
-| Secret | Purpose |
-| --- | --- |
-| `STRIPE_SECRET_KEY` | Server-side Stripe API calls (`sk_test_…` first, `sk_live_…` only after the full test-mode pass) |
-| `STRIPE_WEBHOOK_SECRET` | Signature verification in `stripe-webhook` (`whsec_…`, per endpoint per mode) |
-| `APP_PUBLIC_URL` | Deployed app origin for Checkout success/cancel URLs (e.g. `https://<app>.lovable.app`) |
-| `CREDITS_MODE` | Optional. `enforce` (default) blocks dispatch when credits run out; `log` observes without blocking — the incident rollback lever |
+| Secret                  | Purpose                                                                                                                           |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `STRIPE_SECRET_KEY`     | Server-side Stripe API calls (`sk_test_…` first, `sk_live_…` only after the full test-mode pass)                                  |
+| `STRIPE_WEBHOOK_SECRET` | Signature verification in `stripe-webhook` (`whsec_…`, per endpoint per mode)                                                     |
+| `APP_PUBLIC_URL`        | Deployed app origin for Checkout success/cancel URLs (e.g. `https://<app>.lovable.app`)                                           |
+| `CREDITS_MODE`          | Optional. `enforce` (default) blocks dispatch when credits run out; `log` observes without blocking — the incident rollback lever |
 
 The frontend needs **no Stripe key at all**: the browser is redirected to a
 server-created, Stripe-hosted Checkout URL. No card data ever touches the
@@ -107,7 +113,7 @@ backfilled with the 3-credit signup grant).
 Automated (run locally / CI):
 
 ```sh
-npm run test:edge                                          # Deno unit suite
+npm run test:functions                                     # Deno unit suite
 npm test                                                   # Vitest (incl. CREDIT_COST mirror check)
 psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/credits.test.sql   # SQL invariants
 DATABASE_URL="$DB" supabase/tests/credit-concurrency.sh   # concurrent-spend race
@@ -196,8 +202,9 @@ SELECT * FROM purchases WHERE status = 'pending' AND created_at < now() - interv
 blocking generations (usage is still metered and recorded); unset to
 re-enforce.
 
-Deferred (schema exists, no code path — see "Open product decisions" in the
-[README](../README.md)): subscriptions, promo grants, credit expiration.
+Deferred (schema exists, no code path — see "Unresolved product decisions" in
+[docs/RECONCILIATION.md](RECONCILIATION.md)): subscriptions, promo grants,
+credit expiration.
 
 ## Failure scenarios (authoritative state → recovery)
 

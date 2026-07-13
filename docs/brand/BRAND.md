@@ -26,7 +26,7 @@ annotated reading documents, and other offline thinking tools over time.
 ## Category
 
 **Human-paced computing.**
-Supporting descriptor: *Hardcopy tools for human-AI collaboration.*
+Supporting descriptor: _Hardcopy tools for human-AI collaboration._
 
 Not: a printable document generator, an AI writing assistant, a PDF tool, a
 dictation app, an annotation app, another chatbot, a productivity dashboard.
@@ -72,7 +72,7 @@ The enemy is **technology consuming more attention than the work itself
 deserves**: tools that require permanent residence inside an interface, and
 generation that produces plausible text the user barely reads.
 
-The brand is explicitly *not* anti-technology, not nostalgic, and does not
+The brand is explicitly _not_ anti-technology, not nostalgic, and does not
 frame paper as morally superior. It is an integration of physical and digital
 work, not a war between them.
 
@@ -114,15 +114,15 @@ guilt, urgency tactics, breathless startup language.
 
 ## Messaging Hierarchy
 
-| Level | Copy |
-|---|---|
-| Primary brand line | AI that knows when to disappear. |
-| Supporting line | Research, write, and refine with AI. Then print your work, step away from the screen, and continue by hand. |
-| Alternative supporting line | Create with AI, continue on paper, and bring your handwritten thinking back without losing the thread. |
-| Category statement | Hardcopy Tools creates human-paced tools for working with AI beyond the screen. |
-| Product promise | Turn research and rough ideas into printable working documents. Mark them by hand, dictate your changes, and return to a refined artifact that sounds like you. |
-| Philosophical statement | Powerful tools should give your attention back. |
-| Closing invitation | Leave the screen. Keep the thread. |
+| Level                       | Copy                                                                                                                                                            |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Primary brand line          | AI that knows when to disappear.                                                                                                                                |
+| Supporting line             | Research, write, and refine with AI. Then print your work, step away from the screen, and continue by hand.                                                     |
+| Alternative supporting line | Create with AI, continue on paper, and bring your handwritten thinking back without losing the thread.                                                          |
+| Category statement          | Hardcopy Tools creates human-paced tools for working with AI beyond the screen.                                                                                 |
+| Product promise             | Turn research and rough ideas into printable working documents. Mark them by hand, dictate your changes, and return to a refined artifact that sounds like you. |
+| Philosophical statement     | Powerful tools should give your attention back.                                                                                                                 |
+| Closing invitation          | Leave the screen. Keep the thread.                                                                                                                              |
 
 ## The Loop
 
@@ -166,11 +166,11 @@ demolition.
 
 Brand-layer additions (defined in `src/styles.css`):
 
-| Token | Value | Use |
-|---|---|---|
-| `--paper` | `oklch(0.97 0.008 85)` | The printed-page motif: paper-white surfaces in landing visuals |
-| `--paper-foreground` | `oklch(0.24 0.01 60)` | Ink on the paper motif |
-| `--annotation` | `oklch(0.6 0.12 35)` | Muted rust — handwritten-annotation cues only |
+| Token                | Value                  | Use                                                             |
+| -------------------- | ---------------------- | --------------------------------------------------------------- |
+| `--paper`            | `oklch(0.97 0.008 85)` | The printed-page motif: paper-white surfaces in landing visuals |
+| `--paper-foreground` | `oklch(0.24 0.01 60)`  | Ink on the paper motif                                          |
+| `--annotation`       | `oklch(0.6 0.12 35)`   | Muted rust — handwritten-annotation cues only                   |
 
 Avoid: neon gradients, glowing purple, electric cyan, synthetic glass effects,
 generic AI palettes.

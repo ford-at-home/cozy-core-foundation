@@ -1,0 +1,129 @@
+---
+name: repository-orientation
+description: Map the Hardcopy Draft architecture before editing — locate authoritative files, client/server boundaries, existing patterns, and validation commands. Use at the start of any non-trivial task, when the task mentions unfamiliar parts of the codebase, when asked "where does X live", or before adding anything that might already exist. Prevents duplicate implementations and wrong-layer changes.
+---
+
+# repository-orientation
+
+## Purpose
+
+Give an agent an accurate mental model of this specific repository before it
+edits anything. Hardcopy Draft (repo codename "Compose") is a TanStack Start +
+Supabase app with unusual boundaries (client writes revoked on core tables, a
+vendored content contract, a print/PDF sync rule, an append-only credit
+ledger). Most past agent mistakes were wrong-layer mistakes:
+editing generated files, duplicating an existing helper, or putting a mutation
+on the client that belongs in an Edge Function.
+
+## Use this skill when
+
+- Starting any task that touches more than one file or an unfamiliar area.
+- The task says "add", "fix", "change" something and you don't yet know where
+  it lives.
+- You are about to create a new file, helper, hook, or component.
+- You need to know how to validate a change.
+
+## Do not use this skill when
+
+- You already completed orientation for this task in this session.
+- The task is a single-line change in a file you have already read.
+
+## Required context
+
+Read, in order:
+
+1. `AGENTS.md` — permanent rules + skill router.
+2. `docs/ARCHITECTURE.md` — the verified architecture map (frontend, print,
+   Supabase, state machine, cost accounting, secrets, what is missing/external).
+3. For operations questions: `docs/RUNBOOK.md`. For billing: `docs/BILLING.md`.
+   For configuration/env vars: `docs/CONFIGURATION.md`. For brand voice and
+   copy dispositions: `docs/brand/`. For historical product/orchestration
+   design rationale: `docs/cloud-agents-architecture-plan.md` (predates the
+   credit system — `docs/ARCHITECTURE.md` is current).
+4. For the research-packet workflow (project hub, packet return, handwriting
+   recognition, verification, follow-up research, final artifacts):
+   `docs/research-workflow/` — specs plus the audit — and
+   `docs/research-workflow/BACKEND-CONTRACTS.md` (Edge Function request/
+   response contracts and storage paths). The client stage model is derived
+   in `src/lib/packet-stage.ts` from rows read via
+   `src/lib/packet-workflow.ts`; every write goes through an Edge Function.
+
+## Procedure
+
+1. **Classify the task's layer(s):**
+   - UI/route → `src/routes/` (file-based; conventions in `src/routes/README.md`).
+   - Shared UI → `src/components/` (app) or `src/components/ui/` (shadcn — prefer not to modify).
+   - Client data access → TanStack Query + `src/integrations/supabase/client.ts` (reads only; RLS-scoped).
+   - Server function → `src/lib/*.functions.ts` (`createServerFn` + `requireSupabaseAuth`).
+   - Server-only helper → `src/lib/*.server.ts` (may use service role).
+   - Nitro API route → `src/routes/api/` (external callers / proxies).
+   - Backend job logic, webhooks, dispatch → `supabase/functions/` (Deno Edge Functions).
+   - Schema/RLS → `supabase/migrations/`.
+   - Content-agent prompts/contract → `supabase/functions/_shared/prompt.ts` + `contract/`.
+2. **Find the existing pattern.** Search for a sibling that already does the
+   same class of work (e.g. `costs.functions.ts` for a new server function,
+   `sessions.tsx` for a mobile-card/desktop-table page). Copy its shape; do
+   not invent a new pattern.
+3. **Check for an existing implementation** of what you're about to add
+   (grep for the concept, not just the name). If one exists, extend it.
+4. **Confirm the hands-off list**: `src/routeTree.gen.ts`,
+   `src/integrations/supabase/types.ts`, `src/integrations/lovable/` are
+   generated; `contract/` is the vendored content contract (change only when
+   the task is explicitly about it, and keep MARKUP.md ↔ print.css in sync).
+5. **Identify what is external.** Lovable Cloud secrets, Supabase dashboard
+   state, deployed functions, cron jobs, provider platforms. If the task
+   requires touching these, plan for a "manual actions" section, not a claim
+   of completion.
+6. **Note the validation commands** the change will need (see below) and any
+   applicable specialist skill from the router in `AGENTS.md`. Hand off to
+   those skills before editing.
+
+## Validation
+
+Orientation itself produces no code, so validation is the checklist:
+
+- [ ] You can name the layer(s) the change belongs to and why.
+- [ ] You found (or verifiably ruled out) an existing implementation/pattern.
+- [ ] You listed the exact validation commands for the change:
+      `npm run lint`, `npm run typecheck`, `npm run build`, and when backend files
+      are touched `npm run test:functions`, `bash scripts/check-migrations.sh`,
+      `bash scripts/check-secrets.sh`.
+- [ ] You identified which specialist skills apply next.
+
+## Failure modes (seen or likely in this repo)
+
+- Creating a Next.js-style `pages/` directory or layout — this is TanStack
+  Start file-based routing; the only root layout is `src/routes/__root.tsx`.
+- Editing `src/routeTree.gen.ts` by hand to "register" a route — it is
+  generated by the router plugin during dev/build.
+- Adding a `tailwind.config.js` — Tailwind v4 here is configured in
+  `src/styles.css`.
+- Writing a client-side INSERT/UPDATE to `pieces`/`agent_runs` — revoked by
+  migration; mutations go through Edge Functions (runs must reserve credits
+  before dispatch).
+- Hardcoding product/company names in UI copy — they come from
+  `src/config/brand.ts` (`brand`, `pageTitle()`).
+- Treating `contract/SKILL.md` as instructions for _implementation_ agents —
+  it is the contract for the _content_ agents that write prose.
+- Touching credits/Stripe code without reading `docs/BILLING.md` first — the
+  money rules there are non-negotiable (append-only ledger, webhook-only
+  grants, SECURITY DEFINER balance functions).
+- Assuming React component/route tests exist — vitest covers only the
+  markdown/print pipeline under `tests/`
+  (see `docs/ARCHITECTURE.md` → Missing).
+
+## Output contract
+
+Report before implementation begins:
+
+- Affected layers and files (existing ones to modify, new ones to create).
+- The existing pattern being followed (named file).
+- Skills selected for the implementation.
+- Validation commands that will be run.
+- Anything external that will require manual steps.
+
+## References
+
+- `docs/ARCHITECTURE.md` (authoritative map — update it if you change the architecture)
+- `src/routes/README.md` (routing conventions)
+- `docs/RUNBOOK.md` (operations, secrets checklist)

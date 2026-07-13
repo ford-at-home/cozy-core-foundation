@@ -7,7 +7,8 @@
    smoke run (`bc-3bba400a…`) cloned this repo, wrote
    `pieces/smoke-test/proposal.md`, and pushed branch
    `cursor/smoke-test-proposal-d629` in ~80s.
-2. **Edge function secrets** (Lovable Cloud → backend secrets). Without
+2. **Edge function secrets** (Lovable Cloud → backend secrets; the complete
+   variable inventory is [docs/CONFIGURATION.md](CONFIGURATION.md)). Without
    `CURSOR_API_KEY` the app still works but uses the stub provider (runs are
    marked `bc_stub_…` and produce no content):
    - `CURSOR_API_KEY` — your `crsr_…` key (same one that passed the smoke test).
@@ -36,11 +37,12 @@
 - **GitHub issue thread + labels** (peer comments, `resynth`/`ready` labels
   mirroring the UI buttons) — requires a GitHub App the owner must register;
   the UI buttons already provide the same actions without it.
+- **Style questionnaire** — profile is a free-text `style_text` until the
+  elicitation questions land.
 
-Previously listed here but since built: **dictation** (profile voice notes via
-`/api/transcribe`, billed to the operator's Lovable workspace allowance — see
-[docs/BILLING.md](BILLING.md) "Two credit systems") and **style presets**
-(profile offers text + image style presets; both fields required on save).
+(Dictation shipped: `profile.tsx` records audio and transcribes via
+`/api/transcribe` → the Lovable AI gateway. It bills **workspace AI
+credits**, not the app's generation credits.)
 
 ## Deep research flow (kind: research)
 
@@ -62,13 +64,16 @@ failed with guidance; check https://platform.parallel.ai for the task.
   pause the pg_cron job. In-flight agents can be stopped from cursor.com/agents.
 - `agent_run_events` holds verbatim webhook/poll payloads per run — first stop
   when a run misbehaves.
-- Backend tests: `npm run test:edge`
-  (= `deno test --allow-env supabase/functions/_tests/`; `--allow-env` is
-  required by the research-chain and credits tests).
-- Reconciler cadence: the cron fires every **2 minutes**; within each pass the
-  grace windows are longer — pending purchases are healed from Stripe after
-  **1 h**, stale credit holds are swept after **1 h**, and unconfirmed
-  dispatches are failed after **30 min**.
+- Research-packet workflow runs (`packet`, `followup_research`, `final_docx`,
+  `final_pptx`) use the same webhook + reconciler lifecycle. A failed or
+  cancelled final run also marks its `final_artifacts` row `failed` so the
+  project hub can offer a retry. `piece_events` is the student-visible
+  activity trail — append-only and display-only, never authoritative.
+- `LOVABLE_API_KEY` powers handwriting recognition (`analyze-returned-page`)
+  and dictation transcription (`/api/transcribe`). A gateway 402 surfaces as
+  the established "out of AI credits" message, not a user error.
+- Backend tests: `deno test --allow-env supabase/functions/_tests/`
+  (`--allow-env` is required by the research-chain tests).
 
 ## Billing and credits
 

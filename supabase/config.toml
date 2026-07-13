@@ -20,3 +20,30 @@ verify_jwt = false
 
 [functions.create-checkout-session]
 verify_jwt = true
+
+[functions.create-student-return-upload]
+verify_jwt = true
+
+[functions.analyze-returned-page]
+verify_jwt = true
+
+[functions.submit-dictation]
+verify_jwt = true
+
+[functions.verify-student-responses]
+verify_jwt = true
+
+[functions.prepare-follow-up-questions]
+verify_jwt = true
+
+[functions.run-follow-up-research]
+verify_jwt = true
+
+[functions.create-final-document-job]
+verify_jwt = true
+
+[functions.create-presentation-job]
+verify_jwt = true
+
+[functions.approve-revision]
+verify_jwt = true

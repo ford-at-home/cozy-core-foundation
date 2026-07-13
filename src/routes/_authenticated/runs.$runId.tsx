@@ -2,8 +2,13 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { ACTIVE_RUN_STATUSES, type AgentRun, type RunStatus } from "@/lib/workflows.functions";
-import { runPieceAction, type PieceAction } from "@/lib/pieces.functions";
+import {
+  ACTIVE_RUN_STATUSES,
+  isPacketWorkflowRun,
+  type AgentRun,
+  type RunStatus,
+} from "@/lib/workflows.functions";
+import { approveRevisionPr, runPieceAction, type PieceAction } from "@/lib/pieces.functions";
 import { CREDIT_COST, isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
 import type { Json } from "@/integrations/supabase/types";
 import MarkdownView from "@/components/MarkdownView";
@@ -174,6 +179,15 @@ function RunDetailPage() {
             <span className="text-muted-foreground">
               started {new Date(run.created_at).toLocaleString()}
             </span>
+            {isPacketWorkflowRun(run) && run.piece_id && (
+              <Link
+                to="/project/$pieceId"
+                params={{ pieceId: run.piece_id }}
+                className="font-medium text-primary underline-offset-2 hover:underline"
+              >
+                Open the project →
+              </Link>
+            )}
           </div>
 
           <RunDetailPanel run={run} />
@@ -190,18 +204,93 @@ function RunDetailPage() {
             <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm">
               Research complete.{" "}
               {nextRunId ? (
-                <>
-                  Your draft is now being prepared from this report in your voice —{" "}
-                  <Link
-                    to="/runs/$runId"
-                    params={{ runId: nextRunId }}
-                    className="font-medium underline"
-                  >
-                    follow the drafting run →
-                  </Link>
-                </>
+                isPacketWorkflow(run) ? (
+                  <>
+                    The packet is now being prepared from this report —{" "}
+                    <Link
+                      to="/runs/$runId"
+                      params={{ runId: nextRunId }}
+                      className="font-medium underline"
+                    >
+                      follow the packet run →
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    Your draft is now being prepared from this report in your voice —{" "}
+                    <Link
+                      to="/runs/$runId"
+                      params={{ runId: nextRunId }}
+                      className="font-medium underline"
+                    >
+                      follow the drafting run →
+                    </Link>
+                  </>
+                )
+              ) : isPacketWorkflow(run) ? (
+                "The packet run is being prepared; it will appear on your dashboard within a couple of minutes."
               ) : (
                 "The drafting run is being prepared; it will appear on your dashboard within a couple of minutes."
+              )}
+            </div>
+          )}
+
+          {run.kind === "packet" && run.status === "completed" && (
+            <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm">
+              Research packet ready.{" "}
+              <Link
+                to="/packet/$runId"
+                params={{ runId: run.id }}
+                className="font-medium underline"
+              >
+                Review the questions →
+              </Link>{" "}
+              then print it with real writing space and answer by hand.
+              {run.piece_id && (
+                <>
+                  {" "}
+                  Track the whole journey from{" "}
+                  <Link
+                    to="/project/$pieceId"
+                    params={{ pieceId: run.piece_id }}
+                    className="font-medium underline"
+                  >
+                    your project page
+                  </Link>
+                  .
+                </>
+              )}
+            </div>
+          )}
+
+          {(run.kind === "final_docx" || run.kind === "final_pptx") &&
+            run.status === "completed" && (
+              <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm">
+                Your final {run.kind === "final_docx" ? "document" : "presentation"} is ready.{" "}
+                {run.piece_id && (
+                  <Link
+                    to="/project/$pieceId"
+                    params={{ pieceId: run.piece_id }}
+                    className="font-medium underline"
+                  >
+                    Download it from your project page →
+                  </Link>
+                )}
+              </div>
+            )}
+
+          {run.kind === "followup_research" && run.status === "completed" && (
+            <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm">
+              Follow-up research complete — your questions were answered and a revised packet was
+              prepared (your original packet is unchanged).{" "}
+              {run.piece_id && (
+                <Link
+                  to="/project/$pieceId"
+                  params={{ pieceId: run.piece_id }}
+                  className="font-medium underline"
+                >
+                  See the revised packet on your project page →
+                </Link>
               )}
             </div>
           )}
@@ -257,9 +346,12 @@ function RunDetailPage() {
             </div>
           )}
 
-          {run.status === "completed" && run.piece_id && run.kind !== "research" && (
-            <ActionsPanel run={run} />
-          )}
+          {/* Draft-workflow next-step actions; research runs chain on their
+              own and packet-workflow runs route through the project hub. */}
+          {run.status === "completed" &&
+            run.piece_id &&
+            run.kind !== "research" &&
+            !isPacketWorkflowRun(run) && <ActionsPanel run={run} />}
         </>
       )}
     </div>
@@ -403,12 +495,7 @@ function ActionsPanel({ run }: { run: AgentRun }) {
         </div>
       )}
 
-      {run.kind === "revision" && (
-        <p className="text-sm text-muted-foreground">
-          Final version produced. Approve its pull request on GitHub, then copy the draft from the
-          tabs above wherever it's going.
-        </p>
-      )}
+      {run.kind === "revision" && <RevisionApprovalPanel pieceId={run.piece_id!} runId={run.id} />}
 
       <p className="text-xs text-muted-foreground">
         <Link
@@ -430,7 +517,173 @@ function ActionsPanel({ run }: { run: AgentRun }) {
   );
 }
 
+function RevisionApprovalPanel({ pieceId, runId }: { pieceId: string; runId: string }) {
+  const [prUrl, setPrUrl] = useState<string | null>(null);
+  const [mergedAt, setMergedAt] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const approve = useServerFn(approveRevisionPr);
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from("pieces")
+      .select("final_pr_url, final_pr_merged_at")
+      .eq("id", pieceId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        setPrUrl((data as { final_pr_url: string | null }).final_pr_url ?? null);
+        setMergedAt((data as { final_pr_merged_at: string | null }).final_pr_merged_at ?? null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pieceId]);
+
+  async function onApprove() {
+    if (pending) return;
+    setPending(true);
+    setError(null);
+    setNote(null);
+    try {
+      const res = await approve({ data: { runId } });
+      if (res.prUrl) setPrUrl(res.prUrl);
+      if (res.alreadyMerged) {
+        setMergedAt((prev) => prev ?? new Date().toISOString());
+        setNote("The pull request was already merged.");
+      } else {
+        setMergedAt(res.mergedAt ?? new Date().toISOString());
+        setNote("Merged. The final version is now on the main branch.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Approve failed");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  if (mergedAt) {
+    return (
+      <div className="space-y-2 text-sm">
+        <p className="text-muted-foreground">
+          Approved and merged {new Date(mergedAt).toLocaleString()}. The final version is on the
+          main branch — copy the piece from the tabs above wherever it's going.
+        </p>
+        {prUrl && (
+          <a
+            href={prUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex text-xs text-muted-foreground underline hover:text-foreground"
+          >
+            View merged PR on GitHub ↗
+          </a>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Final version produced. Approving squash-merges the pull request into <code>main</code> and
+        marks this piece as shipped.
+      </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <button
+          type="button"
+          onClick={onApprove}
+          disabled={pending}
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
+        >
+          {pending ? "Merging…" : "Approve & merge"}
+        </button>
+        {prUrl && (
+          <a
+            href={prUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-muted-foreground underline hover:text-foreground"
+          >
+            View PR on GitHub ↗
+          </a>
+        )}
+      </div>
+      {note && <p className="text-xs text-muted-foreground">{note}</p>}
+      {error && (
+        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** A research run that will chain into a packet run (docs/research-workflow/). */
+function isPacketWorkflow(run: AgentRun): boolean {
+  return (
+    !!run.input &&
+    typeof run.input === "object" &&
+    !Array.isArray(run.input) &&
+    (run.input as Record<string, unknown>).workflow === "research_packet"
+  );
+}
+
 function activeStatusMessage(status: RunStatus, kind: string): string {
+  if (kind === "packet") {
+    switch (status) {
+      case "requested":
+      case "dispatching":
+        return "Starting — handing the packet build to the cloud agent.";
+      case "dispatch_unknown":
+        return "Starting… — dispatch is unconfirmed; the reconciler is resolving it. This page updates live.";
+      case "queued":
+        return "Queued — the agent's workspace is being prepared.";
+      case "running":
+        return "Working — analyzing the research and writing questions tailored to its findings. This page updates live.";
+      case "awaiting_fetch":
+        return "Almost done — the packet is written; fetching it back and saving the questions for review.";
+      default:
+        return "In progress.";
+    }
+  }
+  if (kind === "final_docx" || kind === "final_pptx") {
+    const artifact = kind === "final_docx" ? "document" : "presentation";
+    switch (status) {
+      case "requested":
+      case "dispatching":
+        return `Starting — handing the final ${artifact} build to the cloud agent.`;
+      case "dispatch_unknown":
+        return "Starting… — dispatch is unconfirmed; the reconciler is resolving it. This page updates live.";
+      case "queued":
+        return "Queued — the agent's workspace is being prepared.";
+      case "running":
+        return `Working — building the ${artifact} from the research and your verified words. This page updates live.`;
+      case "awaiting_fetch":
+        return `Almost done — the ${artifact} is built; saving it for download.`;
+      default:
+        return "In progress.";
+    }
+  }
+  if (kind === "followup_research") {
+    switch (status) {
+      case "requested":
+      case "dispatching":
+        return "Starting — handing your approved follow-up questions to the research agent.";
+      case "dispatch_unknown":
+        return "Starting… — dispatch is unconfirmed; the reconciler is resolving it. This page updates live.";
+      case "queued":
+        return "Queued — the agent's workspace is being prepared.";
+      case "running":
+        return "Researching your questions — seeking authoritative evidence and noting where it confirms or challenges the original findings. This page updates live.";
+      case "awaiting_fetch":
+        return "Almost done — the follow-up report is written; saving it as a revised packet.";
+      default:
+        return "In progress.";
+    }
+  }
   if (kind === "research") {
     switch (status) {
       case "requested":

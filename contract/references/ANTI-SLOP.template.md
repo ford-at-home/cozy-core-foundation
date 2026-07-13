@@ -1,7 +1,7 @@
 # Anti-Slop: <voice-name>
 
 > Pair with `<voice-name>.md`. This file catalogs the AI tells and other
-> patterns that, when scrubbed, make a draft *more* like the named voice.
+> patterns that, when scrubbed, make a draft _more_ like the named voice.
 >
 > Save filled-in anti-slop files to `~/.me/voices/<voice-name>.anti.md`
 > alongside the voice file. Synthesize loads both automatically when a brief
@@ -34,8 +34,8 @@ Rhythmic patterns that signal AI-generated text. Examples:
 Add your own.
 -->
 
-- 
-- 
+-
+-
 
 ## Hedge stack
 
@@ -49,8 +49,8 @@ Either cut the hedge or commit to a specific claim with a caveat
 (but only one).
 -->
 
-- 
-- 
+-
+-
 
 ## Throat-clearing
 
@@ -61,8 +61,8 @@ Sentences that warm up before saying anything. Common openers to delete:
 - "First, let's consider..."
 -->
 
-- 
-- 
+-
+-
 
 ## Empty connectives
 
@@ -74,8 +74,8 @@ Connectives that pretend to argue. Cut or replace with a real one.
 - "It is clear that" → cut, then prove it
 -->
 
-- 
-- 
+-
+-
 
 ## Voice-specific allergies
 
@@ -87,8 +87,8 @@ Get specific to your voice — there's no universal list. Examples:
 - Emoji (this voice doesn't, ever, except where ironic).
 -->
 
-- 
-- 
+-
+-
 
 ## Notes
 
@@ -97,4 +97,4 @@ Anything that's hard to encode as a rule. Patterns you've caught yourself
 scrubbing repeatedly. Drift to watch for.
 -->
 
-- 
+-

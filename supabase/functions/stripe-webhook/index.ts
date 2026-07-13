@@ -21,6 +21,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@18.5.0?target=denonext";
 import { logEvent } from "../_shared/observability.ts";
 import { refundCreditsToReverse, reversalDelta } from "../_shared/billing.ts";
+import { resolveCheckoutBeneficiary, shouldReprocessDuplicate } from "../_shared/stripe-events.ts";
 
 const FN = "stripe-webhook";
 
@@ -81,7 +82,7 @@ Deno.serve(async (req) => {
         .select("status")
         .eq("id", event.id)
         .maybeSingle();
-      if (existing?.status === "processed" || existing?.status === "skipped") {
+      if (!shouldReprocessDuplicate(existing?.status)) {
         return new Response("duplicate", { status: 200 });
       }
       // received/error: a prior attempt did not finish — reprocess below.
@@ -154,11 +155,11 @@ async function handleCheckoutPaid(
 
   // Sessions we did not create (or a lost purchase row): fall back to the
   // metadata written by create-checkout-session so payment is never dropped.
-  const userId = purchase?.user_id ?? session.metadata?.user_id ?? session.client_reference_id;
-  const credits = purchase?.credits ?? Number(session.metadata?.credits ?? 0);
-  if (!userId || !Number.isInteger(credits) || credits <= 0) {
+  const beneficiary = resolveCheckoutBeneficiary(session, purchase);
+  if (!beneficiary) {
     throw new Error(`cannot resolve user/credits for session ${session.id}`);
   }
+  const { userId, credits } = beneficiary;
 
   if (purchase) {
     await admin

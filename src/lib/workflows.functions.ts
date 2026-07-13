@@ -67,10 +67,13 @@ export type StartWorkflowInput = {
   /** Deep-research entry point: a topic the backend researches for you. */
   topic?: string;
   goal?: string;
+  /** Which pipeline this run feeds: a long-form draft (default) or a
+   *  college research packet (docs/research-workflow/). */
+  workflow?: "longform" | "research_packet";
   requestId?: string;
   attachments?: Array<{
-    path: string;      // storage path within research-attachments bucket
-    name: string;      // display filename
+    path: string; // storage path within research-attachments bucket
+    name: string; // display filename
     contentType?: string;
     size?: number;
   }>;
@@ -79,12 +82,19 @@ export type StartWorkflowInput = {
 export const startWorkflow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: StartWorkflowInput) => data ?? {})
-  .handler(async ({ data, context }): Promise<{ runId: string }> => {
+  .handler(async ({ data, context }): Promise<{ runId: string; pieceId: string | null }> => {
     // Invoke the start-workflow edge function as the signed-in user.
-    const { data: result, error } = await context.supabase.functions.invoke(
-      "start-workflow",
-      { body: data },
-    );
+    const { data: result, error } = await context.supabase.functions.invoke("start-workflow", {
+      body: data,
+    });
     if (error) throw new Error(await extractEdgeError(error, "start-workflow"));
-    return result as { runId: string };
+    const r = result as { runId: string; pieceId?: string | null };
+    return { runId: r.runId, pieceId: r.pieceId ?? null };
   });
+
+/** True when a dashboard run row belongs to the research-packet workflow. */
+export function isPacketWorkflowRun(run: Pick<AgentRun, "kind" | "input">): boolean {
+  if (["packet", "followup_research", "final_docx", "final_pptx"].includes(run.kind)) return true;
+  const input = run.input as { workflow?: string } | null;
+  return input?.workflow === "research_packet";
+}

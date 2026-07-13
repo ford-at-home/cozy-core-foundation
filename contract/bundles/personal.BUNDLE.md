@@ -5,7 +5,7 @@ mode: edit-or-synthesis
 reads:
   - references/MARKUP.md
   - references/STORYTELLING.md
-voice: required  # synthesize resolves from brief.md's Voice field; ~/.me/voices/<name>.md + <name>.anti.md
+voice: required # synthesize resolves from brief.md's Voice field; ~/.me/voices/<name>.md + <name>.anti.md
 triggers:
   - "apply my edits"
   - "merge my dictated changes"
@@ -56,12 +56,12 @@ Two operations, auto-detected from inputs:
 > KSP directive appears in markup, surface it in `unresolved.md` instead of
 > guessing at the rubric. See `contract/README.md` "Not vendored".
 
-| File | Role |
-|---|---|
-| [`references/MARKUP.md`](../references/MARKUP.md) | Source of truth for the markup protocol — symbols, numbered handles, all named directives. Read every invocation. Ships with this package. |
-| [`references/STORYTELLING.md`](../references/STORYTELLING.md) | Piece-architecture philosophy (translated Chappelle). Governs *how the whole piece is built* — casual entry, named gap between public posture and private knowledge, implicated narrator, reframing closer. Edit mode honors existing architecture; synthesis mode uses this to construct it. Read every invocation. |
-| `~/.me/voices/<name>.md` | Voice texture for any connective writing or directive-driven expansion (DEEPEN, HOOK, LAND, etc.). In this product the voice is injected inline by the agent prompt — see `contract/README.md` override 1. |
-| `~/.me/voices/<name>.anti.md` | Catalog of AI tells scrubbed by the SLOP directive. Same inline override applies. |
+| File                                                          | Role                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`references/MARKUP.md`](../references/MARKUP.md)             | Source of truth for the markup protocol — symbols, numbered handles, all named directives. Read every invocation. Ships with this package.                                                                                                                                                                           |
+| [`references/STORYTELLING.md`](../references/STORYTELLING.md) | Piece-architecture philosophy (translated Chappelle). Governs _how the whole piece is built_ — casual entry, named gap between public posture and private knowledge, implicated narrator, reframing closer. Edit mode honors existing architecture; synthesis mode uses this to construct it. Read every invocation. |
+| `~/.me/voices/<name>.md`                                      | Voice texture for any connective writing or directive-driven expansion (DEEPEN, HOOK, LAND, etc.). In this product the voice is injected inline by the agent prompt — see `contract/README.md` override 1.                                                                                                           |
+| `~/.me/voices/<name>.anti.md`                                 | Catalog of AI tells scrubbed by the SLOP directive. Same inline override applies.                                                                                                                                                                                                                                    |
 
 ## Output format
 

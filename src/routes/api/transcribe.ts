@@ -83,9 +83,13 @@ export const Route = createFileRoute("/api/transcribe")({
         if (!res.ok) {
           const detail = await res.text().catch(() => "");
           if (res.status === 402) {
-            // The gateway bills the operator's workspace allowance, not the
-            // user's credit balance — this is not fixable from /billing.
-            return json({ error: "Dictation is temporarily unavailable. Try again later." }, 402);
+            return json(
+              {
+                error:
+                  "Dictation is out of workspace AI credits (separate from your generation credits). Add AI credits in workspace billing to keep dictating.",
+              },
+              402,
+            );
           }
           if (res.status === 429) {
             return json({ error: "Transcription rate-limited. Try again in a moment." }, 429);

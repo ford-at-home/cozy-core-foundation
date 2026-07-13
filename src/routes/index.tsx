@@ -140,10 +140,10 @@ function Hero() {
       <div className="relative z-10 mx-auto max-w-3xl space-y-8 text-center">
         <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-          Human-paced tools for working with AI
+          {brand.company.category}
         </div>
         <h1 className="mx-auto max-w-2xl font-serif text-4xl leading-[1.05] tracking-tight sm:text-6xl">
-          AI that knows when to disappear.
+          {brand.company.line}
         </h1>
         <p className="mx-auto max-w-xl text-base leading-relaxed text-muted-foreground">
           Research, draft, and organize with AI. Then print your work, step away from the screen,
@@ -254,10 +254,10 @@ function Problem() {
           Good work should not require permanent screen time.
         </h2>
         <p className="text-base leading-relaxed text-muted-foreground">
-          Modern tools are powerful, but nearly all of them ask you to stay inside the interface.
-          Hardcopy Tools creates deliberate exits from the screen — the AI carries the context, the
-          research, and the repetitive work, so you can take the thinking somewhere quieter and come
-          back without losing the thread.
+          Modern tools are powerful, but nearly all of them ask you to stay inside the interface.{" "}
+          {brand.company.name} creates deliberate exits from the screen — the AI carries the
+          context, the research, and the repetitive work, so you can take the thinking somewhere
+          quieter and come back without losing the thread.
         </p>
       </div>
     </section>
@@ -458,7 +458,7 @@ function FinalAction() {
     <section className="border-t border-border/60 px-4 py-16 sm:py-24">
       <div className="mx-auto max-w-2xl space-y-7 text-center">
         <h2 className="font-serif text-3xl tracking-tight sm:text-5xl">
-          Leave the screen. Keep the thread.
+          {brand.company.philosophy}
         </h2>
         <Link to="/auth" className={primaryCta}>
           Start your first working draft

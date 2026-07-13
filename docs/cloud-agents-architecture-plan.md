@@ -1,15 +1,13 @@
 # Plan v2: markdown-soul-kitchen — UI-first drafting studio on Lovable + Cursor Cloud Agents
 
-> [!NOTE]
-> **Historical planning document.** Written 2026-07-11, before the mobile,
-> print-fidelity, payments/credits, and Hardcopy Tools brand work merged.
-> Kept for design rationale. Where it disagrees with the code, the code wins:
-> the product is now branded **Hardcopy Tools**, is **multi-user** with
-> per-user credits and Stripe billing (not single-user), iteration happens
-> through in-app actions (`piece-action`) rather than GitHub issue labels,
-> and some names here (`markdown-soul-kitchen`, `agent_jobs`-era schema in
-> the companion research doc) predate the implementation. For the current
-> architecture, start at the [README](../README.md).
+> [!WARNING]
+> **Historical design document.** This plan predates the credit/Stripe
+> billing system, the print-fidelity pipeline, the brand layer, and several
+> hardening passes; its data model, GitHub-issue orchestration, and RLS
+> descriptions no longer match the merged code (GitHub issue/label flows were
+> deferred — see `docs/RUNBOOK.md`). It is kept for design rationale only.
+> The current, verified architecture is `docs/ARCHITECTURE.md`; billing is
+> `docs/BILLING.md`.
 
 **Status:** v2, 2026-07-11. Supersedes v1 (same file, git history) after an owner redirect.
 **Cursor API facts below are bound to the research in [`docs/cursor-api-research.md`](cursor-api-research.md)** (confidence taxonomy: Documented / Strongly implied / Not established). Anything still unknown is marked `[Unverified]`.

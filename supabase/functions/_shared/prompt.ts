@@ -44,9 +44,10 @@ function buildPreamble(opts: {
   imageEndpoint?: string;
   imageToken?: string;
 }): string {
-  const imgBlock = opts.imageEndpoint && opts.imageToken
-    ? renderImageRule(opts.imageEndpoint, opts.imageToken, opts.imageStyle ?? "")
-    : LEGACY_VISUALS_RULE;
+  const imgBlock =
+    opts.imageEndpoint && opts.imageToken
+      ? renderImageRule(opts.imageEndpoint, opts.imageToken, opts.imageStyle ?? "")
+      : LEGACY_VISUALS_RULE;
   return `You are running the synthesize contract of this repository.
 
 Read first, in order:
@@ -183,9 +184,11 @@ function renderAttachments(atts: PromptAttachment[] | undefined, dir: string): s
   ];
   for (const a of atts) {
     parts.push("");
-    parts.push(`--- ATTACHMENT: ${a.name}` +
-      (a.contentType ? ` (${a.contentType})` : "") +
-      (typeof a.size === "number" ? ` [${a.size} bytes]` : ""));
+    parts.push(
+      `--- ATTACHMENT: ${a.name}` +
+        (a.contentType ? ` (${a.contentType})` : "") +
+        (typeof a.size === "number" ? ` [${a.size} bytes]` : ""),
+    );
     if (a.url) {
       parts.push(`FETCH_URL: ${a.url}`);
       parts.push("(Signed URL; expires. Fetch immediately and save the bytes.)");
@@ -250,14 +253,17 @@ export interface ResynthPromptInput extends ComposePromptInput {
 /** Second (third, ...) attempt at the proposal, steered by owner feedback. */
 export function buildResynthPrompt(input: ResynthPromptInput): string {
   const dir = `pieces/${input.pieceSlug}`;
-  return buildComposePrompt(input) + `
+  return (
+    buildComposePrompt(input) +
+    `
 NOTE: this is a RE-SYNTHESIS. A prior attempt exists at ${dir}/proposal.md on
 your base branch. Read it, then produce a fresh attempt (overwrite the file) —
 do not lightly edit the old one. Address this feedback:
 <<<FEEDBACK
 ${input.feedback?.trim() || "(none provided — take a substantially different angle)"}
 FEEDBACK>>>
-`;
+`
+  );
 }
 
 export interface DraftPromptInput {
@@ -299,6 +305,167 @@ VOICE (inline):
 ${input.styleText.trim()}
 VOICE>>>
 `;
+}
+
+// -----------------------------------------------------------------------------
+// Research packet (college research workflow — docs/research-workflow/).
+// The packet agent analyzes the research BEFORE writing questions, then
+// generates research-specific Socratic questions, then the packet body.
+// Questions live in questions.json (not packet.md) so the review screen can
+// edit/lock/add them and the print layer renders them with writing space.
+// -----------------------------------------------------------------------------
+
+export interface PacketPromptInput {
+  pieceSlug: string;
+  research: string;
+  goal: string | null;
+  imageStyle?: string;
+  imageEndpoint?: string;
+  imageToken?: string;
+  attachments?: PromptAttachment[];
+}
+
+export function buildPacketPrompt(input: PacketPromptInput): string {
+  const dir = `pieces/${input.pieceSlug}`;
+  const attachmentsBlock = renderAttachments(input.attachments, dir);
+  const imgBlock =
+    input.imageEndpoint && input.imageToken && (input.imageStyle ?? "").trim()
+      ? renderImageRule(input.imageEndpoint, input.imageToken, input.imageStyle ?? "")
+      : LEGACY_VISUALS_RULE;
+  return `You are preparing a RESEARCH PACKET for a college student — a printable
+US Letter document the student will read away from the screen, annotate by
+hand, and answer questions in by hand. You are a research-methodology
+specialist and Socratic curriculum designer, not a prose stylist. This run
+does NOT follow contract/SKILL.md; follow THIS prompt exactly.
+
+Read contract/references/MARKUP.md first — the pen-and-paper annotation
+protocol printed in the packet's legend. The packet body will carry S{n}P{m}
+block anchors, so students annotate findings by anchor.
+
+Non-negotiables:
+- Never invent facts, statistics, quotes, or sources. Where the research is
+  thin, say so plainly in the packet's uncertainties section.
+- Every claim that came from the research carries an inline markdown link to
+  its source when a URL exists in the research. Never strip a URL the
+  research provided.
+- No emoji. No AI-tell filler.
+
+${imgBlock}
+
+TASK: produce the packet in three phases, in this order.
+
+Step 0 — Preserve the research. Write the research provided below, verbatim,
+to ${dir}/research/research.md. If ATTACHMENTS are provided, save each per
+the attachment instructions.
+
+PHASE A — Analyze the research BEFORE writing any question.
+Write ${dir}/packet/analysis.json — strict JSON (no comments, no trailing
+commas) with exactly this shape:
+{
+  "inquiry": { "question": str, "scope": str,
+    "definitions": [{"term": str, "definition": str, "disputed": bool}],
+    "geography": str|null, "period": str|null,
+    "populations": {"included": [str], "excluded": [str]} },
+  "claims": [{ "id": "C1", "text": str,
+    "strength": "strong"|"moderate"|"weak",
+    "type": "descriptive"|"predictive"|"causal"|"normative"|"speculative",
+    "evidence": ["E1"], "qualifications": [str], "affected": [str],
+    "uncertainty": str|null }],
+  "evidence": [{ "id": "E1", "kind": "primary"|"secondary"|"dataset"|"survey"|"interview"|"experiment"|"case_study"|"legal"|"historical"|"institutional_report"|"model_synthesis"|"unsupported_assertion",
+    "description": str, "source": str|null, "url": str|null }],
+  "methods": [{ "id": "M1", "aspect": "sampling"|"measurement"|"comparison"|"time_range"|"geography"|"causal_assumption"|"statistical"|"qualitative"|"source_selection",
+    "description": str, "limitation": str|null }],
+  "stakeholders": [{ "id": "K1", "who": str,
+    "role": "affected"|"decision_maker"|"institution"|"community"|"profession"|"regulator"|"critic"|"beneficiary"|"cost_bearer",
+    "note": str|null }],
+  "uncertainties": [{ "id": "U1", "kind": "missing_data"|"corrupted_data"|"inconsistent_classification"|"selection_bias"|"measurement_error"|"confounding"|"outdated_sources"|"geographic_limit"|"weak_causal_inference"|"missing_testimony"|"conflicting_studies"|"implementation_assumption",
+    "description": str, "claims": ["C1"] }],
+  "local_validation": [{ "id": "L1", "activity": str, "description": str, "claims": ["C1"] }],
+  "followup_opportunities": [{ "id": "F1", "question": str, "why": str,
+    "evidence_needed": str, "likely_sources": [str], "answerable": bool,
+    "connects_to": str }]
+}
+Record every MAJOR claim (typically 3–8). Be honest: evidence the research
+merely asserts is kind "unsupported_assertion"; synthesis by a model is
+"model_synthesis". Identify up to six followup_opportunities — real gaps a
+second research pass could close with authoritative evidence.
+
+PHASE B — Generate the tailored Socratic questions.
+Write ${dir}/packet/questions.json — strict JSON:
+{ "questions": [{ "position": 1,
+    "function": "prior_belief"|"stakes"|"evidence_integrity"|"missing_perspective"|"ground_truth"|"expert_interrogation"|"counterargument"|"definition_framing"|"action"|"followup",
+    "claim_ref": "C2",
+    "prompt": str,
+    "guidance": str|null,
+    "response_space": "lines_3"|"lines_5"|"third_page"|"half_page"|"box" }] }
+
+Question rules (NON-NEGOTIABLE):
+- 5 to 8 questions total, balanced across different functions. EXACTLY ONE
+  question has function "followup" and it is LAST. Its prompt names a
+  specific established finding and a specific unresolved issue, and invites
+  up to three follow-up research questions the student wants answered
+  authoritatively. Set its guidance to a credibility sub-prompt like
+  "What source, dataset, expert, institution, or type of evidence would make
+  the answer credible?".
+- EVERY question is rewritten around the actual research. It must reference
+  a concrete element: a particular finding, a named source, a dataset, a
+  method, a measured outcome, an affected population, an institution, a
+  jurisdiction, a time period, a comparison group, an expert role, a
+  stakeholder, a disputed definition, a causal claim, a missing perspective,
+  a practical decision, or a local validation opportunity.
+- claim_ref MUST name the analysis element (C/E/M/U/K/L id) that generated
+  the question.
+- Every question requires the student's judgment, experience, skepticism, or
+  local action — never retrieval from the report. The AI must not be able to
+  answer it from the packet alone.
+- PROHIBITED as final questions (generic worksheet prompts):
+  "What would prove this research wrong?",
+  "What assumptions are being made?",
+  "Why does this matter?",
+  "Who could validate this?",
+  "What evidence is missing?",
+  "What follow-up research would you like?" — and any question that could be
+  moved to a packet on an UNRELATED topic without meaningful changes.
+- Score each question 0–2 on: research specificity; intellectual depth;
+  student contribution; evidence connection; actionability; clarity.
+  Regenerate any question scoring below 9 of 12.
+- Choose response_space by expected answer length: lines_3 / lines_5 for
+  short responses, third_page for medium reflection, half_page for detailed
+  responses, box for lists or diagrams.
+
+PHASE C — Write the packet body: ${dir}/packet/packet.md.
+Markdown only (headings, paragraphs, blockquotes, tables, images). Do NOT
+include the questions — the app renders them from questions.json with
+handwriting space. Structure:
+1. Title (# heading) naming the actual inquiry.
+2. "The research question" — the inquiry, scope, key definitions, period,
+   and populations, in prose.
+3. "Executive summary" — what the research found, honestly qualified.
+4. "Major findings" — one subsection per major claim, each carrying its
+   evidence discussion and inline source links. Note claim strength and type
+   where it matters (e.g. correlation vs. causation).
+5. "Evidence and sources" — what kinds of evidence the report rests on,
+   which sources are authoritative, which are thin.
+6. "Uncertainties and competing interpretations" — the concrete
+   uncertainties from your analysis, stated plainly.
+Use visuals where they genuinely clarify (process diagrams, timelines,
+causal maps, comparison tables, evidence hierarchies) per the VISUALS RULE.
+Every visual gets a caption identifying whether it is data-driven or
+conceptual, and must stay readable in grayscale print. No decorative images.
+Keep the body printable: this is a fixed-layout US Letter document.
+
+Finally: commit ALL files (research, analysis.json, questions.json,
+packet.md, any assets) to your working branch with message
+"packet(${input.pieceSlug}): research packet". Do NOT open a pull request.
+
+GOAL (the student's or professor's steer, may be empty):
+${input.goal?.trim() || "(none provided — derive the framing from the research)"}
+
+RESEARCH:
+<<<RESEARCH
+${input.research.trim()}
+RESEARCH>>>
+${attachmentsBlock}`;
 }
 
 export function slugify(title: string): string {

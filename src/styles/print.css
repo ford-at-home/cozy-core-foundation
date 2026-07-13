@@ -1,6 +1,6 @@
 /* print.css — the printable-draft stylesheet.
  *
- * This is the layout engine for Hardcopy Draft's printable artifact: a US Letter,
+ * This is the layout engine for the product's printable artifact: a US Letter,
  * wide-margin draft designed for pen markup, rendered by the browser's paged
  * media engine (print preview, Save as PDF, and paper all share it).
  *
@@ -40,9 +40,13 @@
 
   /* A single muted attribution — the working space of the page stays
    * unbranded; the artifact belongs to the user. Defining this box also
-   * suppresses the browser's own bottom-right footer (URL). */
+   * suppresses the browser's own bottom-right footer (URL). The attribution
+   * string itself (the company domain) is injected per document by
+   * print-document.ts from src/config/brand.ts, so brand names never live
+   * in this stylesheet; this empty fallback keeps the browser footer
+   * suppressed even if that injection is removed. */
   @bottom-right {
-    content: "hardcopy.tools";
+    content: "";
     font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
     font-size: 8pt;
     letter-spacing: 0.05em;
@@ -314,6 +318,54 @@ th {
 }
 
 /* ============================================================
+ * Markup key (legend) printed above the piece.
+ *
+ * Built from divs/spans on purpose: the anchor counters below only count
+ * p / headings / blockquote / pre / table, so the legend never consumes S1.
+ * Content mirrors contract/references/MARKUP.md "Quick Reference".
+ * ============================================================ */
+
+.markup-legend {
+  /* Embedded font (see print-document.ts): OS-fallback metrics would make
+   * page-1 pagination machine-dependent. */
+  font-family: "Source Code Pro", Menlo, Consolas, monospace;
+  font-size: 8.5pt;
+  line-height: 1.5;
+  color: #444444;
+  border: 0.75pt solid #bbbbbb;
+  border-radius: 3px;
+  padding: 0.5em 0.75em;
+  margin-bottom: 2em;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.markup-legend-title {
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 7.5pt;
+  color: #888;
+  margin-bottom: 0.35em;
+}
+
+.markup-legend-row {
+  display: flex;
+  gap: 0.6em;
+}
+
+.markup-legend-label {
+  flex: 0 0 5.5em;
+  font-weight: bold;
+  color: #777;
+  text-transform: uppercase;
+  font-size: 7.5pt;
+  padding-top: 0.1em;
+}
+
+/* ============================================================
  * Pre-printed block anchors (S{n}P{m} labels in the left margin)
  *
  * Active when <body class="with-anchors"> (the default).
@@ -441,4 +493,173 @@ body.with-anchors pre::before {
 /* Table anchors sit at the top-left of the table grid. */
 body.with-anchors table::before {
   top: 3pt;
+}
+
+/* ============================================================
+ * Research packet furniture (docs/research-workflow/03-printable-packet.md)
+ *
+ * Everything below is built from divs/spans ONLY, on purpose: the anchor
+ * counters above count p / headings / blockquote / pre / table, so packet
+ * headers, question blocks, and response areas consume zero S{n}P{m}
+ * anchors. The counting rule itself is untouched. Questions are addressed
+ * by their printed Q{n} identifier.
+ * ============================================================ */
+
+/* Header strip: packet id + student/course/date blanks the student fills. */
+.packet-header {
+  font-family: "Source Code Pro", Menlo, Consolas, monospace;
+  font-size: 8.5pt;
+  color: #444444;
+  border-bottom: 0.75pt solid #bbbbbb;
+  padding-bottom: 0.6em;
+  margin-bottom: 1.2em;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.packet-header-id {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 7.5pt;
+  color: #888;
+  margin-bottom: 0.6em;
+}
+
+.packet-fields {
+  display: flex;
+  gap: 1.25em;
+}
+
+.packet-field {
+  display: flex;
+  flex: 1 1 0;
+  align-items: baseline;
+  gap: 0.5em;
+}
+
+.packet-field-label {
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 7.5pt;
+  color: #777;
+}
+
+.packet-field-line {
+  flex: 1 1 auto;
+  border-bottom: 0.75pt solid #999999;
+  height: 1.4em;
+}
+
+/* Calm handwriting guidance / return instructions boxes — same quiet visual
+ * language as the markup legend. */
+.handwriting-guidance {
+  font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
+  font-size: 9pt;
+  line-height: 1.55;
+  color: #444444;
+  border: 0.75pt solid #bbbbbb;
+  border-radius: 3px;
+  padding: 0.5em 0.75em;
+  margin-bottom: 2em;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.handwriting-guidance .markup-legend-title {
+  font-family: "Source Code Pro", Menlo, Consolas, monospace;
+}
+
+.handwriting-guidance-body {
+  margin-top: 0.25em;
+}
+
+/* Question sections. Section titles are divs styled like headings so they
+ * never increment the section counter. */
+.packet-section {
+  margin-top: 24pt;
+}
+
+.packet-section-title {
+  font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
+  font-size: 16pt;
+  font-weight: 700;
+  line-height: 1.25;
+  border-top: 0.75pt solid #bbbbbb;
+  padding-top: 14pt;
+  margin-bottom: 8pt;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+/* One question = header line + prompt + writing area. Kept on one page:
+ * a block that doesn't fit moves whole to the next page (whitespace at the
+ * bottom of the previous page is acceptable — this is writing paper). */
+.packet-question {
+  margin: 14pt 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.pq-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75em;
+  font-family: "Source Code Pro", Menlo, Consolas, monospace;
+  font-size: 8pt;
+  color: #888888;
+  margin-bottom: 3pt;
+}
+
+.pq-id {
+  font-weight: 700;
+  font-size: 10pt;
+  color: #1a1a1a;
+}
+
+.pq-ref {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 7.5pt;
+}
+
+.pq-prompt {
+  font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
+  font-size: 11.5pt;
+  line-height: 1.55;
+  margin-bottom: 4pt;
+}
+
+.pq-guidance {
+  font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-size: 9.5pt;
+  color: #666666;
+  margin: 2pt 0 4pt;
+}
+
+/* Ruled response lines: 0.35in apart — comfortable for handwriting. */
+.response-lines {
+  margin-top: 4pt;
+}
+
+.response-line {
+  height: 0.35in;
+  border-bottom: 0.75pt solid #bbbbbb;
+}
+
+/* Open box for lists and diagrams. */
+.response-box {
+  height: 2in;
+  border: 0.75pt solid #999999;
+  border-radius: 2pt;
+  margin-top: 6pt;
+}
+
+.packet-return {
+  margin-top: 28pt;
+}
+
+.packet-return .handwriting-guidance-body {
+  font-size: 9pt;
+  color: #444444;
 }

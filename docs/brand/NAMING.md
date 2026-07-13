@@ -2,7 +2,10 @@
 
 Status: **provisional**. The first product ships under the restrained label
 **Hardcopy Draft** until a final name is approved. Nothing in the codebase
-hard-codes the product name outside `src/config/brand.ts`.
+hard-codes the product or company name outside `src/config/brand.ts`: UI copy
+reads `brand`/`pageTitle()`, and the printed page's attribution footer is
+injected from `brand.company.domain` by `src/lib/print-document.ts`. When
+editing copy, grep for the names before claiming this still holds.
 
 ## Recommendation
 
@@ -61,8 +64,10 @@ draft").
 ## Provisional usage rules
 
 1. Use **Hardcopy Draft** wherever the product (not the company) is named:
-   the landing-page product section, in-app section kickers, per-page document
-   titles, and the PDF filename prefix.
+   the landing-page product section, in-app section kickers, and per-page
+   document titles. (There is no programmatic PDF filename — saving as PDF
+   goes through the browser's print dialog, which names the file from the
+   document title.)
 2. Use **Hardcopy Tools** for the company: header wordmark, footer, auth page,
    root metadata, print attribution.
 3. Never present "Hardcopy Draft" as a final name in marketing copy beyond the

@@ -4,14 +4,14 @@ Copied from the `i-write-too-much` repo (packages `markdown-soul` and `paper-mar
 on 2026-07-11. That repo is no longer a dependency of this product; this directory is
 now the authoritative copy the cloud agent reads when it runs.
 
-| File | Role |
-|---|---|
-| `SKILL.md` | The synthesize contract: modes, workflow, output shapes, refusal rules. |
-| `references/BRIEF.template.md` | The five-field brief the agent authors before synthesizing. |
-| `references/STORYTELLING.md` | Piece architecture reference. |
-| `references/MARKUP.md` | Pen-and-paper markup vocabulary (symbols, `S{n}P{m}` block anchors, directives). Drives the annotation/revision flow. |
-| `references/*.template.md` | Persona / style / anti-slop / channel shapes referenced by SKILL.md. |
-| `bundles/*.BUNDLE.md` | The two bundles this product uses: `personal` (edit/synthesis) and `voice-only` (polish). |
+| File                           | Role                                                                                                                  |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| `SKILL.md`                     | The synthesize contract: modes, workflow, output shapes, refusal rules.                                               |
+| `references/BRIEF.template.md` | The five-field brief the agent authors before synthesizing.                                                           |
+| `references/STORYTELLING.md`   | Piece architecture reference.                                                                                         |
+| `references/MARKUP.md`         | Pen-and-paper markup vocabulary (symbols, `S{n}P{m}` block anchors, directives). Drives the annotation/revision flow. |
+| `references/*.template.md`     | Persona / style / anti-slop / channel shapes referenced by SKILL.md.                                                  |
+| `bundles/*.BUNDLE.md`          | The two bundles this product uses: `personal` (edit/synthesis) and `voice-only` (polish).                             |
 
 ## Adaptations for this system (read before prompting an agent)
 

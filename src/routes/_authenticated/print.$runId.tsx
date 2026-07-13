@@ -3,7 +3,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
-import { buildPrintDocument, extractPost } from "@/lib/print-document";
+import {
+  buildPacketPrintDocument,
+  buildPrintDocument,
+  extractPost,
+  type PacketPrintQuestion,
+} from "@/lib/print-document";
+import { getPacketByRunId, listPacketQuestions } from "@/lib/packets";
 import { brand, pageTitle } from "@/config/brand";
 
 export const Route = createFileRoute("/_authenticated/print/$runId")({
@@ -13,9 +19,22 @@ export const Route = createFileRoute("/_authenticated/print/$runId")({
   component: PrintPage,
 });
 
+// Packet runs print through the packet builder: the reviewed questions (with
+// their writing space) come from the packets tables so review-screen edits
+// show up on paper without regenerating anything.
+type PacketPrintInfo = {
+  packetId: string;
+  /** null = packet row unreadable; the header omits the version stamp. */
+  version: number | null;
+  status: "generated" | "reviewed" | null;
+  pieceId: string | null;
+  questions: PacketPrintQuestion[];
+};
+
 function PrintPage() {
   const { runId } = Route.useParams();
   const [post, setPost] = useState<string | null>(null);
+  const [packetInfo, setPacketInfo] = useState<PacketPrintInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [iframeReady, setIframeReady] = useState(false);
@@ -72,6 +91,7 @@ function PrintPage() {
   useEffect(() => {
     let cancelled = false;
     setPost(null);
+    setPacketInfo(null);
     setError(null);
     setLoading(true);
     setIframeReady(false);
@@ -80,38 +100,93 @@ function PrintPage() {
     setModalReady(false);
     setModalError(null);
 
-    supabase
-      .from("agent_runs")
-      .select("result, status")
-      .eq("id", runId)
-      .maybeSingle()
-      .then(
-        ({
-          data,
-          error,
-        }: {
-          data: { result: Json | null; status: string } | null;
-          error: { message: string } | null;
-        }) => {
-          if (cancelled) return;
-          if (error) setError(error.message);
-          else if (!data) setError("Run not found.");
-          else {
-            const content = extractPost(data.result);
-            if (content) {
-              setPost(content);
-              setError(null);
-            } else {
-              setError(
-                data.status === "completed"
-                  ? "This run has no printable draft."
-                  : "This run hasn't completed yet — the draft isn't available to print.",
-              );
+    async function load() {
+      const { data, error } = (await supabase
+        .from("agent_runs")
+        .select("result, status, kind")
+        .eq("id", runId)
+        .maybeSingle()) as {
+        data: { result: Json | null; status: string; kind: string } | null;
+        error: { message: string } | null;
+      };
+      if (cancelled) return;
+      if (error) {
+        setError(error.message);
+      } else if (!data) {
+        setError("Run not found.");
+      } else {
+        const content = extractPost(data.result);
+        if (content) {
+          // followup_research runs produce a revised packet (v+1) that prints
+          // through the same packet builder as v1 — same anchors, same
+          // question rendering, version stamped in the footer.
+          if (data.kind === "packet" || data.kind === "followup_research") {
+            // Reviewed questions come from the packets tables. A missing
+            // packet row (persistence flagged a problem) still prints the
+            // body with the follow-up section, so paper is never blocked.
+            try {
+              const packet = await getPacketByRunId(runId);
+              if (cancelled) return;
+              if (packet) {
+                const questions = await listPacketQuestions(packet.id);
+                if (cancelled) return;
+                setPacketInfo({
+                  packetId: packet.id,
+                  version: packet.version,
+                  status: packet.status,
+                  pieceId: packet.piece_id,
+                  questions: questions.map((q) => ({
+                    position: q.position,
+                    function: q.function,
+                    claim_ref: q.claim_ref,
+                    prompt: q.prompt,
+                    guidance: q.guidance,
+                    response_space: q.response_space,
+                  })),
+                });
+              } else {
+                // Degraded: no packet row yet. Print the body with the default
+                // follow-up section, no version stamp (guessing "v1" on a
+                // revised packet would be wrong on paper), and say so.
+                toast.warning("Printing without the tailored questions.", {
+                  description:
+                    "This packet's reviewed questions couldn't be loaded — the default follow-up section is included instead.",
+                });
+                setPacketInfo({
+                  packetId: runId,
+                  version: null,
+                  status: null,
+                  pieceId: null,
+                  questions: [],
+                });
+              }
+            } catch {
+              toast.warning("Printing without the tailored questions.", {
+                description:
+                  "This packet's reviewed questions couldn't be loaded — the default follow-up section is included instead.",
+              });
+              setPacketInfo({
+                packetId: runId,
+                version: null,
+                status: null,
+                pieceId: null,
+                questions: [],
+              });
             }
           }
-          setLoading(false);
-        },
-      );
+          setPost(content);
+          setError(null);
+        } else {
+          setError(
+            data.status === "completed"
+              ? "This run has no printable draft."
+              : "This run hasn't completed yet — the draft isn't available to print.",
+          );
+        }
+      }
+      setLoading(false);
+    }
+    load();
     return () => {
       cancelled = true;
     };
@@ -122,7 +197,16 @@ function PrintPage() {
   // restyle body, h1, p, ... — can't leak into the app. The same document is
   // what the browser's print engine paginates, so screen preview, print
   // preview, Save-as-PDF, and paper all share one renderer.
-  const srcDoc = useMemo(() => (post ? buildPrintDocument(post) : ""), [post]);
+  const srcDoc = useMemo(() => {
+    if (!post) return "";
+    if (packetInfo) {
+      return buildPacketPrintDocument(post, packetInfo.questions, {
+        packetId: packetInfo.packetId,
+        version: packetInfo.version,
+      });
+    }
+    return buildPrintDocument(post);
+  }, [post, packetInfo]);
 
   function openPreview() {
     setModalReady(false);
@@ -210,13 +294,23 @@ function PrintPage() {
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-          <Link
-            to="/runs/$runId"
-            params={{ runId }}
-            className="inline-flex min-h-11 items-center text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 rounded-sm sm:min-h-0"
-          >
-            ← Back to run
-          </Link>
+          {packetInfo?.pieceId ? (
+            <Link
+              to="/project/$pieceId"
+              params={{ pieceId: packetInfo.pieceId }}
+              className="inline-flex min-h-11 items-center text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 rounded-sm sm:min-h-0"
+            >
+              ← Back to project
+            </Link>
+          ) : (
+            <Link
+              to="/runs/$runId"
+              params={{ runId }}
+              className="inline-flex min-h-11 items-center text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 rounded-sm sm:min-h-0"
+            >
+              ← Back to run
+            </Link>
+          )}
           <button
             type="button"
             onClick={savePdf}
@@ -248,6 +342,15 @@ function PrintPage() {
         >
           {error}
         </p>
+      )}
+
+      {post && packetInfo?.status === "generated" && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+          The packet's questions haven't been approved yet — what prints below is the current draft.{" "}
+          <Link to="/packet/$runId" params={{ runId }} className="font-medium underline">
+            Review and approve the questions first →
+          </Link>
+        </div>
       )}
 
       {post && (
@@ -303,7 +406,7 @@ function PrintPage() {
                 <button
                   type="button"
                   onClick={closePreview}
-                  className="rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
+                  className="inline-flex min-h-11 items-center rounded-md border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-muted"
                 >
                   Cancel
                 </button>
@@ -311,7 +414,7 @@ function PrintPage() {
                   type="button"
                   onClick={confirmPrint}
                   disabled={!modalReady}
-                  className="rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
                   {modalReady ? "Confirm & print" : "Preparing…"}
                 </button>
