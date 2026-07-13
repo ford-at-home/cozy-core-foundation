@@ -34,6 +34,35 @@ import {
 } from "@/lib/packet-stage";
 import { Skeleton } from "@/components/ui/skeleton";
 
+// Turn a raw provider/edge-function error string into a short student-readable
+// explanation. Returns null when we have nothing useful to say beyond the
+// generic "run didn't finish" copy.
+function interpretRunError(
+  raw: string | null | undefined,
+): { title: string; body: string } | null {
+  if (!raw) return null;
+  const msg = raw.toLowerCase();
+  if (msg.includes("hard limit") || msg.includes("increase your hard limit")) {
+    return {
+      title: "The research provider's account is over its spending limit.",
+      body: "This is a limit on the tool's own billing, not yours — no credits were charged. Please tell the site owner; students cannot fix this themselves.",
+    };
+  }
+  if (msg.includes("insufficient_credits") || msg.includes("insufficient credits")) {
+    return {
+      title: "You didn't have enough credits when this run tried to start.",
+      body: "Add credits from Billing and try again — the earlier attempt cost you nothing.",
+    };
+  }
+  if (msg.includes("provider responded")) {
+    return {
+      title: "The research provider rejected the request.",
+      body: raw,
+    };
+  }
+  return { title: "Details from the run:", body: raw };
+}
+
 // The guided hub for one research-packet project: one authoritative stage
 // model (src/lib/packet-stage.ts, derived from server-persisted rows), one
 // primary action per stage, plain-language statuses. Students can leave and
