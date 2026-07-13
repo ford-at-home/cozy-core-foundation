@@ -88,6 +88,23 @@ Deno.serve(
         code: "already_researched",
       });
     }
+    // ...and while a research run is in flight, changing the set would let the
+    // completion path stamp 'researched' onto wording the run never saw.
+    const { data: activeRun } = await admin
+      .from("agent_runs")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("kind", "followup_research")
+      .contains("input", { packetId })
+      .not("status", "in", "(completed,failed,cancelled)")
+      .limit(1)
+      .maybeSingle();
+    if (activeRun) {
+      return e(FN, 409, "follow-up research is already running for this packet", {
+        requestId: rid,
+        code: "research_running",
+      });
+    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const suggestions: (string | null)[] = new Array(questions.length).fill(null);
@@ -143,7 +160,14 @@ Deno.serve(
           suggested_text: suggestions[i],
           status: suggestions[i] ? "refined" : "submitted",
         }));
-    await admin.from("followup_questions").delete().eq("packet_id", packetId).gte("position", 1);
+    // Never delete researched rows — their provenance is the record of what
+    // the research pass actually answered (also narrows the check-then-act
+    // window against a completing run).
+    await admin
+      .from("followup_questions")
+      .delete()
+      .eq("packet_id", packetId)
+      .neq("status", "researched");
     const { error: insErr } = await admin.from("followup_questions").insert(rows);
     if (insErr)
       return e(FN, 500, "Failed to store questions", {

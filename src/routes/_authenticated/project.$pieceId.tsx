@@ -365,13 +365,13 @@ function StageCard({
             The second research pass is running against your approved questions. It usually takes a
             few minutes and arrives as a revised packet — your original packet stays untouched.
           </p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            {followupRun && (
+          {followupRun && (
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Link to="/runs/$runId" params={{ runId: followupRun.id }} className={secondaryBtn}>
                 Watch progress
               </Link>
-            )}
-          </div>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">
             You can close this page — the work continues, and this project picks up where it left
             off.

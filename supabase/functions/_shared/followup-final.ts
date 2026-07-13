@@ -362,7 +362,9 @@ export async function loadPriorPacketContext(
   const { data: pqs } = await admin
     .from("packet_questions")
     .select("id, prompt")
-    .in("packet_id", packetIds);
+    .in("packet_id", packetIds)
+    .order("packet_id", { ascending: true })
+    .order("position", { ascending: true });
 
   const { data: returns } = await admin
     .from("packet_returns")
@@ -389,23 +391,28 @@ export async function loadPriorPacketContext(
     .in("packet_id", packetIds);
   const segments = (segmentRows ?? []) as AssemblySegment[];
 
-  let corrections: AssemblyCorrection[] = [];
+  // Two indexed queries (one per FK), deduped by row id — a correction row
+  // carrying both FKs must not be applied twice.
+  const byId = new Map<string, AssemblyCorrection>();
   const blockIds = blocks.map((b) => b.id);
   const segmentIds = segments.map((s) => s.id);
+  const correctionSelect =
+    "id, block_id, segment_id, corrected_text, corrected_meaning, verified_at";
   if (blockIds.length > 0) {
     const { data } = await admin
       .from("verification_corrections")
-      .select("block_id, segment_id, corrected_text, corrected_meaning, verified_at")
+      .select(correctionSelect)
       .in("block_id", blockIds);
-    corrections = corrections.concat((data ?? []) as AssemblyCorrection[]);
+    for (const c of data ?? []) byId.set(c.id as string, c as AssemblyCorrection);
   }
   if (segmentIds.length > 0) {
     const { data } = await admin
       .from("verification_corrections")
-      .select("block_id, segment_id, corrected_text, corrected_meaning, verified_at")
+      .select(correctionSelect)
       .in("segment_id", segmentIds);
-    corrections = corrections.concat((data ?? []) as AssemblyCorrection[]);
+    for (const c of data ?? []) byId.set(c.id as string, c as AssemblyCorrection);
   }
+  const corrections = Array.from(byId.values());
 
   const verifiedResponses = assembleVerifiedResponses({
     questions: (pqs ?? []) as AssemblyQuestion[],
