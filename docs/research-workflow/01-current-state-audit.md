@@ -33,10 +33,11 @@ instead of `pieces.workflow_stage`):
    `draft → awaiting_student_return` is an invalid hop, so every FSM call in
    the return/verification functions no-ops with a logged warning for pieces
    that started before (or via) the current packet pipeline.
-2. Nothing updates `packet_returns.status` past `uploading` — recognition
-   progress lives on `page_images.status` and the verification verdict in
-   `verification_corrections`, so the UI derives a return's effective status
-   from those rows (`deriveReturnUiStatus`).
+2. ~~Nothing updates `packet_returns.status` past `uploading`~~ — fixed:
+   `analyze-returned-page` now settles the return to `ready`/`failed` once
+   every page is terminal. The UI still derives a return's effective status
+   from rows (`deriveReturnUiStatus`) because the verification verdict lives
+   in `verification_corrections`, not on the return row.
 
 ## Capability inventory
 

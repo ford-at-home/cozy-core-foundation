@@ -1,16 +1,13 @@
-// Handwriting recognition for returned packet pages (Phase 2 of
-// docs/research-workflow/04-return-and-recognition.md). Pure module: prompt
-// building and response validation, tested in _tests/recognition.test.ts.
-// The packet-return Edge Function owns the I/O (storage download, gateway
-// call, DB writes).
+// Handwriting-recognition prompt + response validation for
+// analyze-returned-page (docs/research-workflow/04-return-and-recognition.md).
 //
-// Non-negotiables encoded here:
-//   - Never fabricate unreadable text: an unreadable region comes back as an
-//     empty-text block with null confidence, never invented words.
-//   - Printed packet text is context, not output — only handwriting and
-//     annotation marks are transcribed.
-//   - Raw recognition output is never verified; verification is a separate,
-//     mandatory human step.
+// The prompt carries the packet's own question list so the model can link a
+// handwritten response to the question it answers (retained as
+// recognized_blocks.linked_question_id) and separate printed packet text
+// from student handwriting. The parser enforces the no-fabrication rule:
+// blocks without recognized text are dropped, confidence is clamped to
+// [0, 1], and a page-level quality verdict travels with the blocks so an
+// unreadable photo produces a specific retake reason instead of guesses.
 
 export interface RecognitionQuestionContext {
   id: string;
@@ -18,237 +15,169 @@ export interface RecognitionQuestionContext {
   prompt: string;
 }
 
+export const ANNOTATION_TYPES = [
+  "response",
+  "margin_note",
+  "underline",
+  "circle",
+  "arrow",
+  "other",
+] as const;
+export type AnnotationType = (typeof ANNOTATION_TYPES)[number];
+
 export const QUALITY_CODES = [
   "blur",
   "glare",
+  "shadow",
   "cropped",
+  "skew",
   "low_contrast",
   "too_small",
   "multiple_pages",
-  "wrong_orientation",
-] as const;
-export type QualityCode = (typeof QUALITY_CODES)[number];
-
-export const BLOCK_KINDS = ["response", "annotation", "followup", "note"] as const;
-export type BlockKind = (typeof BLOCK_KINDS)[number];
-
-// Annotation vocabulary from contract/references/MARKUP.md (reused as-is).
-export const ANNOTATION_TYPES = [
-  "circle",
-  "arrow",
-  "underline",
-  "strikethrough",
-  "margin_note",
-  "bracket",
-  "star",
-  "question_mark",
+  "not_a_packet_page",
   "other",
 ] as const;
 
+export type QualityIssue = { code: string; message: string };
+
 export interface RecognizedBlockDraft {
-  position: number;
-  kind: BlockKind;
   text: string;
-  /** null = detected but unreadable (retake or dictate; never invented). */
-  confidence: number | null;
-  annotation_type: string | null;
-  /** Q position (1-based) the writing answers, when identifiable. */
+  confidence: number;
+  annotation_type: AnnotationType;
+  location: { description: string };
   question_position: number | null;
-  /** F.1–F.3 follow-up area index, when the block is a followup. */
-  followup_index: number | null;
-  /** S{n}P{m} anchor or printed identifier near the writing. */
-  linked_anchor: string | null;
-  location: Record<string, unknown> | null;
+  anchor: string | null;
+  interpretation_confidence: number | null;
 }
 
 export interface PageRecognition {
-  quality: { ok: boolean; issues: Array<{ code: string; message: string }> };
+  quality: { ok: boolean; issues: QualityIssue[] };
   page_number: number | null;
   blocks: RecognizedBlockDraft[];
 }
 
-/**
- * Prompt for one page image. The tailored questions give the model the
- * printed text it must NOT transcribe and the Q numbers it should link
- * handwriting to.
- */
+/** Blocks below this confidence require an explicit verdict at review. */
+export const LOW_CONFIDENCE_THRESHOLD = 0.5;
+
+const MAX_BLOCKS_PER_PAGE = 100;
+
 export function buildRecognitionPrompt(questions: RecognitionQuestionContext[]): string {
-  const questionList = questions
-    .map((q) => `Q${q.position}: ${q.prompt}`)
-    .join("\n");
-  return [
-    "You are reading one photographed page of a printed research packet that a student",
-    "completed by hand. The page contains PRINTED packet text (do not transcribe it) and",
-    "the student's HANDWRITTEN responses and annotation marks (transcribe these).",
-    "",
-    "The packet's printed questions, for reference (match handwriting to a question when",
-    "the writing sits in that question's ruled response area or references its number):",
-    questionList || "(no question list available)",
-    "",
-    "Follow-up research areas are printed as F.1, F.2, F.3 (or Q{n}.1–.3) near the end of",
-    "the packet — handwriting there is a follow-up research question.",
-    "",
-    "Return ONLY a JSON object, no markdown fence, with this shape:",
-    "{",
-    '  "quality": { "ok": boolean, "issues": [{ "code": string, "message": string }] },',
-    '  "page_number": number | null,',
-    '  "blocks": [',
-    "    {",
-    '      "kind": "response" | "annotation" | "followup" | "note",',
-    '      "text": string,',
-    '      "confidence": number | null,',
-    '      "annotation_type": string | null,',
-    '      "question_position": number | null,',
-    '      "followup_index": number | null,',
-    '      "linked_anchor": string | null,',
-    '      "location": { "area": string } | null',
-    "    }",
-    "  ]",
-    "}",
-    "",
-    "Rules:",
-    `- quality.issues codes: ${QUALITY_CODES.join(", ")}. Set ok=false only when the page`,
-    "  is unusable for recognition (severe blur, glare over the writing, cut-off writing).",
-    "- page_number: the printed folio number if visible, else null.",
-    "- One block per distinct handwritten passage or annotation mark, in reading order.",
-    "- kind=annotation for marks (circle, arrow, underline, strikethrough, margin_note,",
-    "  bracket, star, question_mark); put any words written with the mark in text.",
-    "- kind=followup for writing in the follow-up areas, with followup_index 1-3.",
-    "- confidence: 0 to 1 for your transcription of that block.",
-    "- CRITICAL: if a passage is not readable, output the block with text set to an empty",
-    "  string and confidence null. NEVER guess or invent words you cannot read.",
-    "- Crossed-out writing: transcribe if legible and note it in location.area as",
-    '  "crossed_out"; the student decides what it means during review.',
-    "- Do not transcribe printed text. Do not summarize. Do not correct spelling.",
-  ].join("\n");
+  const questionList =
+    questions.length > 0
+      ? questions.map((q) => `Q${q.position} (id ${q.id}): ${q.prompt}`).join("\n")
+      : "(no questions available for this packet)";
+  return `You are reading a photographed page of a printed research packet that a student completed by hand.
+
+The printed packet contains these questions (printed text — do NOT transcribe it as handwriting):
+<<<QUESTIONS
+${questionList}
+QUESTIONS>>>
+
+Extract ONLY the student's handwriting and annotation marks. Rules — all mandatory:
+- NEVER invent, guess, or autocomplete text. If a word is unreadable, omit it; if a whole block is unreadable, omit the block. Prefer complete words at lower confidence over guessed characters.
+- Separate printed packet text from handwriting. Printed text is context, not output.
+- When a handwritten response sits in or near a question's ruled answer space, set "question_position" to that question's number. Otherwise null.
+- If the handwriting references a printed block anchor (like "S2P4"), set "anchor" to it. Otherwise null.
+- Classify each block: "response" (an answer in a writing space), "margin_note", "underline", "circle", "arrow", or "other".
+- "confidence" (0..1) is transcription confidence; "interpretation_confidence" (0..1 or null) is how sure you are about the annotation's meaning/classification.
+- Assess photo quality first. If the page cannot be read reliably (blur, glare, shadow, cropped edges, heavy skew, low contrast, writing too small, several pages in one photo), set quality.ok=false and name each problem with a specific, actionable message (e.g. "The bottom third is cut off — retake with the whole page in frame."). Codes: blur, glare, shadow, cropped, skew, low_contrast, too_small, multiple_pages, not_a_packet_page, other.
+- If a printed page number is visible, report it as "page_number".
+
+Return STRICT JSON, nothing else:
+{"quality":{"ok":boolean,"issues":[{"code":string,"message":string}]},"page_number":number|null,"blocks":[{"text":string,"confidence":number,"annotation_type":string,"location":{"description":string},"question_position":number|null,"anchor":string|null,"interpretation_confidence":number|null}]}`;
 }
 
-function clamp01(n: unknown): number | null {
-  if (typeof n !== "number" || !Number.isFinite(n)) return null;
+function clamp01(v: unknown): number {
+  const n = typeof v === "number" && Number.isFinite(v) ? v : 0;
   return Math.max(0, Math.min(1, n));
 }
 
-function intOrNull(n: unknown): number | null {
-  return typeof n === "number" && Number.isInteger(n) ? n : null;
-}
-
-function strOrNull(v: unknown): string | null {
-  return typeof v === "string" && v.trim() !== "" ? v.trim() : null;
-}
-
 /**
- * Validate the model's JSON for one page. Tolerates a fenced code block.
- * Throws on structurally unusable output (the caller marks the page failed
- * and asks for a retake/retry); silently drops malformed individual blocks.
+ * Parse + validate the model output. Throws on malformed JSON; silently
+ * drops information-free blocks (empty text) per the no-fabrication rule.
  */
 export function parseRecognitionResult(raw: string): PageRecognition {
-  let text = raw.trim();
-  const fence = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
-  if (fence) text = fence[1];
-  let doc: unknown;
+  let parsed: unknown;
   try {
-    doc = JSON.parse(text);
+    parsed = JSON.parse(raw);
   } catch {
-    throw new Error("recognition output is not valid JSON");
+    throw new Error("recognition output was not valid JSON");
   }
-  if (!doc || typeof doc !== "object" || Array.isArray(doc)) {
-    throw new Error("recognition output must be a JSON object");
-  }
-  const d = doc as Record<string, unknown>;
+  const obj = (parsed ?? {}) as Record<string, unknown>;
 
-  const qualityIn = (d.quality ?? {}) as Record<string, unknown>;
-  const issuesIn = Array.isArray(qualityIn.issues) ? qualityIn.issues : [];
-  const issues = issuesIn
-    .map((i) => {
-      const it = (i ?? {}) as Record<string, unknown>;
-      const code = strOrNull(it.code);
-      if (!code) return null;
-      return { code, message: strOrNull(it.message) ?? code };
-    })
-    .filter((i): i is { code: string; message: string } => i !== null);
-  const ok = typeof qualityIn.ok === "boolean" ? qualityIn.ok : issues.length === 0;
+  const qualityRaw = (obj.quality ?? {}) as Record<string, unknown>;
+  const issues: QualityIssue[] = Array.isArray(qualityRaw.issues)
+    ? qualityRaw.issues
+        .filter((i): i is Record<string, unknown> => typeof i === "object" && i !== null)
+        .map((i) => ({
+          code: typeof i.code === "string" ? i.code : "other",
+          message: typeof i.message === "string" ? i.message : "Image quality problem.",
+        }))
+        .slice(0, 10)
+    : [];
+  const ok = qualityRaw.ok !== false;
 
-  const blocksIn = Array.isArray(d.blocks) ? d.blocks : [];
+  const pageNumber =
+    typeof obj.page_number === "number" && Number.isInteger(obj.page_number) && obj.page_number > 0
+      ? obj.page_number
+      : null;
+
+  const blocksRaw = Array.isArray(obj.blocks) ? obj.blocks : [];
   const blocks: RecognizedBlockDraft[] = [];
-  for (const b of blocksIn) {
-    if (!b || typeof b !== "object") continue;
-    const blk = b as Record<string, unknown>;
-    const kind = BLOCK_KINDS.includes(blk.kind as BlockKind) ? (blk.kind as BlockKind) : "note";
-    const rawText = typeof blk.text === "string" ? blk.text.trim() : "";
-    let confidence = clamp01(blk.confidence);
-    // Fabrication guard, both directions: text without confidence is
-    // untrusted (unreadable => must be empty), and confidence without text
-    // is meaningless.
-    if (rawText === "") confidence = null;
-    if (confidence === null && rawText !== "") {
-      // The model transcribed something but declared no confidence: keep the
-      // text at the lowest confidence so verification MUST surface it.
-      confidence = 0;
-    }
-    // A block with no text and no annotation carries no information.
-    const annotationType = strOrNull(blk.annotation_type);
-    if (rawText === "" && kind !== "annotation" && confidence === null && !annotationType) {
-      // Keep unreadable regions only when the model flagged where they are.
-      if (!blk.location) continue;
-    }
+  for (const b of blocksRaw.slice(0, MAX_BLOCKS_PER_PAGE)) {
+    if (typeof b !== "object" || b === null) continue;
+    const rec = b as Record<string, unknown>;
+    const text = typeof rec.text === "string" ? rec.text.trim() : "";
+    if (text === "") continue; // never persist information-free blocks
+    const annotation = (ANNOTATION_TYPES as readonly string[]).includes(
+      rec.annotation_type as string,
+    )
+      ? (rec.annotation_type as AnnotationType)
+      : "other";
+    const locRaw = (rec.location ?? {}) as Record<string, unknown>;
     blocks.push({
-      position: blocks.length,
-      kind,
-      text: rawText,
-      confidence,
-      annotation_type: annotationType,
-      question_position: intOrNull(blk.question_position),
-      followup_index: intOrNull(blk.followup_index),
-      linked_anchor: strOrNull(blk.linked_anchor),
-      location:
-        blk.location && typeof blk.location === "object" && !Array.isArray(blk.location)
-          ? (blk.location as Record<string, unknown>)
+      text,
+      confidence: clamp01(rec.confidence),
+      annotation_type: annotation,
+      location: {
+        description: typeof locRaw.description === "string" ? locRaw.description : "",
+      },
+      question_position:
+        typeof rec.question_position === "number" && Number.isInteger(rec.question_position)
+          ? rec.question_position
+          : null,
+      anchor: typeof rec.anchor === "string" && rec.anchor.trim() ? rec.anchor.trim() : null,
+      interpretation_confidence:
+        typeof rec.interpretation_confidence === "number"
+          ? clamp01(rec.interpretation_confidence)
           : null,
     });
   }
 
-  return {
-    quality: { ok, issues },
-    page_number: intOrNull(d.page_number),
-    blocks,
-  };
+  return { quality: { ok, issues }, page_number: pageNumber, blocks };
 }
 
-/** Confidence below this is highlighted as needing attention in review. */
-export const LOW_CONFIDENCE_THRESHOLD = 0.7;
-
-/**
- * Map validated blocks to recognized_blocks rows. Question linking resolves
- * the model's Q position to the packet question id; unknown positions stay
- * unlinked (the student links them in review).
- */
-export function blocksToRows(args: {
-  pageImageId: string;
-  returnId: string;
-  userId: string;
-  attempt: number;
-  blocks: RecognizedBlockDraft[];
-  questions: RecognitionQuestionContext[];
-}): Array<Record<string, unknown>> {
-  const byPosition = new Map(args.questions.map((q) => [q.position, q.id]));
-  return args.blocks.map((b, i) => ({
-    page_image_id: args.pageImageId,
-    return_id: args.returnId,
-    user_id: args.userId,
-    attempt: args.attempt,
-    position: i,
-    kind: b.kind,
-    location: {
-      ...(b.location ?? {}),
-      ...(b.followup_index ? { followup_index: b.followup_index } : {}),
-      ...(b.question_position ? { question_position: b.question_position } : {}),
-    },
+/** Map validated drafts to recognized_blocks rows, resolving question ids. */
+export function blocksToRows(
+  blocks: RecognizedBlockDraft[],
+  ctx: {
+    pageImageId: string;
+    userId: string;
+    questions: RecognitionQuestionContext[];
+  },
+): Array<Record<string, unknown>> {
+  const idByPosition = new Map<number, string>();
+  for (const q of ctx.questions) idByPosition.set(q.position, q.id);
+  return blocks.map((b) => ({
+    page_image_id: ctx.pageImageId,
+    user_id: ctx.userId,
     text: b.text,
     confidence: b.confidence,
     annotation_type: b.annotation_type,
-    linked_question_id: b.question_position
-      ? (byPosition.get(b.question_position) ?? null)
-      : null,
-    linked_anchor: b.linked_anchor,
+    interpretation_confidence: b.interpretation_confidence,
+    location: b.location,
+    linked_question_id:
+      b.question_position !== null ? (idByPosition.get(b.question_position) ?? null) : null,
+    linked_anchor: b.anchor,
   }));
 }

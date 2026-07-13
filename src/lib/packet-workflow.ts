@@ -134,6 +134,16 @@ export async function getPiece(pieceId: string): Promise<PacketPiece | null> {
   return (data as PacketPiece) ?? null;
 }
 
+export async function getPacketById(packetId: string): Promise<Packet | null> {
+  const { data, error } = await supabase
+    .from("packets")
+    .select("*")
+    .eq("id", packetId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as Packet) ?? null;
+}
+
 export async function listPacketsByPiece(pieceId: string): Promise<Packet[]> {
   const { data, error } = await supabase
     .from("packets")
@@ -274,7 +284,6 @@ export function deriveReturnUiStatus(input: {
   hasVerification: boolean;
 }): ReturnUiStatus {
   if (input.hasVerification) return "verified";
-  if (input.returnStatus === "failed") return "failed";
   const total = input.pages.length;
   const analyzed = input.pages.filter((p) => p.status === "analyzed").length;
   const failed = input.pages.filter((p) => p.status === "failed").length;
@@ -282,7 +291,7 @@ export function deriveReturnUiStatus(input: {
   if (inFlight) return "recognizing";
   if (total > 0) {
     if (analyzed > 0 && analyzed + failed === total) return "needs_review";
-    if (failed === total) return "failed";
+    if (failed === total) return "failed"; // every photo needs a retake
     return "collecting";
   }
   // Dictation-only return: reviewable as soon as a segment exists.

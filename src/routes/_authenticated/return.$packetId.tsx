@@ -5,22 +5,19 @@ import { useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { brand, pageTitle } from "@/config/brand";
 import { useDictation } from "@/hooks/use-dictation";
-import { recognizeReturn, type RecognizePageResult } from "@/lib/packet-return.functions";
 import {
-  addDictationSegment,
-  deleteDictationSegment,
-  deletePageImage,
-  getReturn,
+  analyzeReturnedPage,
+  createReturnUpload,
+  submitDictation,
+} from "@/lib/packet-return.functions";
+import {
+  deriveReturnUiStatus,
+  getPacketById,
   listDictationSegments,
   listPageImages,
-  markReturnNeedsReview,
-  registerPageImage,
-  updateDictationSegment,
-  updatePageImage,
-  updateReturnMethod,
+  listReturnsByPackets,
   type DictationSegment,
   type PageImage,
-  type PacketReturn,
 } from "@/lib/packet-workflow";
 import { listPacketQuestions, type PacketQuestion } from "@/lib/packets";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,7 +25,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Return your completed packet: photograph the pages (mobile-first camera
 // capture), dictate responses, or both. Uploading, recognition, and review
 // are free — credits attach to generation only.
-export const Route = createFileRoute("/_authenticated/return/$returnId")({
+//
+// All writes go through Edge Functions (create-student-return-upload,
+// analyze-returned-page, submit-dictation); this page only reads rows and
+// signed URLs. Keyed by packet id: the return row itself is created
+// server-side on the first upload or dictation.
+export const Route = createFileRoute("/_authenticated/return/$packetId")({
   head: () => ({
     meta: [{ title: pageTitle("Return your work") }, { name: "robots", content: "noindex" }],
   }),
@@ -36,138 +38,176 @@ export const Route = createFileRoute("/_authenticated/return/$returnId")({
 });
 
 const MAX_PAGE_BYTES = 15 * 1024 * 1024;
+const MAX_PAGES = 20;
 const primaryBtn =
   "inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto";
 const secondaryBtn =
   "inline-flex min-h-11 items-center justify-center rounded-md border border-border px-3 text-xs font-medium hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-40";
 
+type QualityIssue = { code: string; message: string };
+
 function ReturnPage() {
-  const { returnId } = Route.useParams();
+  const { packetId } = Route.useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const recognize = useServerFn(recognizeReturn);
+  const createUpload = useServerFn(createReturnUpload);
+  const analyzePage = useServerFn(analyzeReturnedPage);
   const [error, setError] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const [progress, setProgress] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const [pageFeedback, setPageFeedback] = useState<RecognizePageResult[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["return", returnId],
+    queryKey: ["return-by-packet", packetId],
     queryFn: async () => {
-      const ret = await getReturn(returnId);
-      if (!ret) return { ret: null, pages: [], segments: [], questions: [] };
-      const [pages, segments, questions] = await Promise.all([
-        listPageImages(returnId),
-        listDictationSegments(returnId),
-        listPacketQuestions(ret.packet_id),
+      const packet = await getPacketById(packetId);
+      if (!packet) {
+        return { packet: null, ret: null, pages: [], segments: [], questions: [] };
+      }
+      const [returns, questions] = await Promise.all([
+        listReturnsByPackets([packetId]),
+        listPacketQuestions(packetId),
       ]);
-      return { ret, pages, segments, questions };
+      const ret = returns[0] ?? null;
+      const [pages, segments] = ret
+        ? await Promise.all([listPageImages(ret.id), listDictationSegments(ret.id)])
+        : [[] as PageImage[], [] as DictationSegment[]];
+      return { packet, ret, pages, segments, questions };
     },
   });
 
+  const packet = data?.packet ?? null;
   const ret = data?.ret ?? null;
   const pages = data?.pages ?? [];
   const segments = data?.segments ?? [];
   const questions = data?.questions ?? [];
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["return", returnId] });
+  const uiStatus = ret
+    ? deriveReturnUiStatus({
+        returnStatus: ret.status,
+        pages,
+        segmentCount: segments.length,
+        // The review page owns verification; while collecting, treat as not verified.
+        hasVerification: false,
+      })
+    : "collecting";
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ["return-by-packet", packetId] });
 
   async function addPhotos(picked: FileList | null) {
-    if (!picked || !ret) return;
+    if (!picked || !packet) return;
     setError(null);
     const files = Array.from(picked).filter((f) => f.type.startsWith("image/"));
+    if (files.length === 0) return;
     const tooBig = files.find((f) => f.size > MAX_PAGE_BYTES);
     if (tooBig) {
       setError(`${tooBig.name} is larger than 15 MB — most phone photos are well under that.`);
       return;
     }
+    if (pages.length + files.length > MAX_PAGES) {
+      setError(`A return holds up to ${MAX_PAGES} page photos.`);
+      return;
+    }
     try {
-      const { data: userData, error: userErr } = await supabase.auth.getUser();
-      if (userErr || !userData.user) throw new Error("Not signed in");
-      const userId = userData.user.id;
-      let position = (pages[pages.length - 1]?.position ?? -1) + 1;
-      for (let i = 0; i < files.length; i++) {
-        const f = files[i];
-        setUploadProgress(`Uploading page photo ${i + 1} of ${files.length}…`);
-        const ext = (f.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
-        const path = `${userId}/${returnId}/${Date.now()}-${i}.${ext || "jpg"}`;
-        const { error: upErr } = await supabase.storage.from("packet-returns").upload(path, f, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: f.type || "image/jpeg",
-        });
+      setProgress(`Preparing ${files.length} upload${files.length === 1 ? "" : "s"}…`);
+      const { uploads } = await createUpload({
+        data: {
+          packetId,
+          returnId: ret?.id ?? null,
+          pages: files.map((f) => ({ contentType: f.type || "image/jpeg" })),
+        },
+      });
+      for (let i = 0; i < uploads.length; i++) {
+        setProgress(`Uploading page photo ${i + 1} of ${uploads.length}…`);
+        const { error: upErr } = await supabase.storage
+          .from("packet-returns")
+          .uploadToSignedUrl(uploads[i].storagePath, uploads[i].token, files[i], {
+            contentType: files[i].type || "image/jpeg",
+          });
         if (upErr) throw new Error(`Upload failed: ${upErr.message}`);
-        await registerPageImage({ returnId, storagePath: path, position });
-        position += 1;
       }
       await invalidate();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
-      setUploadProgress(null);
+      setProgress(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       if (cameraInputRef.current) cameraInputRef.current.value = "";
     }
   }
 
-  async function movePage(page: PageImage, dir: -1 | 1) {
-    const idx = pages.findIndex((p) => p.id === page.id);
-    const other = pages[idx + dir];
-    if (!other) return;
+  async function retakePage(page: PageImage, file: File) {
+    if (!packet || !ret) return;
     setError(null);
     try {
-      await Promise.all([
-        updatePageImage(page.id, { position: other.position }),
-        updatePageImage(other.id, { position: page.position }),
-      ]);
+      setProgress("Uploading the retake…");
+      const { uploads } = await createUpload({
+        data: {
+          packetId,
+          returnId: ret.id,
+          pages: [{ pageNumber: page.page_number ?? undefined, contentType: file.type }],
+        },
+      });
+      const u = uploads[0];
+      const { error: upErr } = await supabase.storage
+        .from("packet-returns")
+        .uploadToSignedUrl(u.storagePath, u.token, file, {
+          contentType: file.type || "image/jpeg",
+        });
+      if (upErr) throw new Error(`Upload failed: ${upErr.message}`);
       await invalidate();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Reorder failed");
+      setError(err instanceof Error ? err.message : "Retake failed");
+    } finally {
+      setProgress(null);
     }
   }
 
-  async function removePage(page: PageImage) {
-    setError(null);
-    try {
-      await deletePageImage(page);
-      await invalidate();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Remove failed");
-    }
+  /** The return row is created lazily on the first photo or dictation. */
+  async function ensureReturnId(): Promise<string> {
+    if (ret) return ret.id;
+    const { returnId } = await createUpload({ data: { packetId, pages: [] } });
+    await invalidate();
+    return returnId;
   }
 
-  const hasPhotos = ret?.method === "photos" || ret?.method === "mixed";
-  const hasDictation = ret?.method === "dictation" || ret?.method === "mixed";
-  const unrecognizedPages = pages.filter((p) => p.status !== "recognized");
-  const canSend = pages.length > 0 || segments.length > 0;
+  const pendingPages = pages.filter((p) => p.status === "uploaded");
+  const failedPages = pages.filter((p) => p.status === "failed");
+  const canSend = pendingPages.length > 0 || (pages.length === 0 && segments.length > 0);
+  const readyForReview = ret && uiStatus === "needs_review";
 
   async function sendForReading() {
-    if (!ret || sending) return;
+    if (sending) return;
     setSending(true);
     setError(null);
-    setPageFeedback([]);
     try {
-      if (pages.length > 0) {
-        const result = await recognize({ data: { returnId } });
-        setPageFeedback(result.pages ?? []);
+      if (pendingPages.length > 0) {
+        let readable = 0;
+        for (let i = 0; i < pendingPages.length; i++) {
+          setProgress(`Reading page photo ${i + 1} of ${pendingPages.length}…`);
+          const result = await analyzePage({ data: { pageImageId: pendingPages[i].id } });
+          const quality = (result as { quality?: { ok: boolean } }).quality;
+          if (quality?.ok !== false) readable += 1;
+        }
+        setProgress(null);
         await invalidate();
-        if (result.status === "needs_review") {
-          router.navigate({ to: "/review/$returnId", params: { returnId } });
+        if (readable === pendingPages.length && failedPages.length === 0 && ret) {
+          router.navigate({ to: "/review/$returnId", params: { returnId: ret.id } });
           return;
         }
         setError(
-          "The pages couldn't be read — see the notes on each photo below, retake them, and send again. You were not charged.",
+          "Some photos couldn't be read — each one below says why. Retake those pages and send again. Reading is free, so retries cost nothing.",
         );
-      } else {
-        // Dictation-only: nothing to recognize; go straight to review.
-        await markReturnNeedsReview(returnId);
-        router.navigate({ to: "/review/$returnId", params: { returnId } });
+      } else if (segments.length > 0 && ret) {
+        // Dictation-only: nothing to recognize; straight to review.
+        router.navigate({ to: "/review/$returnId", params: { returnId: ret.id } });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send for reading");
     } finally {
+      setProgress(null);
       setSending(false);
     }
   }
@@ -185,11 +225,11 @@ function ReturnPage() {
             page in frame — and/or dictate your answers. Returning and reading your work is free.
           </p>
         </div>
-        {ret && (
+        {packet && (
           <Link
             to="/project/$pieceId"
-            params={{ pieceId: ret.piece_id }}
-            className="inline-flex min-h-11 shrink-0 items-center text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 rounded-sm sm:min-h-0"
+            params={{ pieceId: packet.piece_id }}
+            className="inline-flex min-h-11 shrink-0 items-center rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 sm:min-h-0"
           >
             ← Back to project
           </Link>
@@ -203,27 +243,22 @@ function ReturnPage() {
         </div>
       )}
 
-      {!isLoading && !ret && (
+      {!isLoading && !packet && (
         <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
-          Return not found. It may belong to another account.
+          Packet not found. It may belong to another account.
         </div>
       )}
 
-      {ret && (ret.status === "needs_review" || ret.status === "verified") && (
+      {readyForReview && (
         <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm">
-          {ret.status === "verified"
-            ? "This return is verified."
-            : "Your work has been read and is waiting for your review."}{" "}
-          <Link to="/review/$returnId" params={{ returnId }} className="font-medium underline">
-            {ret.status === "verified" ? "See the verified set →" : "Review what was read →"}
+          Your work has been read and is waiting for your review.{" "}
+          <Link
+            to="/review/$returnId"
+            params={{ returnId: ret.id }}
+            className="font-medium underline"
+          >
+            Review what was read →
           </Link>
-        </div>
-      )}
-
-      {ret && ret.status === "recognizing" && (
-        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
-          Your pages are being read — this takes a minute or two. This page updates when it's
-          done.
         </div>
       )}
 
@@ -236,12 +271,12 @@ function ReturnPage() {
         </p>
       )}
 
-      {ret && hasPhotos && (
+      {packet && (
         <section className="space-y-4 rounded-xl border border-border bg-card p-4 text-card-foreground sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-serif text-2xl tracking-tight">Page photos</h2>
             <span className="text-xs text-muted-foreground">
-              {pages.length} page{pages.length === 1 ? "" : "s"}
+              {pages.length} of {MAX_PAGES} page{pages.length === 1 ? "" : "s"}
             </span>
           </div>
 
@@ -276,82 +311,53 @@ function ReturnPage() {
             </label>
           </div>
 
-          {uploadProgress && (
-            <p className="rounded-md border border-border bg-background/60 px-3 py-2 text-xs text-muted-foreground">
-              {uploadProgress}
+          {progress && (
+            <p
+              aria-live="polite"
+              className="rounded-md border border-border bg-background/60 px-3 py-2 text-xs text-muted-foreground"
+            >
+              {progress}
             </p>
           )}
 
           {pages.length > 0 && (
             <ul className="divide-y divide-border rounded-md border border-border bg-background/40">
               {pages.map((p, i) => (
-                <PageRow
-                  key={p.id}
-                  page={p}
-                  index={i}
-                  count={pages.length}
-                  feedback={pageFeedback.find((f) => f.pageImageId === p.id)}
-                  onMove={movePage}
-                  onRemove={removePage}
-                  onPageNumber={async (n) => {
-                    try {
-                      await updatePageImage(p.id, { page_number: n });
-                      await invalidate();
-                    } catch (err) {
-                      setError(err instanceof Error ? err.message : "Update failed");
-                    }
-                  }}
-                />
+                <PageRow key={p.id} page={p} index={i} onRetake={retakePage} />
               ))}
             </ul>
           )}
         </section>
       )}
 
-      {ret && hasDictation && (
+      {packet && (
         <DictationSection
-          returnId={returnId}
+          packetId={packetId}
           questions={questions}
           segments={segments}
+          ensureReturnId={ensureReturnId}
           onChanged={invalidate}
           onError={setError}
         />
       )}
 
-      {ret && ret.status === "collecting" && (
+      {packet && !readyForReview && (
         <div className="flex flex-col gap-3 border-t border-border/60 pt-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1 text-xs text-muted-foreground">
-            <p>Reading your work is free — no credits are used.</p>
-            {ret.method !== "mixed" && (
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    await updateReturnMethod(returnId, "mixed");
-                    await invalidate();
-                  } catch (err) {
-                    setError(err instanceof Error ? err.message : "Update failed");
-                  }
-                }}
-                className="underline hover:text-foreground"
-              >
-                {ret.method === "photos" ? "Add dictation too" : "Add page photos too"}
-              </button>
-            )}
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Reading your work is free — no credits are used. You can leave and come back; nothing
+            here is lost.
+          </p>
           <button
             type="button"
             onClick={sendForReading}
-            disabled={!canSend || sending || uploadProgress !== null}
+            disabled={!canSend || sending || progress !== null}
             aria-busy={sending}
             className={primaryBtn}
           >
             {sending
               ? "Reading your pages…"
-              : pages.length > 0
-                ? unrecognizedPages.length === 0
-                  ? "Continue to review →"
-                  : "Send for reading →"
+              : pendingPages.length > 0
+                ? "Send for reading →"
                 : "Continue to review →"}
           </button>
         </div>
@@ -363,22 +369,15 @@ function ReturnPage() {
 function PageRow({
   page,
   index,
-  count,
-  feedback,
-  onMove,
-  onRemove,
-  onPageNumber,
+  onRetake,
 }: {
   page: PageImage;
   index: number;
-  count: number;
-  feedback?: RecognizePageResult;
-  onMove: (page: PageImage, dir: -1 | 1) => Promise<void>;
-  onRemove: (page: PageImage) => Promise<void>;
-  onPageNumber: (n: number | null) => Promise<void>;
+  onRetake: (page: PageImage, file: File) => Promise<void>;
 }) {
+  const retakeRef = useRef<HTMLInputElement>(null);
   const { data: url } = useQuery({
-    queryKey: ["page-image-url", page.id],
+    queryKey: ["page-image-url", page.id, page.storage_path],
     queryFn: async () => {
       const { data, error } = await supabase.storage
         .from("packet-returns")
@@ -389,8 +388,10 @@ function PageRow({
     staleTime: 25 * 60 * 1000,
   });
 
-  const issues = feedback?.issues ?? page.quality?.issues ?? [];
-  const rejected = page.status === "rejected" || page.status === "failed";
+  const failed = page.status === "failed";
+  const issues = failed
+    ? (((page.quality as { issues?: QualityIssue[] } | null)?.issues ?? []) as QualityIssue[])
+    : [];
 
   return (
     <li className="flex gap-3 p-3">
@@ -406,90 +407,81 @@ function PageRow({
       </div>
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="font-medium">Photo {index + 1}</span>
+          <span className="font-medium">
+            {page.page_number ? `Page ${page.page_number}` : `Photo ${index + 1}`}
+          </span>
           <span
             className={
               "rounded-full border px-2 py-0.5 " +
-              (page.status === "recognized"
+              (page.status === "analyzed"
                 ? "border-emerald-500/40 bg-emerald-500/10"
-                : rejected
+                : failed
                   ? "border-destructive/40 bg-destructive/10 text-destructive"
-                  : "border-border text-muted-foreground")
+                  : page.status === "analyzing"
+                    ? "border-amber-500/40 bg-amber-500/10"
+                    : "border-border text-muted-foreground")
             }
           >
-            {page.status === "recognized"
+            {page.status === "analyzed"
               ? "read"
-              : rejected
+              : failed
                 ? "needs a retake"
-                : "ready to send"}
+                : page.status === "analyzing"
+                  ? "reading…"
+                  : "ready to send"}
           </span>
         </div>
-        {issues.length > 0 && rejected && (
+        {issues.length > 0 && (
           <ul className="space-y-0.5 text-xs text-destructive">
             {issues.map((iss, j) => (
               <li key={j}>{iss.message}</li>
             ))}
           </ul>
         )}
-        <label className="flex items-center gap-2 text-xs text-muted-foreground">
-          Packet page #
-          <input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            defaultValue={page.page_number ?? ""}
-            onBlur={(e) => {
-              const v = e.target.value === "" ? null : Number(e.target.value);
-              if (v !== page.page_number) void onPageNumber(v);
-            }}
-            className="w-16 min-h-9 rounded-md border border-input bg-background/60 px-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-xs"
-          />
-        </label>
-        <div className="flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            onClick={() => void onMove(page, -1)}
-            disabled={index === 0}
-            className={secondaryBtn}
-            aria-label={`Move photo ${index + 1} earlier`}
-          >
-            ↑
-          </button>
-          <button
-            type="button"
-            onClick={() => void onMove(page, 1)}
-            disabled={index === count - 1}
-            className={secondaryBtn}
-            aria-label={`Move photo ${index + 1} later`}
-          >
-            ↓
-          </button>
-          <button
-            type="button"
-            onClick={() => void onRemove(page)}
-            className={secondaryBtn + " text-muted-foreground hover:text-destructive"}
-          >
-            {rejected ? "Remove & retake" : "Remove"}
-          </button>
-        </div>
+        {failed && (
+          <div>
+            <input
+              ref={retakeRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void onRetake(page, f);
+                e.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => retakeRef.current?.click()}
+              className={secondaryBtn}
+            >
+              Retake this page
+            </button>
+          </div>
+        )}
       </div>
     </li>
   );
 }
 
 function DictationSection({
-  returnId,
+  packetId,
   questions,
   segments,
+  ensureReturnId,
   onChanged,
   onError,
 }: {
-  returnId: string;
+  packetId: string;
   questions: PacketQuestion[];
   segments: DictationSegment[];
+  ensureReturnId: () => Promise<string>;
   onChanged: () => Promise<unknown>;
   onError: (m: string | null) => void;
 }) {
+  const submit = useServerFn(submitDictation);
   const [draft, setDraft] = useState("");
   const [questionId, setQuestionId] = useState<string>("");
   const [saving, setSaving] = useState(false);
@@ -503,11 +495,15 @@ function DictationSection({
     setSaving(true);
     onError(null);
     try {
-      await addDictationSegment({
-        returnId,
-        transcript: text,
-        position: (segments[segments.length - 1]?.position ?? -1) + 1,
-        linkedQuestionId: questionId || null,
+      const returnId = await ensureReturnId();
+      await submit({
+        data: {
+          packetId,
+          returnId,
+          transcript: text,
+          resolvedTarget: questionId ? { questionId } : {},
+          segmentOrder: (segments[segments.length - 1]?.segment_order ?? -1) + 1,
+        },
       });
       setDraft("");
       setQuestionId("");
@@ -524,7 +520,8 @@ function DictationSection({
       <h2 className="font-serif text-2xl tracking-tight">Dictate your answers</h2>
       <p className="text-sm leading-relaxed text-muted-foreground">
         Speak one answer at a time, review the transcript, tell us which question it answers, then
-        save it. You can also type instead of speaking.
+        save it. You can also type instead of speaking. Saved answers are corrected later, on the
+        review screen.
       </p>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -604,7 +601,7 @@ function DictationSection({
         <select
           value={questionId}
           onChange={(e) => setQuestionId(e.target.value)}
-          className="w-full min-h-11 rounded-md border border-input bg-background/60 px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-sm"
+          className="min-h-11 w-full rounded-md border border-input bg-background/60 px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-sm"
         >
           <option value="">Not tied to one question (general note)</option>
           {questions.map((q, i) => (
@@ -627,112 +624,21 @@ function DictationSection({
 
       {segments.length > 0 && (
         <ul className="divide-y divide-border rounded-md border border-border bg-background/40">
-          {segments.map((s, i) => (
-            <SegmentRow
-              key={s.id}
-              segment={s}
-              index={i}
-              questions={questions}
-              onChanged={onChanged}
-              onError={onError}
-            />
-          ))}
+          {segments.map((s, i) => {
+            const qid = (s.resolved_target as { questionId?: string } | null)?.questionId;
+            const qIndex = qid ? questions.findIndex((q) => q.id === qid) : -1;
+            return (
+              <li key={s.id} className="space-y-1 p-3 text-sm">
+                <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-wider text-muted-foreground">
+                  <span className="font-mono font-semibold text-foreground">#{i + 1}</span>
+                  <span>{qIndex >= 0 ? `answers Q${qIndex + 1}` : "general note"}</span>
+                </div>
+                <p className="leading-relaxed">{s.transcript}</p>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
-  );
-}
-
-function SegmentRow({
-  segment,
-  index,
-  questions,
-  onChanged,
-  onError,
-}: {
-  segment: DictationSegment;
-  index: number;
-  questions: PacketQuestion[];
-  onChanged: () => Promise<unknown>;
-  onError: (m: string | null) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(segment.transcript);
-  const qIndex = questions.findIndex((q) => q.id === segment.linked_question_id);
-
-  async function save() {
-    onError(null);
-    try {
-      await updateDictationSegment(segment.id, { transcript: draft.trim() });
-      setEditing(false);
-      await onChanged();
-    } catch (err) {
-      onError(err instanceof Error ? err.message : "Save failed");
-    }
-  }
-
-  async function remove() {
-    onError(null);
-    try {
-      await deleteDictationSegment(segment.id);
-      await onChanged();
-    } catch (err) {
-      onError(err instanceof Error ? err.message : "Delete failed");
-    }
-  }
-
-  return (
-    <li className="space-y-2 p-3 text-sm">
-      <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-wider text-muted-foreground">
-        <span className="font-mono font-semibold text-foreground">#{index + 1}</span>
-        <span>{qIndex >= 0 ? `answers Q${qIndex + 1}` : "general note"}</span>
-      </div>
-      {editing ? (
-        <div className="space-y-2">
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            rows={3}
-            className="w-full resize-y rounded-md border border-input bg-background/60 px-3 py-2 text-base leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-sm"
-          />
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={save}
-              disabled={draft.trim() === ""}
-              className={secondaryBtn}
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setDraft(segment.transcript);
-                setEditing(false);
-              }}
-              className={secondaryBtn}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : (
-        <>
-          <p className="leading-relaxed">{segment.transcript}</p>
-          <div className="flex gap-1.5">
-            <button type="button" onClick={() => setEditing(true)} className={secondaryBtn}>
-              Edit
-            </button>
-            <button
-              type="button"
-              onClick={remove}
-              className={secondaryBtn + " text-muted-foreground hover:text-destructive"}
-            >
-              Remove
-            </button>
-          </div>
-        </>
-      )}
-    </li>
   );
 }

@@ -273,40 +273,59 @@ function StageCard({ view, pieceId }: { view: PacketWorkflowView; pieceId: strin
           own. Use dark ink and keep the page numbers visible.
         </p>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Link to="/print/$runId" params={{ runId: packetRunId }} className={primaryBtn}>
+          <Link to="/print/$runId" params={{ runId: packetRunId }} className={secondaryBtn}>
             Print the packet
           </Link>
+          {view.packet && (
+            <Link
+              to="/return/$packetId"
+              params={{ packetId: view.packet.id }}
+              className={primaryBtn}
+            >
+              I'm done — return my work
+            </Link>
+          )}
         </div>
         <p className="text-xs text-muted-foreground">
-          When you've finished on paper, come back here to return your work.
+          When you've finished on paper, return your pages as photos, dictate your answers, or both.
+          Returning and reading are free.
         </p>
       </StageShell>
     );
   }
 
-  // Stages beyond Think are implemented in the return/verification and
-  // follow-up phases; the hub shows honest status for rows that exist.
-  if (view.current === "return") {
+  if (view.current === "return" && view.packet) {
     return (
       <StageShell title="Return" status="Waiting for your pages">
-        <p>Your return is open. Continue uploading pages or dictating responses.</p>
+        <p>
+          Your return is open — continue photographing pages or dictating answers, then send it for
+          reading. You can leave and come back; nothing is lost.
+        </p>
+        <Link to="/return/$packetId" params={{ packetId: view.packet.id }} className={primaryBtn}>
+          Continue returning your work
+        </Link>
       </StageShell>
     );
   }
 
   if (view.current === "review") {
+    const recognizing = view.latestReturn?.status === "recognizing";
     return (
-      <StageShell
-        title="Review"
-        status={
-          view.latestReturn?.status === "recognizing" ? "Reading your notes…" : "Ready for review"
-        }
-      >
+      <StageShell title="Review" status={recognizing ? "Reading your notes…" : "Ready for review"}>
         <p>
-          {view.latestReturn?.status === "recognizing"
-            ? "Your pages are being read. This takes a minute or two."
-            : "Your returned work has been read. Review what the system understood and correct anything it got wrong."}
+          {recognizing
+            ? "Your pages are being read. This takes a minute or two — this page updates on its own."
+            : "Your returned work has been read. Check what the system understood, fix anything it got wrong, and approve. Only your approved words move forward."}
         </p>
+        {!recognizing && view.latestReturn && (
+          <Link
+            to="/review/$returnId"
+            params={{ returnId: view.latestReturn.id }}
+            className={primaryBtn}
+          >
+            Review what was read
+          </Link>
+        )}
       </StageShell>
     );
   }

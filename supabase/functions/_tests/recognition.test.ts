@@ -1,160 +1,158 @@
-// Handwriting-recognition contract tests: the prompt's non-negotiables, the
-// parser's fabrication guards, and the block → row mapping (question
-// linking, attempt versioning inputs).
+// Handwriting-recognition contract tests: prompt construction (question
+// context + no-fabrication rules), model-output validation (fabrication
+// guards, confidence clamping, quality gate), and block → row mapping
+// (question-position resolution).
 
 import { assert, assertEquals, assertThrows } from "jsr:@std/assert@1";
 import {
+  LOW_CONFIDENCE_THRESHOLD,
   blocksToRows,
   buildRecognitionPrompt,
   parseRecognitionResult,
+  type RecognitionQuestionContext,
 } from "../_shared/recognition.ts";
 
-const QUESTIONS = [
-  { id: "q-one", position: 1, prompt: "How does the 2019 audit affect claim C2?" },
-  { id: "q-two", position: 2, prompt: "Which stakeholder does source S3 leave out?" },
+const QUESTIONS: RecognitionQuestionContext[] = [
+  { id: "q-aaa", position: 1, prompt: "What did you believe before reading?" },
+  { id: "q-bbb", position: 2, prompt: "Which claim has the weakest evidence?" },
 ];
 
 // ---------------------------------------------------------------- prompt
 
-Deno.test("prompt: includes questions, forbids fabrication, asks for JSON", () => {
+Deno.test("recognition prompt: carries the packet questions and the no-fabrication rule", () => {
   const p = buildRecognitionPrompt(QUESTIONS);
-  assert(p.includes("Q1: How does the 2019 audit affect claim C2?"));
-  assert(p.includes("Q2: Which stakeholder does source S3 leave out?"));
-  assert(p.includes("NEVER guess or invent words"));
-  assert(p.includes("Do not transcribe printed text"));
-  assert(p.includes('"quality"'));
-  assert(p.includes("F.1, F.2, F.3"));
+  assert(p.includes("Q1 (id q-aaa): What did you believe before reading?"));
+  assert(p.includes("Q2 (id q-bbb): Which claim has the weakest evidence?"));
+  assert(p.includes("NEVER invent"));
+  assert(p.includes("question_position"));
+  assert(p.includes("STRICT JSON"));
 });
 
-// ---------------------------------------------------------------- parser
+Deno.test("recognition prompt: survives an empty question list", () => {
+  const p = buildRecognitionPrompt([]);
+  assert(p.includes("no questions available"));
+});
 
-Deno.test("parser: valid document parses with blocks in order", () => {
-  const out = parseRecognitionResult(
+// ---------------------------------------------------------------- parsing
+
+Deno.test("parse: valid payload with quality, page number, and blocks", () => {
+  const result = parseRecognitionResult(
     JSON.stringify({
       quality: { ok: true, issues: [] },
       page_number: 3,
       blocks: [
         {
-          kind: "response",
-          text: "The audit shows the data was incomplete",
-          confidence: 0.91,
+          text: "I assumed remote work reduced output.",
+          confidence: 0.92,
+          annotation_type: "response",
+          location: { description: "ruled space under Q1" },
           question_position: 1,
+          anchor: null,
+          interpretation_confidence: 0.9,
         },
-        { kind: "annotation", text: "", annotation_type: "circle", location: { area: "S2P1" } },
       ],
     }),
   );
-  assertEquals(out.page_number, 3);
-  assertEquals(out.blocks.length, 2);
-  assertEquals(out.blocks[0].position, 0);
-  assertEquals(out.blocks[1].kind, "annotation");
+  assertEquals(result.quality.ok, true);
+  assertEquals(result.page_number, 3);
+  assertEquals(result.blocks.length, 1);
+  assertEquals(result.blocks[0].question_position, 1);
 });
 
-Deno.test("parser: tolerates a fenced code block", () => {
-  const out = parseRecognitionResult(
-    '```json\n{"quality":{"ok":true,"issues":[]},"page_number":null,"blocks":[]}\n```',
-  );
-  assertEquals(out.blocks.length, 0);
+Deno.test("parse: throws on non-JSON output", () => {
+  assertThrows(() => parseRecognitionResult("the page shows..."), Error, "not valid JSON");
 });
 
-Deno.test("parser: throws on non-JSON (page marked failed, never guessed)", () => {
-  assertThrows(() => parseRecognitionResult("I could not read this page, sorry!"));
-  assertThrows(() => parseRecognitionResult("[1,2,3]"));
-});
-
-Deno.test("parser: empty text forces null confidence (no phantom certainty)", () => {
-  const out = parseRecognitionResult(
+Deno.test("parse: drops information-free blocks (fabrication guard)", () => {
+  const result = parseRecognitionResult(
     JSON.stringify({
       quality: { ok: true, issues: [] },
-      page_number: null,
-      blocks: [{ kind: "response", text: "", confidence: 0.95, location: { area: "q1" } }],
-    }),
-  );
-  assertEquals(out.blocks.length, 1);
-  assertEquals(out.blocks[0].confidence, null);
-  assertEquals(out.blocks[0].text, "");
-});
-
-Deno.test("parser: text without confidence floors to 0 so review must see it", () => {
-  const out = parseRecognitionResult(
-    JSON.stringify({
-      quality: { ok: true, issues: [] },
-      page_number: null,
-      blocks: [{ kind: "response", text: "maybe this", confidence: null }],
-    }),
-  );
-  assertEquals(out.blocks[0].confidence, 0);
-});
-
-Deno.test("parser: confidence clamped to [0,1]", () => {
-  const out = parseRecognitionResult(
-    JSON.stringify({
-      quality: { ok: true, issues: [] },
-      page_number: null,
       blocks: [
-        { kind: "response", text: "a", confidence: 7 },
-        { kind: "response", text: "b", confidence: -2 },
+        { text: "   ", confidence: 0.9, annotation_type: "response" },
+        { text: "real words", confidence: 0.7, annotation_type: "margin_note" },
       ],
     }),
   );
-  assertEquals(out.blocks[0].confidence, 1);
-  assertEquals(out.blocks[1].confidence, 0);
+  assertEquals(result.blocks.length, 1);
+  assertEquals(result.blocks[0].text, "real words");
 });
 
-Deno.test("parser: information-free blocks are dropped", () => {
-  const out = parseRecognitionResult(
+Deno.test("parse: clamps confidence into [0,1] and defaults bad annotation types", () => {
+  const result = parseRecognitionResult(
     JSON.stringify({
-      quality: { ok: true, issues: [] },
-      page_number: null,
-      blocks: [{ kind: "note", text: "", confidence: null }],
+      blocks: [
+        { text: "a", confidence: 7, annotation_type: "scribble" },
+        { text: "b", confidence: -2, annotation_type: "underline" },
+      ],
     }),
   );
-  assertEquals(out.blocks.length, 0);
+  assertEquals(result.blocks[0].confidence, 1);
+  assertEquals(result.blocks[0].annotation_type, "other");
+  assertEquals(result.blocks[1].confidence, 0);
 });
 
-Deno.test("parser: quality issues normalize and ok defaults from issues", () => {
-  const out = parseRecognitionResult(
+Deno.test("parse: quality gate carries specific retake reasons", () => {
+  const result = parseRecognitionResult(
     JSON.stringify({
-      quality: { issues: [{ code: "blur" }, { bogus: true }] },
-      page_number: null,
+      quality: {
+        ok: false,
+        issues: [{ code: "cropped", message: "The bottom third is cut off." }],
+      },
       blocks: [],
     }),
   );
-  assertEquals(out.quality.ok, false);
-  assertEquals(out.quality.issues, [{ code: "blur", message: "blur" }]);
+  assertEquals(result.quality.ok, false);
+  assertEquals(result.quality.issues[0].code, "cropped");
+});
+
+Deno.test("parse: low-confidence threshold is between 0 and 1", () => {
+  assert(LOW_CONFIDENCE_THRESHOLD > 0 && LOW_CONFIDENCE_THRESHOLD < 1);
 });
 
 // ---------------------------------------------------------------- rows
 
-Deno.test("rows: question positions resolve to packet question ids", () => {
+Deno.test("rows: resolves question_position to the packet question id", () => {
   const parsed = parseRecognitionResult(
     JSON.stringify({
-      quality: { ok: true, issues: [] },
-      page_number: 2,
       blocks: [
-        { kind: "response", text: "answer one", confidence: 0.8, question_position: 1 },
-        { kind: "response", text: "answer nine", confidence: 0.8, question_position: 9 },
-        { kind: "followup", text: "what about X?", confidence: 0.7, followup_index: 2 },
+        { text: "answer one", confidence: 0.8, annotation_type: "response", question_position: 2 },
+        { text: "loose note", confidence: 0.6, annotation_type: "margin_note" },
+        { text: "ghost", confidence: 0.5, annotation_type: "response", question_position: 9 },
       ],
     }),
   );
-  const rows = blocksToRows({
+  const rows = blocksToRows(parsed.blocks, {
     pageImageId: "img-1",
-    returnId: "ret-1",
-    userId: "u-1",
-    attempt: 2,
-    blocks: parsed.blocks,
+    userId: "user-1",
     questions: QUESTIONS,
   });
-  assertEquals(rows.length, 3);
-  assertEquals(rows[0].linked_question_id, "q-one");
-  assertEquals(rows[1].linked_question_id, null); // unknown Q stays unlinked
+  assertEquals(rows[0].linked_question_id, "q-bbb");
+  assertEquals(rows[1].linked_question_id, null);
+  // Unknown positions never link to a random question.
   assertEquals(rows[2].linked_question_id, null);
-  assertEquals((rows[2].location as Record<string, unknown>).followup_index, 2);
-  // Attempt versioning + unique (page, attempt, position) inputs.
-  for (const [i, r] of rows.entries()) {
-    assertEquals(r.attempt, 2);
-    assertEquals(r.position, i);
-    assertEquals(r.page_image_id, "img-1");
-  }
+  assertEquals(rows[0].page_image_id, "img-1");
+  assertEquals(rows[0].user_id, "user-1");
+});
+
+Deno.test("rows: preserves anchors and interpretation confidence", () => {
+  const parsed = parseRecognitionResult(
+    JSON.stringify({
+      blocks: [
+        {
+          text: "research further",
+          confidence: 0.75,
+          annotation_type: "margin_note",
+          anchor: "S2P4",
+          interpretation_confidence: 0.55,
+        },
+      ],
+    }),
+  );
+  const rows = blocksToRows(parsed.blocks, {
+    pageImageId: "img-1",
+    userId: "user-1",
+    questions: [],
+  });
+  assertEquals(rows[0].linked_anchor, "S2P4");
+  assertEquals(rows[0].interpretation_confidence, 0.55);
 });

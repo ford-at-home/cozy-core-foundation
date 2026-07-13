@@ -49,8 +49,8 @@ All responses: JSON. Standard error shape: `{ error, code, requestId }`.
 
 | Function | Body | Response | Billable |
 | --- | --- | --- | --- |
-| `create-student-return-upload` | `{ packetId, pages: [{pageNumber?, contentType?}] }` (≤20) | `201 { returnId, uploads: [{pageNumber, storagePath, signedUrl, token}] }` | No |
-| `analyze-returned-page` | `{ pageImageId }` | `200 { pageImageId, blocksInserted }` | No |
+| `create-student-return-upload` | `{ packetId, returnId?, pages: [{pageNumber?, contentType?}] }` (≤20; `returnId` appends to an existing return — the retake loop — and replaces a failed page with the same `pageNumber`; empty `pages` creates a dictation-only return) | `201 { returnId, uploads: [{pageNumber, storagePath, signedUrl, token}] }` | No |
+| `analyze-returned-page` | `{ pageImageId }` | `200 { pageImageId, blocksInserted, quality: {ok, issues: [{code, message}]} }` — `quality.ok=false` means the page needs a retake for the named reasons; blocks carry `linked_question_id` resolved from the packet's questions | No |
 | `submit-dictation` | `{ packetId, transcript, returnId?, resolvedTarget?, segmentOrder?, storagePath? }` | `201 { segmentId }` | No |
 | `verify-student-responses` | `{ pieceId, corrections: [{blockId?|segmentId?, correctedText, correctedMeaning?}] }` (≤500) | `201 { inserted }` | No |
 | `prepare-follow-up-questions` | `{ packetId, questions: string[] (1..3), suggestRefinements?: boolean }` | `201 { count, hasSuggestions }` | No |

@@ -57,6 +57,8 @@ Specification set: `docs/research-workflow/`.
 | `/project/$pieceId`                 | `src/routes/_authenticated/project.$pieceId.tsx` (research-packet guided hub: Research → Print → Think → Return → Review → Follow Up → Finish; stage model derived in `src/lib/packet-stage.ts` from server-persisted rows) |
 | `/packet/$runId`                    | `src/routes/_authenticated/packet.$runId.tsx` (research-packet question review: edit / lock / add / approve) |
 | `/print/$runId`                     | print-for-markup preview + PDF download (packet runs use the packet builder with response areas) |
+| `/return/$packetId`                 | `src/routes/_authenticated/return.$packetId.tsx` (return completed work: camera-first page photos via signed uploads + dictation via `useDictation`; all writes through Edge Functions) |
+| `/review/$returnId`                 | `src/routes/_authenticated/review.$returnId.tsx` (mandatory verification: photo beside recognized text, low-confidence gating, handwriting-vs-dictation conflict resolution, approval via `verify-student-responses`) |
 | `/billing`                          | `src/routes/_authenticated/billing.tsx` (balance, credit packs, purchase history, ledger, checkout return banners) |
 
 ### Mobile (verified — mobile is the primary interface)
@@ -160,8 +162,8 @@ costs up to `agent_runs` and `sessions`. Never write totals directly.
 | `reconcile-runs`          | `verify_jwt = false`; optional `RECONCILE_TOKEN` bearer                | pg_cron sweep: completes runs, settles/releases credits, sweeps stale reservations |
 | `create-checkout-session` | JWT required                                                           | Server-created Stripe Checkout; validates price ids against `credit_products`      |
 | `stripe-webhook`          | `verify_jwt = false`; Stripe signature verification                    | Sole grantor of purchased credits; `stripe_events` inbox dedup                     |
-| `create-student-return-upload` | JWT required + packet ownership check                             | Creates `packet_returns` + `page_images` rows, returns signed upload URLs (≤20 pages) |
-| `analyze-returned-page`   | JWT required + page ownership check                                    | Handwriting extraction via Lovable AI Gateway; writes `recognized_blocks`; idempotent per analyzed page |
+| `create-student-return-upload` | JWT required + packet ownership check                             | Creates (or appends to, for retakes/dictation-only) a `packet_returns` row + `page_images` rows; returns signed upload URLs (≤20 pages) |
+| `analyze-returned-page`   | JWT required + page ownership check                                    | Handwriting extraction via Lovable AI Gateway (`_shared/recognition.ts`: question-linked blocks, quality gate with named retake reasons, no fabrication); records an idempotent inference (`lovable:hwr:{returnId}:{path}`); keeps `packet_returns.status` truthful |
 | `submit-dictation`        | JWT required + packet ownership check                                  | Persists a dictation transcript (`dictation_segments`); transcription itself happens via `/api/transcribe` |
 | `verify-student-responses` | JWT required + piece ownership check                                  | Writes append-only `verification_corrections` (≤500)                               |
 | `prepare-follow-up-questions` | JWT required + packet ownership check                              | Stores 1–3 follow-up questions with optional AI refinement suggestions (never overwrites the student's wording) |
@@ -180,7 +182,11 @@ Shared modules in `supabase/functions/_shared/`: `state.ts` (run state machine),
 missed webhooks), `prompt.ts` (cloud-agent prompt builders, including
 `buildPacketPrompt`), `packet.ts` (packet JSON validation + idempotent
 persistence into `packets`/`packet_questions`, called before a packet run is
-marked completed), `webhook.ts`, `parallel.ts`, `research.ts`,
+marked completed), `recognition.ts` (handwriting-recognition prompt +
+fabrication-guarded output validation + question-id resolution),
+`followup-final.ts` (follow-up/final prompt builders + fetch-back persistors),
+`workflow.ts` (FSM advance + piece events), `http.ts` (JWT auth boilerplate),
+`webhook.ts`, `parallel.ts`, `research.ts`,
 `provider.cursor.ts`, `provider.stub.ts`, `observability.ts`.
 
 ### Run state machine (verified — `_shared/state.ts`)
