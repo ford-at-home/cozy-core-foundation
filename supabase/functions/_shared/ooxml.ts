@@ -93,9 +93,9 @@ export function listZipEntries(bytes: Uint8Array): ZipEntry[] | null {
 }
 
 async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([data.slice()]).stream().pipeThrough(
-    new DecompressionStream("deflate-raw"),
-  );
+  const stream = new Blob([data.slice()])
+    .stream()
+    .pipeThrough(new DecompressionStream("deflate-raw"));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 

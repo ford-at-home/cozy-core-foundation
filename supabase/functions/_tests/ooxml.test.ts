@@ -186,15 +186,18 @@ Deno.test("ooxml: a docx main part with a corrupt deflate stream is rejected", a
   assert(v.reason?.includes("unreadable"));
 });
 
-Deno.test("ooxml: an exotic compression method skips content checks but still passes structure", async () => {
-  const zip = makeZip([
-    { name: "[Content_Types].xml", size: 1200 },
-    { name: "word/styles.xml", size: 3000 },
-    // Method 99 (unknown to the validator): structure-only validation.
-    { name: "word/document.xml", size: 4000, method: 99 },
-  ]);
-  assertEquals(await validateOoxmlArtifact(zip, "docx"), { ok: true });
-});
+Deno.test(
+  "ooxml: an exotic compression method skips content checks but still passes structure",
+  async () => {
+    const zip = makeZip([
+      { name: "[Content_Types].xml", size: 1200 },
+      { name: "word/styles.xml", size: 3000 },
+      // Method 99 (unknown to the validator): structure-only validation.
+      { name: "word/document.xml", size: 4000, method: 99 },
+    ]);
+    assertEquals(await validateOoxmlArtifact(zip, "docx"), { ok: true });
+  },
+);
 
 Deno.test("ooxml: a pptx with fewer than 3 slide parts is rejected", async () => {
   const zip = makeZip([

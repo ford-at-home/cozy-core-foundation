@@ -198,7 +198,7 @@ Deno.test("final docx prompt: output path, design system, and every context bloc
   assert(p.includes("- (belief) Local offices matter most."));
   assert(p.includes("Employment declined."));
   assert(p.includes("Second-pass evidence confirmed the decline."));
-  assert(p.includes('final-docx(my-piece)'));
+  assert(p.includes("final-docx(my-piece)"));
 });
 
 Deno.test("final pptx prompt: output path, slide design system, and every context block", () => {
@@ -213,7 +213,7 @@ Deno.test("final pptx prompt: output path, slide design system, and every contex
   assert(p.includes("core properties"));
   assert(p.includes("- (belief) Local offices matter most."));
   assert(p.includes("I thought jobs were safe."));
-  assert(p.includes('final-pptx(my-piece)'));
+  assert(p.includes("final-pptx(my-piece)"));
 });
 
 Deno.test("final prompts: empty context degrades to explicit placeholders, never blanks", () => {

@@ -173,9 +173,10 @@ manual cleanup):
   skip a level), Normal for body. Never fake a heading with bold direct
   formatting; never switch fonts mid-document.
 - Typography: one serif family for everything (built-in Georgia or
-  Cambria is fine), body 11–12pt with line spacing ~1.15–1.4 and ~6–10pt
-  space AFTER each paragraph set in the style — never blank paragraphs as
-  spacing, never two empty paragraphs anywhere.
+  Cambria is fine), body 11–12pt with line spacing ~1.15–1.4 (as a
+  multiple, never an exact height) and ~6–10pt space AFTER each paragraph
+  set in the style — never blank paragraphs as spacing, never two empty
+  paragraphs anywhere.
 - Color: near-black body text; at most ONE muted accent (deep green
   #1F4D3A or burnt orange #B45309) used only for headings or thin rules.
   Everything must survive grayscale printing.
