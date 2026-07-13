@@ -23,9 +23,19 @@ credit- or Stripe-adjacent** — its money rules override convenience.
   `reconcile-runs`, `piece-action`, `create-checkout-session`,
   `stripe-webhook`, or anything in `supabase/functions/_shared/` (dispatch,
   state, complete, usage, credits, billing, stripe-reconcile, provider.*,
-  parallel, research, prompt).
+  parallel, research, prompt, workflow, packet, recognition, followup-final).
+- Changing the research-packet workflow functions: `run-follow-up-research`,
+  `create-final-document-job`, `create-presentation-job` (billable, key
+  shapes `followup:{user}:{requestId}` / `final_docx:{user}:{requestId}` /
+  `final_pptx:{user}:{requestId}`), or `analyze-returned-page` (free to the
+  student; records gateway inferences under `lovable:hwr:{returnId}:{path}`).
+  Their completions persist via `cursor-webhook`/`reconcile-runs`
+  (`persistFollowUpResult`, `persistFinalArtifactResult` — binary fetch-back
+  into the `final-artifacts` bucket) and settle `final_artifacts` rows on
+  failure (`settleFinalArtifactFailure`).
 - Adding a run kind, run state, provider, webhook event type, or inference
-  source.
+  source. Current packet-workflow kinds: `packet`, `followup_research`,
+  `final_docx`, `final_pptx`.
 - Anything about costs or credits: `inferences`, `model_pricing`, `sessions`,
   rollups, `recordInference`, `credit_ledger`, `credit_reservations`,
   reserve/settle/release, Stripe checkout or webhooks.
@@ -61,6 +71,12 @@ credit- or Stripe-adjacent** — its money rules override convenience.
 - `supabase/functions/reconcile-runs/index.ts` — the authoritative sweep;
   webhooks are an optimization, the reconciler is correctness. It also
   settles/releases credits and sweeps stale reservations.
+- `supabase/functions/_shared/workflow.ts` — `advanceStage` (the
+  `pieces.workflow_stage` FSM via SECURITY DEFINER `advance_workflow_stage`;
+  invalid hops log a warning and continue) and `logPieceEvent` (append-only
+  `piece_events` activity trail: display-only, never authoritative, duplicate
+  completion events possible under the webhook/reconciler race — the client
+  dedupes on `(event, runId)`).
 - For credit/Stripe work: `docs/BILLING.md` (money rules, secrets, manual
   Stripe checklist), `supabase/functions/_shared/credits.ts`
   (reserve/settle/release/sweep), `_shared/stripe-reconcile.ts`,

@@ -21,6 +21,15 @@ and the cross-skill routing.
   the chained compose via `agent_runs.parent_run_id`). Costs:
   `CREDIT_COST` in `supabase/functions/_shared/credits.ts`, mirrored in
   `src/lib/use-credits.ts` — change both together or neither.
+- Research-packet workflow costs (the full table is `docs/BILLING.md` →
+  "What costs what"): follow-up research 2, final Word document 2,
+  presentation 2 — each a local `const COST` in its Edge Function
+  (`run-follow-up-research`, `create-final-document-job`,
+  `create-presentation-job`) mirrored by `FOLLOWUP_RESEARCH_COST` /
+  `FINAL_ARTIFACT_COST` in `src/lib/followup.functions.ts` /
+  `src/lib/final-artifacts.functions.ts`. `tests/billing-boundaries.test.ts`
+  fails on drift. Returning work, recognition, verification, question
+  approval, and downloads are free.
 - Signup grants 3 credits, idempotent by construction
   (`handle_new_user` trigger, key `signup:{user_id}`).
 - Holds are placed **before dispatch** (`start-workflow`, `piece-action`)

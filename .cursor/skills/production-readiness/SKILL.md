@@ -97,6 +97,20 @@ degraded states:
   (checkout from a phone → `/billing?status=success` → balance updates;
   canceled checkout preserves prior state). Test mode first, always.
 
+**Research-packet workflow (project hub and its sub-surfaces)**
+
+- A failed page photo gets named retake reasons (quality gate in
+  `analyze-returned-page`), never fabricated text; the return keeps its
+  other pages.
+- `final_artifacts` rows must never sit `pending` after their run dies —
+  the failure paths settle them to `failed` and the Finish card offers a
+  retry with a fresh `requestId` (new run, no double-charge).
+- Follow-up and final-artifact dispatch surface `insufficient_credits` with
+  the paywall pattern; every billable button states its cost first.
+- The hub stage model derives from rows (`src/lib/packet-stage.ts`), so it
+  must stay correct when `pieces.workflow_stage` lags; `piece_events` is
+  display-only history, never load-bearing.
+
 **External providers**
 
 - Lovable gateway 402 ("Out of AI credits"): transcription and image paths
