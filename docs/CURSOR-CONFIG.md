@@ -140,6 +140,95 @@ substitutions in the [substitution log](#model-substitution-log).
 - Use per-subagent `model` fields for planner / executor / reviewer splits.
 - Confirm a spend limit is set on the account before the first run.
 
+## Cloud Agent workflow configuration for this repo
+
+Cursor does not expose "named Cloud Agent products with bound models" as a
+first-class concept. The four specialization mechanisms are:
+
+| Mechanism                                     | What it configures                                                | When to reach for it                                          | Used in this repo today? |
+| --------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------ |
+| Per-dispatch `model` on `POST /v0/agents`     | The model on a single Cloud Agent run                             | Any programmatic dispatch, including this repo's edge functions | Yes (via `AGENT_MODEL` env var — global, not per-workflow) |
+| Per-subagent `model` inside a run             | Different models on planner / executor / reviewer sub-tasks       | Cheap-implement + premium-review pattern in unattended runs   | No                       |
+| Automations                                   | A named schedule / trigger + model + tools + prompt on the account | Recurring or event-triggered runs; the closest thing to a "named workflow Cloud Agent" | No |
+| Custom Modes (beta)                           | IDE-side preset (model + tools + instructions)                    | Interactive human turns, not Cloud Agent runs                 | No                       |
+
+### Workflows this repo dispatches to Cursor
+
+Enumerated by `agent_runs.kind`. The two research kinds go to Parallel AI
+and are out of scope for Cursor model selection.
+
+| Kind          | Dispatched by                                                                                                      | What the Cloud Agent does           | Recommended model class          |
+| ------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------- | -------------------------------- |
+| `packet`      | `supabase/functions/start-workflow/index.ts` → `_shared/dispatch.ts` → `_shared/provider.cursor.ts` `POST /v0/agents` | Compose the research packet         | High-intelligence (Sonnet-class) |
+| `final_docx`  | `supabase/functions/create-final-document-job/index.ts` → same dispatch path                                       | Generate DOCX artifact              | High-intelligence (Sonnet-class), tight spend limit |
+| `final_pptx`  | `supabase/functions/create-presentation-job/index.ts` → same dispatch path                                         | Generate PPTX artifact              | High-intelligence (Sonnet-class), tight spend limit |
+| `research`    | `supabase/functions/start-workflow` (Parallel AI provider)                                                         | Deep research task                  | Not applicable (Parallel model, not Cursor) |
+| `followup_research` | `supabase/functions/run-follow-up-research/index.ts` (Parallel AI)                                           | Follow-up research task             | Not applicable (Parallel model, not Cursor) |
+
+### Current dispatch reads one env var
+
+`supabase/functions/_shared/dispatch.ts` line 73:
+
+```
+model: Deno.env.get("AGENT_MODEL") ?? undefined,
+```
+
+Every Cursor dispatch resolves to the same `AGENT_MODEL`. This is
+functional but not optimal — the three workflows above have different cost
+sensitivities but currently share a model. Set `AGENT_MODEL` to a
+Sonnet-class model ID exposed by your account (see the substitution log
+below). If left unset, the Cursor account's user default → team default →
+system default resolves it, and that default is where you land — the repo
+does not force a choice.
+
+### Specializing per workflow (out of scope for this pass)
+
+To make the model per-workflow instead of global, the smallest change is
+to thread `run.kind` into `dispatch.ts`'s model resolution. Two shapes
+work:
+
+- **Per-`kind` env vars.** Read `AGENT_MODEL_PACKET`, `AGENT_MODEL_FINAL_DOCX`,
+  `AGENT_MODEL_FINAL_PPTX`, falling back to `AGENT_MODEL`, then to
+  `undefined` (account default). ~15 lines in `dispatch.ts`, one line in
+  `docs/CONFIGURATION.md`, secret setup as a Lovable-side action.
+- **Static map in `dispatch.ts`.** A `KIND_MODEL: Record<RunKind, string>`
+  constant hard-coded in the file, overridable by env var. Cheaper to
+  deploy (no new secrets) but less operable — every model change requires
+  a code push.
+
+Either shape belongs behind its own work item. Not part of this policy
+pass.
+
+### Per-subagent split (out of scope for this pass)
+
+The `packet` workflow is the natural fit for a planner (Opus) → executor
+(Sonnet) → reviewer (Opus) subagent split — most of the reasoning value is
+in the plan, most of the output tokens are in the compose. Requires:
+
+- Prompt-template changes to structure the sub-tasks explicitly.
+- `dispatch.ts` extension to pass a subagent config, per the Cloud Agents
+  API subagent schema.
+- Cost projection review (per-run cost may go up in exchange for reduced
+  retry cost — worth measuring after 30 days).
+
+### Automations (not currently used)
+
+Automations persist their own trigger + model + tools + prompt on the
+Cursor dashboard, and are the right home for any scheduled / recurring
+Cloud Agent workflow (e.g. a nightly release-certification pass). This
+repo has no scheduled Cloud Agent workflows today. If one is added, an
+Automation with its own explicit `model` is the correct configuration
+site — not a repo env var.
+
+### Custom Modes (IDE only)
+
+The instructions inside a Custom Mode can live in the repo (Cursor
+exposes an export path), but the model binding itself is a per-user
+preference set in the IDE. Useful for interactive workflows: a
+"Deep-Reasoning" preset (Opus, no auto-run, plan-mode default) and a
+"Certification" preset (Opus, review-oriented prompt) are the two
+research recommends. Not applicable to Cloud Agent dispatch.
+
 ## Cloud Agents caveats
 
 - **Always premium + Max Mode.** No Auto option. Every run bills at
