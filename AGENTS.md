@@ -65,6 +65,16 @@ holds the rules that always apply and the router that selects skills.
 12. **Run validation before declaring work complete**: `npm run lint`,
     `npm run typecheck`, `npm test`, `npm run build`, plus the task-specific
     checks the selected skill requires.
+13. **Model choice is advisory in the repo, enforced in Cursor.** Composer 2.5
+    (or Auto on Teams) is the routine default. Escalate to Sonnet-class only
+    on the objective triggers in
+    [.cursor/skills/model-selection-and-spend/SKILL.md](.cursor/skills/model-selection-and-spend/SKILL.md);
+    reserve Opus-class for planning, diagnosis, security review, and release
+    certification (mostly as reviewer or planner, not executor). Repository
+    files never switch the active model — enforceable controls live in
+    [docs/CURSOR-CONFIG.md](docs/CURSOR-CONFIG.md). The validated policy
+    baseline is [docs/cursor-model-selection-research.md](docs/cursor-model-selection-research.md);
+    treat it as authoritative and do not re-research.
 
 ## Skill router
 
@@ -80,6 +90,7 @@ Skills live in `.cursor/skills/<name>/SKILL.md`. Select using this table:
 | run dispatch, webhooks, the reconciler, run states, idempotency, cost accounting                                                                    | `run-orchestration-change` |
 | credits, the ledger, reservations, Stripe checkout or webhooks, purchases, the paywall                                                              | `billing-and-credits`      |
 | release checks, failure/loading/retry behavior, resilience, pre-merge review                                                                        | `production-readiness`     |
+| model choice, cost / spend, escalation to a premium model, Cloud Agent dispatch, release certification                                              | `model-selection-and-spend`|
 
 Rules for using the router:
 
@@ -94,8 +105,10 @@ Rules for using the router:
   | change checkout or paywall UI       | `billing-and-credits` + `mobile-ui-polish`                                                                |
   | add a new billable artifact type    | `repository-orientation` + `billing-and-credits` + `run-orchestration-change` + `print-artifact-fidelity` |
   | change Supabase billing schema      | `supabase-change` + `billing-and-credits`                                                                 |
-  | prepare a release                   | `production-readiness` + every domain skill the release touches                                           |
+  | prepare a release                   | `production-readiness` + `model-selection-and-spend` + every domain skill the release touches             |
   | landing-page pricing or credit copy | `docs/brand/` guidance + `billing-and-credits` (claims must match implemented billing)                    |
+  | dispatch a Cloud Agent run          | `model-selection-and-spend` + the domain skill(s) the run touches                                         |
+  | any billing- / auth- / RLS-adjacent change | `model-selection-and-spend` (cheap-implement + premium-review) + the domain skill(s)               |
 
 - Beyond that, use the **smallest sufficient set** — don't read skills whose
   boundary the task genuinely does not cross.
@@ -127,6 +140,8 @@ Every implementation agent's final response must include:
 ```
 Skills used:
 - <skill> — <one line: why>
+Model class used:
+- <cheap-fast | general | high-intelligence | premium> — <one line: why>
 Validation completed:
 - <command or check> — <result>
 Manual actions still required:
@@ -137,6 +152,11 @@ Known limitations:
 
 Validation lines must name real commands or concrete checks that were actually
 run — "reviewed the result" does not count.
+
+`Model class used` is omitted only when the task was fully advisory / docs-only
+and no paid runs occurred. When the task used the
+cheap-implement + premium-review pattern, list both classes
+(e.g. `general (Composer 2.5) implemented → premium (Opus) reviewed diff`).
 
 ## Reviewer subagents
 

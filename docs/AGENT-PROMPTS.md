@@ -20,11 +20,13 @@ Before editing:
 2. Identify the skills applicable to this task from the router.
 3. Read those skill files in .cursor/skills/ completely.
 4. State which skills you are applying and why.
-5. Follow their procedures and validation requirements.
+5. State the model class you will use (Composer 2.5 by default) and the
+   escalation triggers from model-selection-and-spend you are watching for.
+6. Follow their procedures and validation requirements.
 
 Your final response must end with the report contract from AGENTS.md
-(Skills used / Validation completed / Manual actions still required /
-Known limitations).
+(Skills used / Model class used / Validation completed / Manual actions still
+required / Known limitations).
 ```
 
 ## Task prompts
@@ -40,6 +42,9 @@ Constraints:
 - Start with the repository-orientation skill; state the affected layers and
   the existing pattern you will follow before writing code.
 - Do not add features, dependencies, or refactors beyond this task.
+- Model: default Composer 2.5. Escalate to Sonnet-class only if any
+  model-selection-and-spend §Escalation-checklist signal fires; escalate to
+  Opus-class only for planning or diff review, never routine execution.
 - Finish with the production-readiness skill before your final report.
 ```
 
@@ -56,6 +61,9 @@ Constraints:
 - Preserve the editorial dark theme and design tokens in src/styles.css.
 - Do not touch the print iframe content — that is print-artifact-fidelity
   territory.
+- Model: default Composer 2.5. Escalate to Sonnet-class only if the change is
+  design-sensitive or crosses several components. Opus is not justified for
+  mobile-polish work.
 - Ask the mobile-ux-reviewer subagent (.cursor/agents/mobile-ux-reviewer.md)
   to review the diff before you finish, and include its verdict.
 ```
@@ -77,6 +85,8 @@ Constraints:
 - Run npm test (Chromium via `npx playwright install chromium`) — the
   print-fidelity suite is the authoritative check — and inspect the
   regenerated PDFs in test-artifacts/print/ for the affected fixtures.
+- Model: default Composer 2.5. Escalate to Sonnet-class only for stubborn
+  anchor / pagination bugs after two Composer failures.
 - Ask the print-layout-reviewer subagent to review the diff and include its
   verdict.
 ```
@@ -98,6 +108,11 @@ Constraints:
   scripts/check-secrets.sh.
 - List every manual action (apply migration, deploy function, set secret,
   regenerate types) — do not claim external work was done.
+- Model: Sonnet-class as default (migrations, RLS, and Edge Functions are
+  §Escalation-checklist signals 3 and 4). Escalate to Opus-class for
+  irreversible / data-loss-capable migrations or any auth / RLS / secret
+  logic. Use cheap-implement + premium-review: implement on Sonnet, then
+  have the backend-integrity-reviewer run on Opus.
 - Ask the backend-integrity-reviewer subagent to review the diff and include
   its verdict.
 ```
@@ -121,6 +136,11 @@ Constraints:
   holds released on failure.
 - Name every idempotency key you introduce and its redelivery behavior.
 - Add Deno tests covering duplicate and out-of-order delivery.
+- Model: Sonnet-class as default. Any change that touches the credit ledger,
+  reservation flow, Stripe webhook, or cost recording is money-adjacent and
+  requires cheap-implement + premium-review: implement on Sonnet, then have
+  the backend-integrity-reviewer run on Opus. Escalate to Opus-class for
+  suspected concurrency / race conditions.
 - Ask the backend-integrity-reviewer subagent to review the diff and include
   its verdict.
 ```
@@ -135,7 +155,54 @@ Run every deterministic check, walk the failure states relevant to the diff,
 and end with the skill's verdict block (Checks / Failure states reviewed /
 Risks / Rollback / Manual actions / Verdict). Do not fix issues in this task;
 report them.
+
+Model: Opus-class. Release certification is one of the always-escalate cases
+in the model-selection-and-spend skill (§Escalation-checklist signal 13).
+The review is input-heavy and output-light, so premium is genuinely
+justified here.
 ```
+
+### Certification (cheap implement → premium review)
+
+For release-gated or high-risk changes (billing, auth, RLS, migrations,
+production-impact code), split the model across two turns:
+
+```
+<PREAMBLE>
+
+Turn 1 — Implementation:
+
+Task: <describe the implementation, e.g. "Add the new billable operation X
+per docs/BILLING.md.">
+
+Constraints:
+- Apply the domain skills required (billing-and-credits, supabase-change,
+  run-orchestration-change, etc.) as the router indicates.
+- Model: default Composer 2.5. Escalate to Sonnet-class if the change
+  spans several files or touches RLS / auth / migrations.
+- Produce a minimal, complete diff. Do not include the review in this turn.
+```
+
+```
+Turn 2 — Review (a new agent turn on a premium model):
+
+Task: Review the branch diff for <turn 1's scope>.
+
+Constraints:
+- Apply the model-selection-and-spend and production-readiness skills.
+- Model: Opus-class. Review only — do not modify code in this turn.
+- Ask the appropriate reviewer subagent (backend-integrity-reviewer for
+  billing / auth / RLS / migrations; mobile-ux-reviewer for UI;
+  print-layout-reviewer for print) to run in this turn, and include its
+  verdict.
+- If issues are found, file them for a follow-up turn — do not fix them
+  here (the premium reviewer is not the cheap fixer).
+```
+
+Cost intuition (per docs/cursor-model-selection-research.md §10): reviewing
+a 20K-token diff on Opus costs ~$0.15; writing the same feature on Opus
+costs ~$0.40. Composer 2.5 wrote it for ~$0.03. Total ~$0.18 versus $0.40 —
+same assurance level, roughly ⅓ the premium cost.
 
 ## Maintenance guidance
 
