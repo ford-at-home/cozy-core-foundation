@@ -14,8 +14,8 @@ below — the table row shows current state; the log preserves history.
 | WI-0003 | Legacy: backend verification of the connected Supabase project | lovable | cursor    | completed        | P0       | —          | [Original brief](../../LOVABLE-BACKEND-VERIFICATION.md)                                                             | [WI-0003 pointer](../lovable/outbox/WI-0003-backend-verification-legacy-results.md) → [findings](../../lovable-backend-research-findings.md) | 2026-07-13 |
 | WI-0004 | Legacy: application audit and hardening plan                   | cursor  | human     | completed        | P0       | WI-0003    | (human-directed audit task)                                                                                         | [WI-0004 pointer](../cursor/outbox/WI-0004-audit-and-hardening-plan-legacy-results.md) → [plan](../../AUDIT-AND-HARDENING-PLAN.md)           | 2026-07-13 |
 | WI-0005 | Execute the Lovable hardening plan (steps L1–L7)               | lovable | cursor    | in_progress      | P0       | WI-0002    | [WI-0005 request](../lovable/inbox/WI-0005-execute-lovable-hardening-plan.md) → [plan](../../PLAN-LOVABLE-AGENT.md) | [interim report](../../lovable-plan-execution.md) (L1+L4 done; L2/L3/L5–L7 pending)                                                          | 2026-07-13 |
-| WI-0006 | Migration pipeline experiment (apply the marker migration, L3) | lovable | cursor    | requested        | P0       | —          | [WI-0006 request](../lovable/inbox/WI-0006-migration-pipeline-experiment.md)                                        | (pending)                                                                                                                                    | 2026-07-13 |
-| WI-0007 | Verify Edge Function redeploy after phase C3 (L6)              | lovable | cursor    | requested        | P0       | —          | [WI-0007 request](../lovable/inbox/WI-0007-deploy-verification-c3.md)                                               | (pending)                                                                                                                                    | 2026-07-13 |
+| WI-0006 | Migration pipeline experiment (apply the marker migration, L3) | lovable | cursor    | completed        | P0       | —          | [WI-0006 request](../lovable/completed/WI-0006-migration-pipeline-experiment.md)                                    | [WI-0006 results](../lovable/outbox/WI-0006-migration-pipeline-experiment-results.md)                                                        | 2026-07-13 |
+| WI-0007 | Verify Edge Function redeploy after phase C3 + C7 (L6)         | lovable | cursor    | completed        | P0       | —          | [WI-0007 request](../lovable/completed/WI-0007-deploy-verification-c3.md)                                           | [WI-0007 results](../lovable/outbox/WI-0007-deploy-verification-c3-results.md)                                                               | 2026-07-13 |
 
 The Cursor-side hardening phases (C1–C9 in
 [PLAN-CURSOR-AGENT.md](../../PLAN-CURSOR-AGENT.md)) will be registered as
@@ -23,6 +23,20 @@ work items when each phase begins, so that cross-agent dependencies (C4
 needs L3; C6 needs L2+L5; C8 needs L7) are tracked here explicitly.
 
 ## Log
+
+### 2026-07-13 — WI-0006 + WI-0007 — Lovable
+
+Both executed. WI-0006: Cursor-authored migrations do NOT auto-apply;
+applied the marker via `supabase--migration`, version `20260713160000`
+now present in `schema_migrations`. Procedure documented in the outbox
+for `docs/RUNBOOK.md`; WI-0008 (phase C4) is unblocked. WI-0007: Edge
+Function deploys are NOT automatic on push; called
+`supabase--deploy_edge_functions` for all seven changed functions
+(analyze-returned-page, reconcile-runs, run-follow-up-research,
+create-final-document-job, create-presentation-job, start-workflow,
+prepare-follow-up-questions). Live `POST /reconcile-runs` returned the
+new `stalePagesSwept` field, confirming C3 code is live. Full evidence
+in the outbox files.
 
 ### 2026-07-13 — WI-0007 amended — Cursor
 
