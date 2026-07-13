@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -268,9 +268,12 @@ function ProfilePage() {
       const body = (await res.json().catch(() => ({}))) as { text?: string; error?: string };
       if (!res.ok) {
         if (res.status === 402) {
+          // Transcription runs on the operator's workspace AI allowance, not
+          // the user's credit balance — there is nothing the user can buy on
+          // /billing to fix this, so don't send them there.
           setDictationError({
-            message: "Out of AI credits.",
-            hint: "Add credits in Workspace Settings → Plans & credits, then press Retry.",
+            message: "Dictation is temporarily unavailable.",
+            hint: "The transcription service is out of capacity. Type your notes for now, or press Retry in a little while.",
             retryable: true,
           });
         } else if (res.status === 429) {
@@ -475,7 +478,7 @@ function ProfilePage() {
                 }}
                 rows={14}
                 placeholder={
-                  "How do you open a piece? What do you refuse to sound like? Sentence " +
+                  "How do you open a draft? What do you refuse to sound like? Sentence " +
                   "rhythm, vocabulary you love and hate, how you handle evidence, how you " +
                   "land an ending. Paste examples of lines that sound like you."
                 }
@@ -595,6 +598,23 @@ function ProfilePage() {
             </div>
           </>
         )}
+      </div>
+
+      {/* Billing lives off the main nav (the header chip is its usual door);
+          give mobile users a second, discoverable path from here. */}
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm sm:p-5">
+        <div>
+          <p className="text-sm font-medium">Credits &amp; billing</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Balance, credit packs, and purchase history.
+          </p>
+        </div>
+        <Link
+          to="/billing"
+          className="inline-flex min-h-11 shrink-0 items-center rounded-md border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/60"
+        >
+          Open billing
+        </Link>
       </div>
     </div>
   );

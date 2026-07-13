@@ -191,17 +191,17 @@ function RunDetailPage() {
               Research complete.{" "}
               {nextRunId ? (
                 <>
-                  The piece is now being composed from this report in your voice —{" "}
+                  Your draft is now being prepared from this report in your voice —{" "}
                   <Link
                     to="/runs/$runId"
                     params={{ runId: nextRunId }}
                     className="font-medium underline"
                   >
-                    follow the compose run →
+                    follow the drafting run →
                   </Link>
                 </>
               ) : (
-                "The compose run is being prepared; it will appear on your dashboard within a couple of minutes."
+                "The drafting run is being prepared; it will appear on your dashboard within a couple of minutes."
               )}
             </div>
           )}
@@ -405,7 +405,7 @@ function ActionsPanel({ run }: { run: AgentRun }) {
 
       {run.kind === "revision" && (
         <p className="text-sm text-muted-foreground">
-          Final version produced. Approve its pull request on GitHub, then copy the piece from the
+          Final version produced. Approve its pull request on GitHub, then copy the draft from the
           tabs above wherever it's going.
         </p>
       )}
@@ -442,7 +442,7 @@ function activeStatusMessage(status: RunStatus, kind: string): string {
       case "running":
         return "Researching — scanning sources across the web and assembling a cited report. Deep research usually takes 2–10 minutes. This page updates live.";
       case "awaiting_fetch":
-        return "Almost done — the report is ready; fetching it and starting the compose run.";
+        return "Almost done — the report is ready; fetching it and starting the drafting run.";
       default:
         return "In progress.";
     }
@@ -456,7 +456,7 @@ function activeStatusMessage(status: RunStatus, kind: string): string {
     case "queued":
       return "Queued — the agent's workspace is being prepared.";
     case "running":
-      return "Working — the agent is preparing the brief and drafting the piece. This page updates live.";
+      return "Working — the agent is preparing the brief and writing the draft. This page updates live.";
     case "awaiting_fetch":
       return "Almost done — the draft is written; fetching it back now.";
     case "cancel_requested":

@@ -325,6 +325,11 @@ function FirstProduct() {
             thoughtful long-form work. You set your voice once; every draft is prepared in it, and
             every revision carries your marks forward.
           </p>
+          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            Signing up includes three credits. A finished draft uses one; starting with deep
+            research uses two. Printing and marking up what you've made is always free, and nothing
+            is charged for work that fails.
+          </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link to="/auth" className={`${primaryCta} w-full sm:w-auto`}>
               Start a working draft
@@ -456,7 +461,7 @@ function FinalAction() {
           Leave the screen. Keep the thread.
         </h2>
         <Link to="/auth" className={primaryCta}>
-          Create your first working draft
+          Start your first working draft
         </Link>
       </div>
     </section>

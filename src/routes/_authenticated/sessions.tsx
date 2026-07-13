@@ -104,13 +104,13 @@ function SessionsPage() {
         <div className="rounded-xl border border-border bg-card p-8 text-center sm:p-10">
           <p className="font-serif text-xl">No sessions yet</p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Start a piece from the dashboard — cost tracking appears here.
+            Start a draft from the dashboard — cost tracking appears here.
           </p>
           <Link
             to="/new"
             className="mt-5 inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Create a piece
+            Start a draft
           </Link>
         </div>
       )}
