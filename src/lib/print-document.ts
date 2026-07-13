@@ -68,20 +68,41 @@ function escapeHtml(value: string): string {
  * from src/config/brand.ts). The header is suppressed on page 1, where the
  * title itself is the first thing on the page. Defining the boxes at all also
  * tells Chromium to drop its own date/title/URL furniture on those edges.
- * Static furniture (the page-number footer) lives in print.css. */
-function pageFurnitureCss(title: string | null): string {
+ * Static furniture (the page-number footer and the per-page markup reminder)
+ * lives in print.css.
+ *
+ * `docRef` is a short stable document identifier ("draft 1a2b3c4d",
+ * "packet 5e6f7a8b · v2") printed top-right on EVERY page — including the
+ * first — so any single scanned or photographed page can be attributed to
+ * its exact document and version. */
+function pageFurnitureCss(title: string | null, docRef: string | null): string {
+  // The header shares the top strip with the document ref; a very long title
+  // would collide with it (nowrap keeps the strip to one line), so trim to a
+  // budget that fits the strip at 8.5pt.
+  const headerTitle = title && title.length > 44 ? `${title.slice(0, 43).trimEnd()}…` : title;
   return [
     "@page {",
     "  @top-center {",
-    `    content: "${title ? escapeCssString(title) : ""}";`,
+    `    content: "${headerTitle ? escapeCssString(headerTitle) : ""}";`,
     '    font-family: "Source Serif 4", Georgia, "Times New Roman", serif;',
     "    font-size: 8.5pt;",
     "    letter-spacing: 0.08em;",
     "    text-transform: uppercase;",
+    "    white-space: nowrap;",
     "    color: #666666;",
-    "    /* Center on the text column (see the split-margin note in print.css). */",
-    "    padding-left: 1in;",
     "  }",
+    ...(docRef
+      ? [
+          "  @top-right {",
+          `    content: "${escapeCssString(docRef)}";`,
+          '    font-family: "Source Code Pro", Menlo, Consolas, monospace;',
+          "    font-size: 7pt;",
+          "    letter-spacing: 0.02em;",
+          "    white-space: nowrap;",
+          "    color: #999999;",
+          "  }",
+        ]
+      : []),
     "  @bottom-right {",
     `    content: "${escapeCssString(brand.company.domain)}";`,
     "  }",
@@ -95,15 +116,25 @@ function pageFurnitureCss(title: string | null): string {
 // Printed markup key. Content mirrors contract/references/MARKUP.md ("Quick
 // Reference"); update both together. Divs/spans only — the S{n}P{m} anchor
 // counters in print.css count p/headings/blockquote/pre/table, and the legend
-// must not consume S1.
+// must not consume S1. A one-line reminder of the Marks row repeats in the
+// @bottom-left margin box on pages after the first (print.css).
 const MARKUP_LEGEND_HTML = `
 <div class="markup-legend">
   <div class="markup-legend-title">Markup key</div>
-  <div class="markup-legend-row"><span class="markup-legend-label">Symbols</span>✓ keep &middot; ✗ cut &middot; ~ rework &middot; ★ expand &middot; → move &middot; ? weak</div>
+  <div class="markup-legend-row"><span class="markup-legend-label">Marks</span>✓ keep &middot; ✗ cut &middot; ~ rework (say how) &middot; ★ expand &middot; → move (say where) &middot; ? unsure — a margin mark applies to the whole block named by its anchor; underline or circle words to narrow it</div>
+  <div class="markup-legend-row"><span class="markup-legend-label">Edits</span>replace: strike the old words, write the new ones above or in the margin, join with a line &middot; add: caret ^ at the spot, new text in the margin &middot; unmarked = unchanged</div>
   <div class="markup-legend-row"><span class="markup-legend-label">Dials</span>WC word choice &middot; REG register &middot; VOI voice &middot; RH rhythm — always signed: + more / – less, doubled = a lot (WC––)</div>
   <div class="markup-legend-row"><span class="markup-legend-label">Directives</span>VIZ &middot; SLOP &middot; DEEPEN &middot; TIGHT &middot; KSP &middot; EX &middot; HOOK &middot; LAND &middot; PIVOT &middot; STAKES &middot; CLAIM &middot; SCENE &middot; EV &middot; CB &middot; ASIDE</div>
-  <div class="markup-legend-row"><span class="markup-legend-label">Voice</span>&ldquo;WC&ndash; on S3P4 — &lsquo;optimize&rsquo;&rdquo; &middot; S{n}P{m} anchors pre-printed in margin &middot; ① ② ③ = your hand-numbered handles</div>
+  <div class="markup-legend-row"><span class="markup-legend-label">Refer</span>S{n}P{m} anchors are pre-printed in the left margin (&ldquo;S4P3: tighten&rdquo;) &middot; ① ② ③ = handles you number yourself &middot; highlight = use as-is</div>
+  <div class="markup-legend-row"><span class="markup-legend-label">Example</span>to swap one word in S3P4: strike it, write the new word above it, then dictate &ldquo;S3P4 — &lsquo;optimize&rsquo; becomes &lsquo;fix&rsquo;&rdquo;</div>
+  <div class="markup-legend-row"><span class="markup-legend-label">Avoid</span>writing over the margin anchors, inventing symbols, or marks that touch no text &middot; X-out any note you do NOT want applied</div>
 </div>`;
+
+export interface PrintDocumentOptions {
+  /** Stable document identifier (e.g. the run id) printed top-right on every
+   *  page so a scanned page can be attributed; omitted when unknown. */
+  documentId?: string | null;
+}
 
 /**
  * Build the complete, self-contained print document for a markdown piece.
@@ -113,8 +144,9 @@ const MARKUP_LEGEND_HTML = `
  * identically on screen, in print preview, saved as PDF, and on paper — with
  * no network fetches and no dependency on the host page's styles.
  */
-export function buildPrintDocument(source: string): string {
+export function buildPrintDocument(source: string, opts: PrintDocumentOptions = {}): string {
   const title = extractTitle(source);
+  const docRef = opts.documentId ? `draft ${opts.documentId.slice(0, 8)}` : null;
   return [
     "<!doctype html>",
     '<html lang="en">',
@@ -123,7 +155,7 @@ export function buildPrintDocument(source: string): string {
     `<title>${escapeHtml(title ?? brand.product.name)}</title>`,
     `<style>${fontFaces}</style>`,
     `<style>${printCss}</style>`,
-    `<style>${pageFurnitureCss(title)}</style>`,
+    `<style>${pageFurnitureCss(title, docRef)}</style>`,
     "</head>",
     '<body class="with-anchors">',
     MARKUP_LEGEND_HTML,
@@ -267,6 +299,7 @@ export function buildPacketPrintDocument(
   opts: PacketPrintOptions,
 ): string {
   const title = extractTitle(source);
+  const docRef = `packet ${opts.packetId.slice(0, 8)}${opts.version != null ? ` · v${opts.version}` : ""}`;
   const ordered = [...questions].sort((a, b) => a.position - b.position);
   // The first followup-function question shapes the "Further research"
   // section; any extras print as regular questions rather than vanishing.
@@ -292,7 +325,7 @@ export function buildPacketPrintDocument(
     `<title>${escapeHtml(title ?? brand.product.name)}</title>`,
     `<style>${fontFaces}</style>`,
     `<style>${printCss}</style>`,
-    `<style>${pageFurnitureCss(title)}</style>`,
+    `<style>${pageFurnitureCss(title, docRef)}</style>`,
     "</head>",
     '<body class="with-anchors">',
     packetHeaderHtml(opts),
