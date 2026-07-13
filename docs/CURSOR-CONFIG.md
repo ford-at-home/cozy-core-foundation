@@ -83,13 +83,15 @@ updated table.
 
 The recommended set from research §13 is: **Composer 2.5, Sonnet-class,
 Opus-class enabled; everything else disabled.** Record the current state
-and any deltas.
+and any deltas. "Enabled" below means present in `GET /v1/models` for
+this API key (Cloud Agents / API surface). IDE Settings → Models may
+still differ — fill that separately under Cursor product / installation.
 
 | Recommended model    | Enabled in this account? | Substituted with (if rotated out) | Verified on |
 | -------------------- | ------------------------ | --------------------------------- | ----------- |
-| Composer 2.5         | _(fill in)_              | —                                 | _(YYYY-MM-DD)_ |
-| Claude Sonnet 4.6    | _(fill in)_              | _(e.g. Sonnet 5 if rotated in)_   | _(YYYY-MM-DD)_ |
-| Claude Opus 4.8      | _(fill in)_              | _(e.g. Opus 4.9 if rotated in)_   | _(YYYY-MM-DD)_ |
+| Composer 2.5         | Yes (`composer-2.5`; aliases `composer-latest`, `composer`, `composer-2-5`) | — | 2026-07-13 |
+| Claude Sonnet 4.6    | Yes (`claude-sonnet-4-6`; aliases `sonnet-latest`, `sonnet`, `sonnet-4.6`, `sonnet-4-6`) | — | 2026-07-13 |
+| Claude Opus 4.8      | Yes (`claude-opus-4-8`; aliases `opus-latest`, `opus`, `opus-4.8`, `opus-4-8`) | — | 2026-07-13 |
 
 ### Cloud Agents
 
@@ -98,9 +100,9 @@ and any deltas.
 | Cloud Agent default model                                  | _(fill in)_ | Cloud Agents settings                            |
 | Max Mode                                                   | Always on (forced by Cursor for Cloud Agents) | Documented; no toggle |
 | Long-running agents enabled?                               | _(fill in)_ | Cloud Agents team settings                      |
-| v1 REST API enabled for this account?                      | _(fill in)_ | `curl -u "$CURSOR_API_KEY:" https://api.cursor.com/v1/me` — JSON body = yes, 401/404/HTML = no |
-| Model IDs exposed by `GET /v1/models` on this account      | _(fill in)_ | `curl -u "$CURSOR_API_KEY:" https://api.cursor.com/v1/models` |
-| v1 launch payload subagent shape                           | _(fill in from a probe POST /v1/agents response)_ | See Follow-up 1 in Cloud Agent workflow configuration below |
+| v1 REST API enabled for this account?                      | **Yes.** `GET /v1/me` returned HTTP 200 JSON for API key `macbook` (userId `189016502`, userEmail `priorww@gmail.com`, createdAt `2026-07-10T12:18:40.785Z`). | `curl -u "$CURSOR_API_KEY:" https://api.cursor.com/v1/me` — JSON body = yes, 401/404/HTML = no |
+| Model IDs exposed by `GET /v1/models` on this account      | **33 IDs** in `items[]` (2026-07-13): `default` (Auto), `grok-4.5`, `composer-2.5`, `claude-opus-4-8`, `gpt-5.6-sol`, `gpt-5.5`, `claude-fable-5`, `claude-sonnet-5`, `gpt-5.6-terra`, `claude-sonnet-4-6`, `gpt-5.3-codex`, `claude-opus-4-7`, `gpt-5.4`, `claude-opus-4-6`, `claude-opus-4-5`, `gpt-5.2`, `gpt-5.6-luna`, `gemini-3.1-pro`, `gpt-5.4-mini`, `gpt-5.4-nano`, `claude-haiku-4-5`, `claude-sonnet-4-5`, `gpt-5.2-codex`, `gpt-5.1-codex-max`, `gpt-5.1`, `gemini-3-flash`, `gemini-3.5-flash`, `gpt-5.1-codex-mini`, `claude-sonnet-4`, `gpt-5-mini`, `gemini-2.5-flash`, `kimi-k2.7-code`, `glm-5.2`. Each item has `id`, `displayName`, optional `aliases` / `parameters` / `variants`. | `curl -u "$CURSOR_API_KEY:" https://api.cursor.com/v1/models` |
+| v1 launch payload subagent shape                           | **`customSubagents` on `POST /v1/agents` (not a separate endpoint).** Optional array (max 20). Each entry requires `name`, `description`, and `prompt`; optional `model` may be a model ID string, a `ModelSelection` object (`{id, params?}`), or `"inherit"`. Names must be unique and must not collide with built-ins (`explore`, `debug`, `shell`, `computerUse`, …). Create response returns durable `agent` + initial `run`; accepted `customSubagents` are echoed on `agent.customSubagents`. v1 create body uses `prompt` / `model` / `repos` / `env` / `autoCreatePR` / `customSubagents` — **not** the v0 `source`/`target` keys (those return `400 validation_error`). Cancel via `POST /v1/agents/{id}/runs/{runId}/cancel` (documented Follow-up 1 `/stop` path is v0-shaped and 404s on v1). Live probe 2026-07-13: create with `customSubagents` → 201; cancel → run `CANCELLED`; agent archived. | See Follow-up 1 in Cloud Agent workflow configuration below |
 
 ## Recommended settings
 
@@ -353,9 +355,14 @@ Recommended models rotate. When a recommended model is not available in
 this account, substitute the current in-product equivalent in the same
 class and record the substitution here.
 
+Verified 2026-07-13 via `GET /v1/models`: all three recommended models
+are present (`composer-2.5` for cheap-fast / general, `claude-sonnet-4-6`
+for high-intelligence, `claude-opus-4-8` for premium). No substitution
+rows required.
+
 | Date       | Class             | Recommended        | Substituted with | Reason                    | Recorded by |
 | ---------- | ----------------- | ------------------ | ---------------- | ------------------------- | ----------- |
-| _(none yet — add rows as substitutions occur)_ | | | | | |
+| _(none — all recommended models present as of 2026-07-13)_ | | | | | |
 
 ## Verification cadence
 
