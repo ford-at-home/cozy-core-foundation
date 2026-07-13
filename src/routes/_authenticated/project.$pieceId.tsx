@@ -6,10 +6,10 @@ import { brand, pageTitle } from "@/config/brand";
 import {
   getPiece,
   listArtifactsByPiece,
-  listFollowupsByPiece,
+  listFollowupsByPackets,
   listPacketsByPiece,
-  listReturnsByPiece,
   listRunsByPiece,
+  loadReturnSummaries,
 } from "@/lib/packet-workflow";
 import {
   derivePacketWorkflow,
@@ -40,13 +40,16 @@ function ProjectHubPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["project", pieceId],
     queryFn: async () => {
-      const [piece, runs, packets, returns, followups, artifacts] = await Promise.all([
+      const [piece, runs, packets, artifacts] = await Promise.all([
         getPiece(pieceId),
         listRunsByPiece(pieceId),
         listPacketsByPiece(pieceId),
-        listReturnsByPiece(pieceId),
-        listFollowupsByPiece(pieceId),
         listArtifactsByPiece(pieceId),
+      ]);
+      const packetIds = packets.map((p) => p.id);
+      const [returns, followups] = await Promise.all([
+        loadReturnSummaries(packetIds),
+        listFollowupsByPackets(packetIds),
       ]);
       return { piece, runs, packets, returns, followups, artifacts };
     },
@@ -56,22 +59,18 @@ function ProjectHubPage() {
       const d = query.state.data;
       if (!d) return false;
       const busyRun = d.runs.some((r) => !["completed", "failed", "cancelled"].includes(r.status));
-      const busyReturn = d.returns.some((r) => r.status === "recognizing");
-      const busyArtifact = d.artifacts.some((a) => a.status === "generating");
+      const busyReturn = d.returns.some((r) => r.uiStatus === "recognizing");
+      const busyArtifact = d.artifacts.some((a) => ["pending", "generating"].includes(a.status));
       return busyRun || busyReturn || busyArtifact ? 5000 : false;
     },
   });
 
   useEffect(() => {
+    // agent_runs is in the realtime publication; the return/artifact tables
+    // are not, so their transitions are covered by the polling above.
     const channel = supabase
       .channel(`project-${pieceId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "agent_runs" }, () =>
-        queryClient.invalidateQueries({ queryKey: ["project", pieceId] }),
-      )
-      .on("postgres_changes", { event: "*", schema: "public", table: "packet_returns" }, () =>
-        queryClient.invalidateQueries({ queryKey: ["project", pieceId] }),
-      )
-      .on("postgres_changes", { event: "*", schema: "public", table: "final_artifacts" }, () =>
         queryClient.invalidateQueries({ queryKey: ["project", pieceId] }),
       )
       .subscribe();
@@ -84,9 +83,20 @@ function ProjectHubPage() {
     ? derivePacketWorkflow({
         runs: data.runs as StageRun[],
         packets: data.packets as StagePacket[],
-        returns: data.returns as StageReturn[],
+        returns: data.returns.map((r): StageReturn => ({
+          id: r.id,
+          status: r.uiStatus,
+          created_at: r.created_at,
+        })),
         followups: data.followups as StageFollowup[],
-        artifacts: data.artifacts as StageArtifact[],
+        artifacts: data.artifacts
+          .filter((a) => a.kind === "docx" || a.kind === "pptx")
+          .map((a): StageArtifact => ({
+            id: a.id,
+            kind: a.kind as "docx" | "pptx",
+            status: a.status,
+            created_at: a.created_at,
+          })),
       })
     : null;
 

@@ -129,13 +129,14 @@ Project id `dlaojinagezrlbwyritd` (`supabase/config.toml`).
 | `stripe_events`                                   | Webhook inbox, PK = Stripe event id (duplicate delivery = no-op insert); RLS deny-all, service-role only |
 | `packets`                                         | One row per completed packet run (`workflow='research_packet'`): analysis jsonb, status `generated → reviewed`; unique `run_id` |
 | `packet_questions`                                | Tailored Socratic questions per packet; question text/lock are owner-editable content under RLS; unique `(packet_id, position)` |
-| `packet_returns`                                  | One return attempt per printed packet: `collecting → recognizing → needs_review → verified` (or `failed`); owner creates/verifies, Edge Function writes recognition verdicts |
-| `page_images`                                     | Uploaded page photos (private `packet-returns` bucket); quality jsonb + status written server-side; owner reorders/removes |
-| `recognized_blocks`                               | Raw handwriting-recognition output per page (attempt-versioned, append-only); service-role writes only, owner reads |
-| `dictation_segments`                              | Dictated/typed response transcripts with page/question references; owner CRUD (user content) |
-| `verification_corrections`                        | Append-only student verdicts (confirm/correct/reject) on blocks/segments; latest row per target wins |
-| `followup_questions`                              | Up to 3 follow-up research questions per packet (`position` 1–3); `submitted → refined → approved → researched` |
-| `final_artifacts`                                 | Generated Word/PowerPoint artifacts (`final-artifacts` bucket); service-role writes, owner downloads via signed URL |
+| `packet_returns`                                  | One return attempt per printed packet (status tracks the upload lifecycle: `pending → uploading → recognizing → ready`/`failed`); created by `create-student-return-upload`; client grant is SELECT-only |
+| `page_images`                                     | Uploaded page photos (private `packet-returns` bucket); `uploaded → analyzing → analyzed`/`failed` written by `analyze-returned-page`; client grant is SELECT-only |
+| `recognized_blocks`                               | Raw handwriting-recognition output per page (append-only); service-role writes only, owner reads |
+| `dictation_segments`                              | Dictated response transcripts with `resolved_target` jsonb; written via `submit-dictation`; client grant is SELECT-only |
+| `verification_corrections`                        | Append-only student-approved final text per block/segment, written via `verify-student-responses`; latest row per target wins |
+| `followup_questions`                              | Up to 3 follow-up research questions per packet (unique `(packet_id, position)`); `submitted → refined → approved → researched`; written via `prepare-follow-up-questions` |
+| `final_artifacts`                                 | Generated Word/PowerPoint artifacts (`final-artifacts` bucket); `pending → generating → ready`/`failed`; service-role writes, owner downloads via signed URL |
+| `pieces.workflow_stage` + `piece_events`          | Backend FSM (`advance_workflow_stage`, service-role only) + packet-level audit trail; the hub UI derives its stage from rows, not this column (see `src/lib/packet-stage.ts`) |
 
 RLS: users read/write their own rows where user-editable (profiles, sessions,
 inferences); **INSERT/UPDATE/DELETE on `pieces`/`agent_runs` are revoked for
@@ -159,6 +160,17 @@ costs up to `agent_runs` and `sessions`. Never write totals directly.
 | `reconcile-runs`          | `verify_jwt = false`; optional `RECONCILE_TOKEN` bearer                | pg_cron sweep: completes runs, settles/releases credits, sweeps stale reservations |
 | `create-checkout-session` | JWT required                                                           | Server-created Stripe Checkout; validates price ids against `credit_products`      |
 | `stripe-webhook`          | `verify_jwt = false`; Stripe signature verification                    | Sole grantor of purchased credits; `stripe_events` inbox dedup                     |
+| `create-student-return-upload` | JWT required + packet ownership check                             | Creates `packet_returns` + `page_images` rows, returns signed upload URLs (≤20 pages) |
+| `analyze-returned-page`   | JWT required + page ownership check                                    | Handwriting extraction via Lovable AI Gateway; writes `recognized_blocks`; idempotent per analyzed page |
+| `submit-dictation`        | JWT required + packet ownership check                                  | Persists a dictation transcript (`dictation_segments`); transcription itself happens via `/api/transcribe` |
+| `verify-student-responses` | JWT required + piece ownership check                                  | Writes append-only `verification_corrections` (≤500)                               |
+| `prepare-follow-up-questions` | JWT required + packet ownership check                              | Stores 1–3 follow-up questions with optional AI refinement suggestions (never overwrites the student's wording) |
+| `run-follow-up-research`  | JWT required; **2 credits** reserved before dispatch                    | Focused research on approved follow-ups; fetch-back writes a NEW `packets` row (v+1) |
+| `create-final-document-job` | JWT required; **2 credits** reserved before dispatch                  | Final Word document run (`kind='final_docx'`); binary fetch-back into `final-artifacts` |
+| `create-presentation-job` | JWT required; **2 credits** reserved before dispatch                    | Final PowerPoint run (`kind='final_pptx'`); binary fetch-back into `final-artifacts` |
+
+Contracts for the eight research-workflow functions:
+`docs/research-workflow/BACKEND-CONTRACTS.md`.
 
 Shared modules in `supabase/functions/_shared/`: `state.ts` (run state machine),
 `dispatch.ts` (insert-before-dispatch, `dispatch_unknown` on ambiguity),

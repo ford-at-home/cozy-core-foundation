@@ -60,12 +60,8 @@ function verifiedBlock(verified: Array<{ prompt: string; response: string }>): s
 export function buildFollowUpPrompt(input: FollowUpPromptInput): string {
   const dir = `pieces/${input.pieceSlug}`;
   const nextVersion = input.priorVersion + 1;
-  const qBlock = input.approvedQuestions
-    .map((q) => `${q.position}. ${q.text}`)
-    .join("\n");
-  const contributions = input.studentContributions
-    .map((c) => `- (${c.kind}) ${c.text}`)
-    .join("\n");
+  const qBlock = input.approvedQuestions.map((q) => `${q.position}. ${q.text}`).join("\n");
+  const contributions = input.studentContributions.map((c) => `- (${c.kind}) ${c.text}`).join("\n");
   return `You are running FOLLOW-UP RESEARCH on an existing research packet.
 
 You are NOT allowed to modify the prior packet. Your outputs go to a NEW
@@ -250,10 +246,12 @@ export async function loadPriorPacketContext(
     .eq("packet_id", packet.id)
     .in("status", ["approved", "researched"])
     .order("position", { ascending: true });
-  const approvedQuestions = (fq ?? []).map((r: any) => ({
-    position: r.position,
-    text: (r.approved_text ?? r.student_text ?? "").trim(),
-  })).filter((r: any) => r.text.length > 0);
+  const approvedQuestions = (fq ?? [])
+    .map((r: any) => ({
+      position: r.position,
+      text: (r.approved_text ?? r.student_text ?? "").trim(),
+    }))
+    .filter((r: any) => r.text.length > 0);
 
   // Verified responses: JOIN corrections to their source block/segment, then
   // to the packet question via linked_question_id (block path). Server-side
@@ -307,7 +305,11 @@ export async function loadPriorPacketContext(
   }));
 
   return {
-    packet: { id: packet.id as string, version: packet.version as number, analysis: packet.analysis ?? null },
+    packet: {
+      id: packet.id as string,
+      version: packet.version as number,
+      analysis: packet.analysis ?? null,
+    },
     approvedQuestions,
     verifiedResponses,
     studentContributions,
@@ -434,7 +436,11 @@ export async function persistFollowUpResult(
       run_id: run.id,
       source: "edge",
       event_type: "followup_validation",
-      payload: { problems, rejected: parsedQuestions.rejected, persisted: parsedQuestions.questions.length },
+      payload: {
+        problems,
+        rejected: parsedQuestions.rejected,
+        persisted: parsedQuestions.questions.length,
+      },
     });
   }
 }
@@ -447,7 +453,13 @@ export async function persistFollowUpResult(
  */
 export async function persistFinalArtifactResult(
   admin: any,
-  run: { id: string; user_id: string; piece_id: string | null; kind: string; branch: string | null },
+  run: {
+    id: string;
+    user_id: string;
+    piece_id: string | null;
+    kind: string;
+    branch: string | null;
+  },
   slug: string,
 ): Promise<void> {
   if (!run.piece_id) throw new Error("final artifact run has no piece");

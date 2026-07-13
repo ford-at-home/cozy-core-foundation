@@ -13,12 +13,30 @@ artifact workflow") was verified against migrations, generated types, and
 Phase 2–7 tables (`packet_returns`, `page_images`, `recognized_blocks`,
 `dictation_segments`, `verification_corrections`, `followup_questions`,
 `final_artifacts`), buckets (`packet-returns`, `final-artifacts`), or Edge
-Functions beyond packet generation had been delivered. The missing schema
-is implemented in `supabase/migrations/20260713060000_packet_return_workflow.sql`
-following the data model specified in `08-data-model-and-apis.md` (no
-alternative model), and the workflow stages are implemented in the
-application (see the per-capability rows below and the phase status in
-`README.md`).
+Functions beyond packet generation had been delivered at that time.
+
+**Update (same day):** the backend handoff subsequently landed on `main` —
+migration `20260713043040_1528bbcd…` (return/recognition/follow-up/artifact
+tables, `pieces.workflow_stage` FSM, storage buckets), eight Edge Functions,
+regenerated Supabase types, and `BACKEND-CONTRACTS.md`. An interim migration
+this branch had added while the backend was missing
+(`20260713060000_packet_return_workflow.sql`) was **removed** in favor of the
+delivered schema; the client modules (`src/lib/packet-workflow.ts`,
+`src/lib/packet-stage.ts`) now target the delivered contracts.
+
+Two delivered-backend caveats the frontend works around (row-derived stage
+instead of `pieces.workflow_stage`):
+
+1. Nothing advances the FSM through the early stages (`draft →
+   initial_research_pending → … → packet_ready`) — `start-workflow` and the
+   packet completion path never call `advance_workflow_stage`, and
+   `draft → awaiting_student_return` is an invalid hop, so every FSM call in
+   the return/verification functions no-ops with a logged warning for pieces
+   that started before (or via) the current packet pipeline.
+2. Nothing updates `packet_returns.status` past `uploading` — recognition
+   progress lives on `page_images.status` and the verification verdict in
+   `verification_corrections`, so the UI derives a return's effective status
+   from those rows (`deriveReturnUiStatus`).
 
 ## Capability inventory
 

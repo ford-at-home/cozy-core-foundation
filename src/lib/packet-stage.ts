@@ -48,6 +48,8 @@ export type StagePacket = {
 
 export type StageReturn = {
   id: string;
+  /** Derived UI status (deriveReturnUiStatus in src/lib/packet-workflow.ts),
+   *  not the raw packet_returns.status upload-lifecycle value. */
   status: "collecting" | "recognizing" | "needs_review" | "verified" | "failed";
   created_at: string;
 };
@@ -61,7 +63,7 @@ export type StageFollowup = {
 export type StageArtifact = {
   id: string;
   kind: "docx" | "pptx";
-  status: "generating" | "ready" | "failed";
+  status: "pending" | "generating" | "ready" | "failed";
   created_at: string;
 };
 
