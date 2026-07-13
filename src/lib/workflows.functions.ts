@@ -39,13 +39,14 @@ export type AgentRun = {
   result: Json | null;
   error: string | null;
   branch: string | null;
+  external_agent_id: string | null;
   created_at: string;
   dispatched_at: string | null;
   completed_at: string | null;
 };
 
 const RUN_COLUMNS =
-  "id, user_id, piece_id, session_id, provider, total_cost_usd, status, kind, input, result, error, branch, created_at, dispatched_at, completed_at";
+  "id, user_id, piece_id, session_id, provider, total_cost_usd, status, kind, input, result, error, branch, external_agent_id, created_at, dispatched_at, completed_at";
 
 export const listMyRuns = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

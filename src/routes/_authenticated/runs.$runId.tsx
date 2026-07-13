@@ -43,7 +43,7 @@ type GeneratedBrief = { path?: string; content: string };
 const BRIEF_TAB = "__brief__";
 
 const RUN_COLUMNS =
-  "id, user_id, piece_id, session_id, provider, total_cost_usd, status, kind, input, result, error, branch, created_at, dispatched_at, completed_at";
+  "id, user_id, piece_id, session_id, provider, total_cost_usd, status, kind, input, result, error, branch, external_agent_id, created_at, dispatched_at, completed_at";
 
 /** Prefer the more advanced lifecycle snapshot so a slow initial fetch cannot
  *  overwrite a newer realtime UPDATE (e.g. completed → running). */
@@ -1089,6 +1089,35 @@ function RunDetailPanel({ run }: { run: AgentRun }) {
         <Stat label="Branch" value={run.branch ?? "—"} mono />
         <Stat label="Piece" value={run.piece_id ?? "—"} mono />
       </dl>
+
+      {run.provider === "cursor" && (
+        <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs">
+          <span className="font-medium text-foreground">Watch the raw agent stream on Cursor:</span>{" "}
+          <a
+            href={
+              run.external_agent_id
+                ? `https://cursor.com/agents?id=${encodeURIComponent(run.external_agent_id)}`
+                : "https://cursor.com/agents"
+            }
+            target="_blank"
+            rel="noreferrer"
+            className="underline hover:text-foreground"
+          >
+            {run.external_agent_id
+              ? "Open this agent on cursor.com →"
+              : "Open cursor.com/agents →"}
+          </a>
+          {run.branch && (
+            <span className="ml-1 text-muted-foreground">
+              (branch <span className="font-mono">{run.branch}</span>)
+            </span>
+          )}
+          <p className="mt-1 text-muted-foreground">
+            Requires access to the site owner's Cursor workspace — the branch name is enough to
+            locate the agent even without a deep link.
+          </p>
+        </div>
+      )}
 
       {run.error && (
         <div className="space-y-1">
