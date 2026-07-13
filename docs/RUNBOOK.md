@@ -64,6 +64,14 @@ failed with guidance; check https://platform.parallel.ai for the task.
   pause the pg_cron job. In-flight agents can be stopped from cursor.com/agents.
 - `agent_run_events` holds verbatim webhook/poll payloads per run — first stop
   when a run misbehaves.
+- Research-packet workflow runs (`packet`, `followup_research`, `final_docx`,
+  `final_pptx`) use the same webhook + reconciler lifecycle. A failed or
+  cancelled final run also marks its `final_artifacts` row `failed` so the
+  project hub can offer a retry. `piece_events` is the student-visible
+  activity trail — append-only and display-only, never authoritative.
+- `LOVABLE_API_KEY` powers handwriting recognition (`analyze-returned-page`)
+  and dictation transcription (`/api/transcribe`). A gateway 402 surfaces as
+  the established "out of AI credits" message, not a user error.
 - Backend tests: `deno test --allow-env supabase/functions/_tests/`
   (`--allow-env` is required by the research-chain tests).
 
