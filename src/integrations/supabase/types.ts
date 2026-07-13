@@ -485,6 +485,126 @@ export type Database = {
         }
         Relationships: []
       }
+      packet_questions: {
+        Row: {
+          claim_ref: string
+          created_at: string
+          edited: boolean
+          function: string
+          guidance: string | null
+          id: string
+          locked: boolean
+          packet_id: string
+          position: number
+          prompt: string
+          response_space: string
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          claim_ref?: string
+          created_at?: string
+          edited?: boolean
+          function: string
+          guidance?: string | null
+          id?: string
+          locked?: boolean
+          packet_id: string
+          position: number
+          prompt: string
+          response_space?: string
+          source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          claim_ref?: string
+          created_at?: string
+          edited?: boolean
+          function?: string
+          guidance?: string | null
+          id?: string
+          locked?: boolean
+          packet_id?: string
+          position?: number
+          prompt?: string
+          response_space?: string
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "packet_questions_packet_id_fkey"
+            columns: ["packet_id"]
+            isOneToOne: false
+            referencedRelation: "packets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      packets: {
+        Row: {
+          analysis: Json | null
+          created_at: string
+          id: string
+          piece_id: string
+          run_id: string
+          status: string
+          supersedes_packet_id: string | null
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          analysis?: Json | null
+          created_at?: string
+          id?: string
+          piece_id: string
+          run_id: string
+          status?: string
+          supersedes_packet_id?: string | null
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          analysis?: Json | null
+          created_at?: string
+          id?: string
+          piece_id?: string
+          run_id?: string
+          status?: string
+          supersedes_packet_id?: string | null
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "packets_piece_id_fkey"
+            columns: ["piece_id"]
+            isOneToOne: false
+            referencedRelation: "pieces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packets_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: true
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packets_supersedes_packet_id_fkey"
+            columns: ["supersedes_packet_id"]
+            isOneToOne: false
+            referencedRelation: "packets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pieces: {
         Row: {
           created_at: string
@@ -497,6 +617,7 @@ export type Database = {
           title: string | null
           updated_at: string
           user_id: string
+          workflow: string
         }
         Insert: {
           created_at?: string
@@ -509,6 +630,7 @@ export type Database = {
           title?: string | null
           updated_at?: string
           user_id: string
+          workflow?: string
         }
         Update: {
           created_at?: string
@@ -521,6 +643,7 @@ export type Database = {
           title?: string | null
           updated_at?: string
           user_id?: string
+          workflow?: string
         }
         Relationships: []
       }
