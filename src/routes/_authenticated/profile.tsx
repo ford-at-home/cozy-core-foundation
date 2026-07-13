@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { getMyProfile, saveMyProfile } from "@/lib/profile.functions";
-import { supabase } from "@/integrations/supabase/client";
+import { useDictation } from "@/hooks/use-dictation";
 import { toast } from "sonner";
 import { brand, pageTitle } from "@/config/brand";
 
@@ -93,256 +93,21 @@ function ProfilePage() {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Dictation state — recording via Web Audio (PCM → WAV) so the upload is a
-  // complete decodable file on every browser (Safari MP4 fragments won't).
-  const [recording, setRecording] = useState(false);
-  const [transcribing, setTranscribing] = useState(false);
-  const [dictationError, setDictationError] = useState<{
-    message: string;
-    hint?: string;
-    retryable: boolean;
-  } | null>(null);
-  // Kept so Retry re-uploads the same recording instead of forcing a re-record.
-  const [lastBlob, setLastBlob] = useState<Blob | null>(null);
-  const recRef = useRef<{
-    stream: MediaStream;
-    ctx: AudioContext;
-    source: MediaStreamAudioSourceNode;
-    node: ScriptProcessorNode;
-    chunks: Float32Array[];
-    sampleRate: number;
-  } | null>(null);
-
-  function encodeWav(chunks: Float32Array[], sampleRate: number): Blob {
-    const total = chunks.reduce((n, c) => n + c.length, 0);
-    const pcm = new Float32Array(total);
-    let offset = 0;
-    for (const c of chunks) {
-      pcm.set(c, offset);
-      offset += c.length;
-    }
-    // Downsample to 16 kHz mono to shrink the upload.
-    const target = 16000;
-    const ratio = sampleRate / target;
-    const outLen = Math.floor(pcm.length / ratio);
-    const out = new Int16Array(outLen);
-    for (let i = 0; i < outLen; i++) {
-      const s = pcm[Math.floor(i * ratio)] ?? 0;
-      const v = Math.max(-1, Math.min(1, s));
-      out[i] = v < 0 ? v * 0x8000 : v * 0x7fff;
-    }
-    const buffer = new ArrayBuffer(44 + out.byteLength);
-    const view = new DataView(buffer);
-    const writeStr = (o: number, s: string) => {
-      for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i));
-    };
-    writeStr(0, "RIFF");
-    view.setUint32(4, 36 + out.byteLength, true);
-    writeStr(8, "WAVE");
-    writeStr(12, "fmt ");
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, 1, true);
-    view.setUint32(24, target, true);
-    view.setUint32(28, target * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    writeStr(36, "data");
-    view.setUint32(40, out.byteLength, true);
-    new Int16Array(buffer, 44).set(out);
-    return new Blob([buffer], { type: "audio/wav" });
-  }
-
-  async function startRecording() {
-    setDictationError(null);
-    setLastBlob(null);
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setDictationError({
-        message: "Your browser doesn't support microphone recording.",
-        hint: "Try the latest Chrome, Safari, or Firefox — dictation needs a secure (https) context.",
-        retryable: false,
-      });
-      return;
-    }
-    let stream: MediaStream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch (err) {
-      const name = (err as { name?: string } | undefined)?.name ?? "";
-      if (name === "NotAllowedError" || name === "SecurityError") {
-        setDictationError({
-          message: "Microphone access was blocked.",
-          hint: "Click the mic icon in your browser's address bar, allow this site, and try again.",
-          retryable: true,
-        });
-      } else if (name === "NotFoundError" || name === "OverconstrainedError") {
-        setDictationError({
-          message: "No microphone was detected.",
-          hint: "Plug in or enable a mic in your system settings, then try again.",
-          retryable: true,
-        });
-      } else if (name === "NotReadableError") {
-        setDictationError({
-          message: "Your mic is being used by another app.",
-          hint: "Close other apps or tabs that might be recording, then try again.",
-          retryable: true,
-        });
-      } else {
-        setDictationError({
-          message: "Couldn't start the microphone.",
-          hint: "Refresh the page and try again — if it keeps failing, check your browser's site permissions.",
-          retryable: true,
-        });
-      }
-      return;
-    }
-    const ctx = new AudioContext();
-    const source = ctx.createMediaStreamSource(stream);
-    const node = ctx.createScriptProcessor(4096, 1, 1);
-    // Mute before destination so the processor stays alive without speaker echo.
-    const mute = ctx.createGain();
-    mute.gain.value = 0;
-    const chunks: Float32Array[] = [];
-    node.onaudioprocess = (e) => chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
-    source.connect(node);
-    node.connect(mute);
-    mute.connect(ctx.destination);
-    recRef.current = { stream, ctx, source, node, chunks, sampleRate: ctx.sampleRate };
-    setRecording(true);
-  }
-
-  async function stopRecording() {
-    const rec = recRef.current;
-    recRef.current = null;
-    setRecording(false);
-    if (!rec) return;
-    rec.stream.getTracks().forEach((t) => t.stop());
-    rec.node.disconnect();
-    rec.source.disconnect();
-    const blob = encodeWav(rec.chunks, rec.sampleRate);
-    await rec.ctx.close();
-    if (blob.size < 2048) {
-      setDictationError({
-        message: "That recording was empty.",
-        hint: "Check your mic input level, then hold Dictate for at least a second or two before stopping.",
-        retryable: false,
-      });
-      return;
-    }
-    setLastBlob(blob);
-    await transcribeBlob(blob);
-  }
-
-  async function transcribeBlob(blob: Blob) {
-    setDictationError(null);
-    setTranscribing(true);
-    try {
-      const { data: sess } = await supabase.auth.getSession();
-      const token = sess.session?.access_token;
-      if (!token) {
-        setDictationError({
-          message: "Your session expired.",
-          hint: "Sign in again to keep dictating — your recording is still ready to retry.",
-          retryable: true,
-        });
-        return;
-      }
-      const fd = new FormData();
-      fd.append("file", blob, "recording.wav");
-      let res: Response;
-      try {
-        res = await fetch("/api/transcribe", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: fd,
-        });
-      } catch {
-        // fetch() only rejects on a real network failure (offline, DNS, TLS).
-        setDictationError({
-          message: "Couldn't reach the transcription service.",
-          hint: "Check your internet connection, then press Retry — your recording is still here.",
-          retryable: true,
-        });
-        return;
-      }
-      const body = (await res.json().catch(() => ({}))) as { text?: string; error?: string };
-      if (!res.ok) {
-        if (res.status === 402) {
-          setDictationError({
-            message: "Dictation is out of workspace AI credits.",
-            hint: "Dictation bills workspace AI credits — separate from the generation credits on your Billing page. Add AI credits in Workspace Settings → Plans & credits, then press Retry.",
-            retryable: true,
-          });
-        } else if (res.status === 429) {
-          setDictationError({
-            message: "Transcription is rate-limited right now.",
-            hint: "Wait a few seconds, then press Retry.",
-            retryable: true,
-          });
-        } else if (res.status === 401) {
-          setDictationError({
-            message: "Your session expired.",
-            hint: "Sign in again, then press Retry.",
-            retryable: true,
-          });
-        } else if (res.status === 413) {
-          setDictationError({
-            message: "That recording is too long to transcribe in one go.",
-            hint: "Record shorter clips (under ~10 minutes) and dictate them one at a time.",
-            retryable: false,
-          });
-        } else if (res.status >= 500) {
-          setDictationError({
-            message: "The transcription service hit a temporary error.",
-            hint: body.error
-              ? `${body.error} — press Retry in a moment.`
-              : "Press Retry in a moment.",
-            retryable: true,
-          });
-        } else {
-          setDictationError({
-            message: body.error ?? `Transcription failed (${res.status}).`,
-            hint: "Press Retry, or record again if the problem continues.",
-            retryable: true,
-          });
-        }
-        return;
-      }
-      const text = (body.text ?? "").trim();
-      if (!text) {
-        setDictationError({
-          message: "No speech detected in that recording.",
-          hint: "Speak closer to the mic and try again.",
-          retryable: false,
-        });
-        return;
-      }
-      setStyleText((prev) => (prev.trim() ? `${prev.replace(/\s+$/, "")}\n\n${text}` : text));
-      setDirty(true);
-      setLastBlob(null);
-      toast.success("Transcription appended to your style");
-    } catch (err) {
-      setDictationError({
-        message: err instanceof Error ? err.message : "Transcription failed unexpectedly.",
-        hint: "Press Retry — if it keeps failing, refresh the page and record again.",
-        retryable: true,
-      });
-    } finally {
-      setTranscribing(false);
-    }
-  }
-
-  useEffect(() => {
-    return () => {
-      const rec = recRef.current;
-      if (rec) {
-        rec.stream.getTracks().forEach((t) => t.stop());
-        rec.node.disconnect();
-        rec.source.disconnect();
-        void rec.ctx.close();
-      }
-    };
-  }, []);
+  // Dictation via the shared hook (recording + /api/transcribe); the
+  // transcript is appended to the style text.
+  const {
+    recording,
+    transcribing,
+    error: dictationError,
+    lastBlob,
+    start: startRecording,
+    stop: stopRecording,
+    retry: retryTranscription,
+  } = useDictation((text) => {
+    setStyleText((prev) => (prev.trim() ? `${prev.replace(/\s+$/, "")}\n\n${text}` : text));
+    setDirty(true);
+    toast.success("Transcription appended to your style");
+  });
 
   // Seed the editor once the profile loads; don't clobber in-progress edits.
   useEffect(() => {
@@ -497,7 +262,7 @@ function ProfilePage() {
                 {dictationError.retryable && lastBlob && (
                   <button
                     type="button"
-                    onClick={() => void transcribeBlob(lastBlob)}
+                    onClick={retryTranscription}
                     disabled={transcribing}
                     className="mt-2 inline-flex min-h-11 items-center rounded-md border border-destructive/50 bg-background px-3 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
                   >

@@ -82,11 +82,19 @@ export type StartWorkflowInput = {
 export const startWorkflow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: StartWorkflowInput) => data ?? {})
-  .handler(async ({ data, context }): Promise<{ runId: string }> => {
+  .handler(async ({ data, context }): Promise<{ runId: string; pieceId: string | null }> => {
     // Invoke the start-workflow edge function as the signed-in user.
     const { data: result, error } = await context.supabase.functions.invoke("start-workflow", {
       body: data,
     });
     if (error) throw new Error(await extractEdgeError(error, "start-workflow"));
-    return result as { runId: string };
+    const r = result as { runId: string; pieceId?: string | null };
+    return { runId: r.runId, pieceId: r.pieceId ?? null };
   });
+
+/** True when a dashboard run row belongs to the research-packet workflow. */
+export function isPacketWorkflowRun(run: Pick<AgentRun, "kind" | "input">): boolean {
+  if (["packet", "followup_research", "final_docx", "final_pptx"].includes(run.kind)) return true;
+  const input = run.input as { workflow?: string } | null;
+  return input?.workflow === "research_packet";
+}

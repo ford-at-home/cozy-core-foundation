@@ -33,12 +33,17 @@ export function serve(fn: string, handler: (req: Request, rid: string) => Promis
   return async (req: Request) => {
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
     const rid = newRequestId();
-    if (req.method !== "POST") return errorResponse(fn, 405, "Method not allowed", { requestId: rid });
+    if (req.method !== "POST")
+      return errorResponse(fn, 405, "Method not allowed", { requestId: rid });
     try {
       return await handler(req, rid);
     } catch (e) {
       if (e instanceof Response) return e;
-      return errorResponse(fn, 500, "Unhandled server error", { requestId: rid, code: "unhandled", cause: e });
+      return errorResponse(fn, 500, "Unhandled server error", {
+        requestId: rid,
+        code: "unhandled",
+        cause: e,
+      });
     }
   };
 }

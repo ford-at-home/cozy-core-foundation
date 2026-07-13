@@ -22,10 +22,7 @@ import {
 import { recordInference, cursorInferenceUsage } from "../_shared/usage.ts";
 import { releaseRunCredits, settleRunCredits } from "../_shared/credits.ts";
 import { persistPacketResult } from "../_shared/packet.ts";
-import {
-  persistFinalArtifactResult,
-  persistFollowUpResult,
-} from "../_shared/followup-final.ts";
+import { persistFinalArtifactResult, persistFollowUpResult } from "../_shared/followup-final.ts";
 import { advanceStage, logPieceEvent } from "../_shared/workflow.ts";
 import { workflowStageForCompletedKind } from "../_shared/complete.ts";
 

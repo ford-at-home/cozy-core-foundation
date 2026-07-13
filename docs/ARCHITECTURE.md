@@ -54,8 +54,12 @@ Specification set: `docs/research-workflow/`.
 | `/profile`                          | `src/routes/_authenticated/profile.tsx` (voice/style + dictation) |
 | `/sessions`, `/sessions/$sessionId` | cost views                                                        |
 | `/runs/$runId`                      | run detail, outputs, actions (ready / resynth / revise)           |
+| `/project/$pieceId`                 | `src/routes/_authenticated/project.$pieceId.tsx` (research-packet guided hub: Research → Print → Think → Return → Review → Follow Up → Finish; stage model derived in `src/lib/packet-stage.ts` from server-persisted rows) |
 | `/packet/$runId`                    | `src/routes/_authenticated/packet.$runId.tsx` (research-packet question review: edit / lock / add / approve) |
 | `/print/$runId`                     | print-for-markup preview + PDF download (packet runs use the packet builder with response areas) |
+| `/return/$packetId`                 | `src/routes/_authenticated/return.$packetId.tsx` (return completed work: camera-first page photos via signed uploads + dictation via `useDictation`; all writes through Edge Functions) |
+| `/review/$returnId`                 | `src/routes/_authenticated/review.$returnId.tsx` (mandatory verification: photo beside recognized text, low-confidence gating, handwriting-vs-dictation conflict resolution, approval via `verify-student-responses`) |
+| `/followup/$packetId`               | `src/routes/_authenticated/followup.$packetId.tsx` (follow-up stage: submit up to 3 questions — typed / dictated / from `followup_opportunities` / from verified handwriting — visible suggested rewordings, explicit approval, then the 2-credit `run-follow-up-research` dispatch; result is a v+1 packet) |
 | `/billing`                          | `src/routes/_authenticated/billing.tsx` (balance, credit packs, purchase history, ledger, checkout return banners) |
 
 ### Mobile (verified — mobile is the primary interface)
@@ -128,6 +132,14 @@ Project id `dlaojinagezrlbwyritd` (`supabase/config.toml`).
 | `stripe_events`                                   | Webhook inbox, PK = Stripe event id (duplicate delivery = no-op insert); RLS deny-all, service-role only |
 | `packets`                                         | One row per completed packet run (`workflow='research_packet'`): analysis jsonb, status `generated → reviewed`; unique `run_id` |
 | `packet_questions`                                | Tailored Socratic questions per packet; question text/lock are owner-editable content under RLS; unique `(packet_id, position)` |
+| `packet_returns`                                  | One return attempt per printed packet (status tracks the upload lifecycle: `pending → uploading → recognizing → ready`/`failed`); created by `create-student-return-upload`; client grant is SELECT-only |
+| `page_images`                                     | Uploaded page photos (private `packet-returns` bucket); `uploaded → analyzing → analyzed`/`failed` written by `analyze-returned-page`; client grant is SELECT-only |
+| `recognized_blocks`                               | Raw handwriting-recognition output per page (append-only); service-role writes only, owner reads |
+| `dictation_segments`                              | Dictated response transcripts with `resolved_target` jsonb; written via `submit-dictation`; client grant is SELECT-only |
+| `verification_corrections`                        | Append-only student-approved final text per block/segment, written via `verify-student-responses`; latest row per target wins |
+| `followup_questions`                              | Up to 3 follow-up research questions per packet (unique `(packet_id, position)`); `submitted → refined → approved → researched`; written via `prepare-follow-up-questions` |
+| `final_artifacts`                                 | Generated Word/PowerPoint artifacts (`final-artifacts` bucket); `pending → generating → ready`/`failed`; service-role writes, owner downloads via signed URL |
+| `pieces.workflow_stage` + `piece_events`          | Backend FSM (`advance_workflow_stage`, service-role only) + packet-level audit trail; the hub UI derives its stage from rows, not this column (see `src/lib/packet-stage.ts`) |
 
 RLS: users read/write their own rows where user-editable (profiles, sessions,
 inferences); **INSERT/UPDATE/DELETE on `pieces`/`agent_runs` are revoked for
@@ -151,6 +163,17 @@ costs up to `agent_runs` and `sessions`. Never write totals directly.
 | `reconcile-runs`          | `verify_jwt = false`; optional `RECONCILE_TOKEN` bearer                | pg_cron sweep: completes runs, settles/releases credits, sweeps stale reservations |
 | `create-checkout-session` | JWT required                                                           | Server-created Stripe Checkout; validates price ids against `credit_products`      |
 | `stripe-webhook`          | `verify_jwt = false`; Stripe signature verification                    | Sole grantor of purchased credits; `stripe_events` inbox dedup                     |
+| `create-student-return-upload` | JWT required + packet ownership check                             | Creates (or appends to, for retakes/dictation-only) a `packet_returns` row + `page_images` rows; returns signed upload URLs (≤20 pages) |
+| `analyze-returned-page`   | JWT required + page ownership check                                    | Handwriting extraction via Lovable AI Gateway (`_shared/recognition.ts`: question-linked blocks, quality gate with named retake reasons, no fabrication); records an idempotent inference (`lovable:hwr:{returnId}:{path}`); keeps `packet_returns.status` truthful |
+| `submit-dictation`        | JWT required + packet ownership check                                  | Persists a dictation transcript (`dictation_segments`); transcription itself happens via `/api/transcribe` |
+| `verify-student-responses` | JWT required + piece ownership check                                  | Writes append-only `verification_corrections` (≤500)                               |
+| `prepare-follow-up-questions` | JWT required + packet ownership check                              | Stores 1–3 follow-up questions with optional AI refinement suggestions (never overwrites the student's wording) |
+| `run-follow-up-research`  | JWT required; **2 credits** reserved before dispatch                    | Focused research on approved follow-ups; fetch-back writes a NEW `packets` row (v+1) |
+| `create-final-document-job` | JWT required; **2 credits** reserved before dispatch                  | Final Word document run (`kind='final_docx'`); binary fetch-back into `final-artifacts` |
+| `create-presentation-job` | JWT required; **2 credits** reserved before dispatch                    | Final PowerPoint run (`kind='final_pptx'`); binary fetch-back into `final-artifacts` |
+
+Contracts for the eight research-workflow functions:
+`docs/research-workflow/BACKEND-CONTRACTS.md`.
 
 Shared modules in `supabase/functions/_shared/`: `state.ts` (run state machine),
 `dispatch.ts` (insert-before-dispatch, `dispatch_unknown` on ambiguity),
@@ -160,7 +183,11 @@ Shared modules in `supabase/functions/_shared/`: `state.ts` (run state machine),
 missed webhooks), `prompt.ts` (cloud-agent prompt builders, including
 `buildPacketPrompt`), `packet.ts` (packet JSON validation + idempotent
 persistence into `packets`/`packet_questions`, called before a packet run is
-marked completed), `webhook.ts`, `parallel.ts`, `research.ts`,
+marked completed), `recognition.ts` (handwriting-recognition prompt +
+fabrication-guarded output validation + question-id resolution),
+`followup-final.ts` (follow-up/final prompt builders + fetch-back persistors),
+`workflow.ts` (FSM advance + piece events), `http.ts` (JWT auth boilerplate),
+`webhook.ts`, `parallel.ts`, `research.ts`,
 `provider.cursor.ts`, `provider.stub.ts`, `observability.ts`.
 
 ### Run state machine (verified — `_shared/state.ts`)

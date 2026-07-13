@@ -114,10 +114,15 @@ function NewPiecePage() {
     setError(null);
     try {
       if (mode === "topic") {
-        const { runId } = await start({
+        const { runId, pieceId } = await start({
           data: { topic: topic.trim(), goal: goal.trim(), workflow, requestId },
         });
-        router.navigate({ to: "/runs/$runId", params: { runId } });
+        // Research packets get the guided project hub; drafts keep the run page.
+        if (isPacket && pieceId) {
+          router.navigate({ to: "/project/$pieceId", params: { pieceId } });
+        } else {
+          router.navigate({ to: "/runs/$runId", params: { runId } });
+        }
         return;
       }
 
@@ -151,10 +156,14 @@ function NewPiecePage() {
         setUploadProgress(null);
       }
 
-      const { runId } = await start({
+      const { runId, pieceId } = await start({
         data: { research, goal: goal.trim(), workflow, requestId, attachments },
       });
-      router.navigate({ to: "/runs/$runId", params: { runId } });
+      if (isPacket && pieceId) {
+        router.navigate({ to: "/project/$pieceId", params: { pieceId } });
+      } else {
+        router.navigate({ to: "/runs/$runId", params: { runId } });
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to start";
       setError(
@@ -180,9 +189,10 @@ function NewPiecePage() {
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           {isPacket ? (
             <>
-              Bring research (or a topic to research), and AI prepares a printable packet: findings
-              with sources, plus questions written for that specific research. You read, annotate,
-              and answer on paper.
+              Start with a question. {brand.company.name} researches the subject and prepares a
+              packet you can print, read, and mark by hand. Return your pages or dictate your
+              thoughts, review what the system understood, then create a final document and
+              presentation shaped by your own reasoning.
             </>
           ) : (
             <>

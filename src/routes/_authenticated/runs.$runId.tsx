@@ -2,7 +2,12 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { ACTIVE_RUN_STATUSES, type AgentRun, type RunStatus } from "@/lib/workflows.functions";
+import {
+  ACTIVE_RUN_STATUSES,
+  isPacketWorkflowRun,
+  type AgentRun,
+  type RunStatus,
+} from "@/lib/workflows.functions";
 import { runPieceAction, type PieceAction } from "@/lib/pieces.functions";
 import { isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
 import type { Json } from "@/integrations/supabase/types";
@@ -174,6 +179,15 @@ function RunDetailPage() {
             <span className="text-muted-foreground">
               started {new Date(run.created_at).toLocaleString()}
             </span>
+            {isPacketWorkflowRun(run) && run.piece_id && (
+              <Link
+                to="/project/$pieceId"
+                params={{ pieceId: run.piece_id }}
+                className="font-medium text-primary underline-offset-2 hover:underline"
+              >
+                Open the project →
+              </Link>
+            )}
           </div>
 
           <RunDetailPanel run={run} />
@@ -217,6 +231,36 @@ function RunDetailPage() {
                 Review the questions →
               </Link>{" "}
               then print it with real writing space and answer by hand.
+              {run.piece_id && (
+                <>
+                  {" "}
+                  Track the whole journey from{" "}
+                  <Link
+                    to="/project/$pieceId"
+                    params={{ pieceId: run.piece_id }}
+                    className="font-medium underline"
+                  >
+                    your project page
+                  </Link>
+                  .
+                </>
+              )}
+            </div>
+          )}
+
+          {run.kind === "followup_research" && run.status === "completed" && (
+            <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm">
+              Follow-up research complete — your questions were answered and a revised packet was
+              prepared (your original packet is unchanged).{" "}
+              {run.piece_id && (
+                <Link
+                  to="/project/$pieceId"
+                  params={{ pieceId: run.piece_id }}
+                  className="font-medium underline"
+                >
+                  See the revised packet on your project page →
+                </Link>
+              )}
             </div>
           )}
 
@@ -271,10 +315,12 @@ function RunDetailPage() {
             </div>
           )}
 
+          {/* Draft-workflow next-step actions; research runs chain on their
+              own and packet-workflow runs route through the project hub. */}
           {run.status === "completed" &&
             run.piece_id &&
             run.kind !== "research" &&
-            run.kind !== "packet" && <ActionsPanel run={run} />}
+            !isPacketWorkflowRun(run) && <ActionsPanel run={run} />}
         </>
       )}
     </div>
@@ -453,6 +499,23 @@ function activeStatusMessage(status: RunStatus, kind: string): string {
         return "Working — analyzing the research and writing questions tailored to its findings. This page updates live.";
       case "awaiting_fetch":
         return "Almost done — the packet is written; fetching it back and saving the questions for review.";
+      default:
+        return "In progress.";
+    }
+  }
+  if (kind === "followup_research") {
+    switch (status) {
+      case "requested":
+      case "dispatching":
+        return "Starting — handing your approved follow-up questions to the research agent.";
+      case "dispatch_unknown":
+        return "Starting… — dispatch is unconfirmed; the reconciler is resolving it. This page updates live.";
+      case "queued":
+        return "Queued — the agent's workspace is being prepared.";
+      case "running":
+        return "Researching your questions — seeking authoritative evidence and noting where it confirms or challenges the original findings. This page updates live.";
+      case "awaiting_fetch":
+        return "Almost done — the follow-up report is written; saving it as a revised packet.";
       default:
         return "In progress.";
     }
