@@ -6,10 +6,13 @@
 import { assert, assertEquals } from "jsr:@std/assert@1";
 import {
   assembleVerifiedResponses,
+  buildFinalDocxPrompt,
+  buildFinalPptxPrompt,
   buildFollowUpPrompt,
   type AssemblyBlock,
   type AssemblyCorrection,
   type AssemblySegment,
+  type FinalArtifactPromptInput,
 } from "../_shared/followup-final.ts";
 
 const QUESTIONS = [
@@ -164,3 +167,70 @@ Deno.test(
     assert(p.includes("v2 research"));
   },
 );
+
+// ----------------------------------------------------------------- final artifact prompts
+
+const FINAL_INPUT: FinalArtifactPromptInput = {
+  pieceSlug: "my-piece",
+  goal: "Automation and administrative work",
+  styleText: "Short declarative sentences.",
+  packetBody: "# Findings\n\nEmployment declined.",
+  packetAnalysis: { claims: [{ id: "C1" }] },
+  verifiedResponses: [{ prompt: "What did you believe?", response: "I thought jobs were safe." }],
+  followupSummary: "Second-pass evidence confirmed the decline.",
+  studentContributions: [{ kind: "belief", text: "Local offices matter most." }],
+};
+
+Deno.test("final docx prompt: output path, design system, and every context block", () => {
+  const p = buildFinalDocxPrompt(FINAL_INPUT);
+  assert(p.includes("pieces/my-piece/final/document.docx"));
+  // Design rules the sample suite (tests/office-artifacts.test.ts) verifies.
+  assert(p.includes("US Letter page"));
+  assert(p.includes("real Word paragraph styles"));
+  assert(p.includes("Heading 1"));
+  assert(p.includes("page number"));
+  assert(p.includes("core properties"));
+  assert(p.includes("alt text"));
+  assert(p.includes("grayscale"));
+  // Context blocks arrive verbatim, including student contributions.
+  assert(p.includes("Short declarative sentences."));
+  assert(p.includes("I thought jobs were safe."));
+  assert(p.includes("- (belief) Local offices matter most."));
+  assert(p.includes("Employment declined."));
+  assert(p.includes("Second-pass evidence confirmed the decline."));
+  assert(p.includes('final-docx(my-piece)'));
+});
+
+Deno.test("final pptx prompt: output path, slide design system, and every context block", () => {
+  const p = buildFinalPptxPrompt(FINAL_INPUT);
+  assert(p.includes("pieces/my-piece/final/presentation.pptx"));
+  assert(p.includes("8–12 slides"));
+  assert(p.includes("16:9"));
+  assert(p.includes("speaker notes"));
+  assert(p.includes("Slide numbers"));
+  assert(p.includes("Grayscale-safe"));
+  assert(p.includes("Nothing below 11pt"));
+  assert(p.includes("core properties"));
+  assert(p.includes("- (belief) Local offices matter most."));
+  assert(p.includes("I thought jobs were safe."));
+  assert(p.includes('final-pptx(my-piece)'));
+});
+
+Deno.test("final prompts: empty context degrades to explicit placeholders, never blanks", () => {
+  const empty: FinalArtifactPromptInput = {
+    pieceSlug: "p",
+    goal: null,
+    styleText: "",
+    packetBody: null,
+    packetAnalysis: null,
+    verifiedResponses: [],
+    followupSummary: null,
+    studentContributions: [],
+  };
+  for (const p of [buildFinalDocxPrompt(empty), buildFinalPptxPrompt(empty)]) {
+    assert(p.includes("(none — infer from the packet)"));
+    assert(p.includes("(neutral academic register)"));
+    assert(p.includes("STUDENT_RESPONSES: (none captured yet)"));
+    assert(p.includes("(missing)"));
+  }
+});
