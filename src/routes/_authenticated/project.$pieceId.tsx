@@ -298,6 +298,7 @@ function StageCard({
               ? "Deep research is running — reading sources and assembling evidence. This usually takes 2–10 minutes."
               : "The research is done; your packet — findings, sources, and questions written for this specific research — is being prepared."}
           </p>
+          <LiveHeartbeat since={view.activeRun.created_at} />
           <div className="flex flex-col gap-2 sm:flex-row">
             <Link to="/runs/$runId" params={{ runId: view.activeRun.id }} className={secondaryBtn}>
               Watch progress
