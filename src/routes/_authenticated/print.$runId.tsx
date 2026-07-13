@@ -22,7 +22,13 @@ export const Route = createFileRoute("/_authenticated/print/$runId")({
 // Packet runs print through the packet builder: the reviewed questions (with
 // their writing space) come from the packets tables so review-screen edits
 // show up on paper without regenerating anything.
-type PacketPrintInfo = { packetId: string; version: number; questions: PacketPrintQuestion[] };
+type PacketPrintInfo = {
+  packetId: string;
+  version: number;
+  status: "generated" | "reviewed" | null;
+  pieceId: string | null;
+  questions: PacketPrintQuestion[];
+};
 
 function PrintPage() {
   const { runId } = Route.useParams();
@@ -123,6 +129,8 @@ function PrintPage() {
                 setPacketInfo({
                   packetId: packet.id,
                   version: packet.version,
+                  status: packet.status,
+                  pieceId: packet.piece_id,
                   questions: questions.map((q) => ({
                     position: q.position,
                     function: q.function,
@@ -133,10 +141,22 @@ function PrintPage() {
                   })),
                 });
               } else {
-                setPacketInfo({ packetId: runId, version: 1, questions: [] });
+                setPacketInfo({
+                  packetId: runId,
+                  version: 1,
+                  status: null,
+                  pieceId: null,
+                  questions: [],
+                });
               }
             } catch {
-              setPacketInfo({ packetId: runId, version: 1, questions: [] });
+              setPacketInfo({
+                packetId: runId,
+                version: 1,
+                status: null,
+                pieceId: null,
+                questions: [],
+              });
             }
           }
           setPost(content);
@@ -259,13 +279,23 @@ function PrintPage() {
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-          <Link
-            to="/runs/$runId"
-            params={{ runId }}
-            className="inline-flex min-h-11 items-center text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 rounded-sm sm:min-h-0"
-          >
-            ← Back to run
-          </Link>
+          {packetInfo?.pieceId ? (
+            <Link
+              to="/project/$pieceId"
+              params={{ pieceId: packetInfo.pieceId }}
+              className="inline-flex min-h-11 items-center text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 rounded-sm sm:min-h-0"
+            >
+              ← Back to project
+            </Link>
+          ) : (
+            <Link
+              to="/runs/$runId"
+              params={{ runId }}
+              className="inline-flex min-h-11 items-center text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 rounded-sm sm:min-h-0"
+            >
+              ← Back to run
+            </Link>
+          )}
           <button
             type="button"
             onClick={savePdf}
@@ -297,6 +327,15 @@ function PrintPage() {
         >
           {error}
         </p>
+      )}
+
+      {post && packetInfo?.status === "generated" && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+          The packet's questions haven't been approved yet — what prints below is the current draft.{" "}
+          <Link to="/packet/$runId" params={{ runId }} className="font-medium underline">
+            Review and approve the questions first →
+          </Link>
+        </div>
       )}
 
       {post && (

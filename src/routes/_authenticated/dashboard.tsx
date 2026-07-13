@@ -1,7 +1,7 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { listMyRuns } from "@/lib/workflows.functions";
+import { isPacketWorkflowRun, listMyRuns, type AgentRun } from "@/lib/workflows.functions";
 import { StatusPill } from "@/components/StatusPill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { brand, pageTitle } from "@/config/brand";
@@ -26,8 +26,17 @@ function DashboardPage() {
     queryFn: () => fetchRuns(),
   });
 
-  function openRun(runId: string) {
-    router.navigate({ to: "/runs/$runId", params: { runId } });
+  // Research-packet runs open the guided project hub; drafts keep the run page.
+  function openRun(run: AgentRun) {
+    if (isPacketWorkflowRun(run) && run.piece_id) {
+      router.navigate({ to: "/project/$pieceId", params: { pieceId: run.piece_id } });
+    } else {
+      router.navigate({ to: "/runs/$runId", params: { runId: run.id } });
+    }
+  }
+
+  function runLabel(run: AgentRun): string {
+    return isPacketWorkflowRun(run) ? `Research packet · ${run.kind}` : run.kind;
   }
 
   const runs = data?.runs ?? [];
@@ -133,11 +142,11 @@ function DashboardPage() {
                 <li key={r.id}>
                   <button
                     type="button"
-                    onClick={() => openRun(r.id)}
+                    onClick={() => openRun(r)}
                     className="flex w-full min-h-14 flex-col gap-2 px-4 py-3.5 text-left transition-colors active:bg-accent/50 focus-visible:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm font-medium capitalize">{r.kind}</span>
+                      <span className="text-sm font-medium capitalize">{runLabel(r)}</span>
                       <StatusPill status={r.status} />
                     </div>
                     <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
@@ -173,12 +182,12 @@ function DashboardPage() {
                       key={r.id}
                       tabIndex={0}
                       role="link"
-                      aria-label={`Open ${r.kind} run ${r.id.slice(0, 8)}, ${r.status}`}
-                      onClick={() => openRun(r.id)}
+                      aria-label={`Open ${runLabel(r)} run ${r.id.slice(0, 8)}, ${r.status}`}
+                      onClick={() => openRun(r)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          openRun(r.id);
+                          openRun(r);
                         }
                       }}
                       className="cursor-pointer border-b border-border/60 transition-colors last:border-0 hover:bg-accent/40 focus-visible:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50"
@@ -186,7 +195,7 @@ function DashboardPage() {
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         {new Date(r.created_at).toLocaleString()}
                       </td>
-                      <td className="px-5 py-3.5 text-muted-foreground">{r.kind}</td>
+                      <td className="px-5 py-3.5 text-muted-foreground">{runLabel(r)}</td>
                       <td className="px-5 py-3.5">
                         <StatusPill status={r.status} />
                       </td>

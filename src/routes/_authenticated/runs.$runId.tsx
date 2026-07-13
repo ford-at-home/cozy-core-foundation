@@ -2,7 +2,12 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { ACTIVE_RUN_STATUSES, type AgentRun, type RunStatus } from "@/lib/workflows.functions";
+import {
+  ACTIVE_RUN_STATUSES,
+  isPacketWorkflowRun,
+  type AgentRun,
+  type RunStatus,
+} from "@/lib/workflows.functions";
 import { runPieceAction, type PieceAction } from "@/lib/pieces.functions";
 import { isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
 import type { Json } from "@/integrations/supabase/types";
@@ -174,6 +179,15 @@ function RunDetailPage() {
             <span className="text-muted-foreground">
               started {new Date(run.created_at).toLocaleString()}
             </span>
+            {isPacketWorkflowRun(run) && run.piece_id && (
+              <Link
+                to="/project/$pieceId"
+                params={{ pieceId: run.piece_id }}
+                className="font-medium text-primary underline-offset-2 hover:underline"
+              >
+                Open the project →
+              </Link>
+            )}
           </div>
 
           <RunDetailPanel run={run} />
@@ -217,6 +231,20 @@ function RunDetailPage() {
                 Review the questions →
               </Link>{" "}
               then print it with real writing space and answer by hand.
+              {run.piece_id && (
+                <>
+                  {" "}
+                  Track the whole journey from{" "}
+                  <Link
+                    to="/project/$pieceId"
+                    params={{ pieceId: run.piece_id }}
+                    className="font-medium underline"
+                  >
+                    your project page
+                  </Link>
+                  .
+                </>
+              )}
             </div>
           )}
 

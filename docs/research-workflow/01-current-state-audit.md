@@ -4,6 +4,22 @@ Verified against the repository on 2026-07-13 (branch base `main`,
 commit `979d666`). Status vocabulary matches `docs/ARCHITECTURE.md`:
 **implemented**, **partial**, **missing**, **external**.
 
+## Backend-handoff verification (2026-07-13, post-Phase-1)
+
+A claimed backend handoff ("schema, migrations, RLS, storage, workflow
+state, and Edge Functions for the full return/recognition/follow-up/
+artifact workflow") was verified against migrations, generated types, and
+`supabase/functions/` — **only the Phase 1 slice existed**. None of the
+Phase 2–7 tables (`packet_returns`, `page_images`, `recognized_blocks`,
+`dictation_segments`, `verification_corrections`, `followup_questions`,
+`final_artifacts`), buckets (`packet-returns`, `final-artifacts`), or Edge
+Functions beyond packet generation had been delivered. The missing schema
+is implemented in `supabase/migrations/20260713060000_packet_return_workflow.sql`
+following the data model specified in `08-data-model-and-apis.md` (no
+alternative model), and the workflow stages are implemented in the
+application (see the per-capability rows below and the phase status in
+`README.md`).
+
 ## Capability inventory
 
 | Capability | Status | Where | Notes |

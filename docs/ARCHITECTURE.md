@@ -54,6 +54,7 @@ Specification set: `docs/research-workflow/`.
 | `/profile`                          | `src/routes/_authenticated/profile.tsx` (voice/style + dictation) |
 | `/sessions`, `/sessions/$sessionId` | cost views                                                        |
 | `/runs/$runId`                      | run detail, outputs, actions (ready / resynth / revise)           |
+| `/project/$pieceId`                 | `src/routes/_authenticated/project.$pieceId.tsx` (research-packet guided hub: Research → Print → Think → Return → Review → Follow Up → Finish; stage model derived in `src/lib/packet-stage.ts` from server-persisted rows) |
 | `/packet/$runId`                    | `src/routes/_authenticated/packet.$runId.tsx` (research-packet question review: edit / lock / add / approve) |
 | `/print/$runId`                     | print-for-markup preview + PDF download (packet runs use the packet builder with response areas) |
 | `/billing`                          | `src/routes/_authenticated/billing.tsx` (balance, credit packs, purchase history, ledger, checkout return banners) |
@@ -128,6 +129,13 @@ Project id `dlaojinagezrlbwyritd` (`supabase/config.toml`).
 | `stripe_events`                                   | Webhook inbox, PK = Stripe event id (duplicate delivery = no-op insert); RLS deny-all, service-role only |
 | `packets`                                         | One row per completed packet run (`workflow='research_packet'`): analysis jsonb, status `generated → reviewed`; unique `run_id` |
 | `packet_questions`                                | Tailored Socratic questions per packet; question text/lock are owner-editable content under RLS; unique `(packet_id, position)` |
+| `packet_returns`                                  | One return attempt per printed packet: `collecting → recognizing → needs_review → verified` (or `failed`); owner creates/verifies, Edge Function writes recognition verdicts |
+| `page_images`                                     | Uploaded page photos (private `packet-returns` bucket); quality jsonb + status written server-side; owner reorders/removes |
+| `recognized_blocks`                               | Raw handwriting-recognition output per page (attempt-versioned, append-only); service-role writes only, owner reads |
+| `dictation_segments`                              | Dictated/typed response transcripts with page/question references; owner CRUD (user content) |
+| `verification_corrections`                        | Append-only student verdicts (confirm/correct/reject) on blocks/segments; latest row per target wins |
+| `followup_questions`                              | Up to 3 follow-up research questions per packet (`position` 1–3); `submitted → refined → approved → researched` |
+| `final_artifacts`                                 | Generated Word/PowerPoint artifacts (`final-artifacts` bucket); service-role writes, owner downloads via signed URL |
 
 RLS: users read/write their own rows where user-editable (profiles, sessions,
 inferences); **INSERT/UPDATE/DELETE on `pieces`/`agent_runs` are revoked for
