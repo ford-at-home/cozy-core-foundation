@@ -997,6 +997,7 @@ export type Database = {
           assignment_id: string | null
           created_at: string
           draft_pr_url: string | null
+          final_pr_merged_at: string | null
           final_pr_url: string | null
           id: string
           issue_number: number | null
@@ -1012,6 +1013,7 @@ export type Database = {
           assignment_id?: string | null
           created_at?: string
           draft_pr_url?: string | null
+          final_pr_merged_at?: string | null
           final_pr_url?: string | null
           id?: string
           issue_number?: number | null
@@ -1027,6 +1029,7 @@ export type Database = {
           assignment_id?: string | null
           created_at?: string
           draft_pr_url?: string | null
+          final_pr_merged_at?: string | null
           final_pr_url?: string | null
           id?: string
           issue_number?: number | null
