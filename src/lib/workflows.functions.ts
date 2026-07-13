@@ -94,7 +94,7 @@ export const startWorkflow = createServerFn({ method: "POST" })
 
 /** True when a dashboard run row belongs to the research-packet workflow. */
 export function isPacketWorkflowRun(run: Pick<AgentRun, "kind" | "input">): boolean {
-  if (["packet", "followup_research", "docx", "pptx"].includes(run.kind)) return true;
+  if (["packet", "followup_research", "final_docx", "final_pptx"].includes(run.kind)) return true;
   const input = run.input as { workflow?: string } | null;
   return input?.workflow === "research_packet";
 }
