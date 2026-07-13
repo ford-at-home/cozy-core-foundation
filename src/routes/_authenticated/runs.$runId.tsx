@@ -1105,6 +1105,11 @@ function RunDetailPanel({ run }: { run: AgentRun }) {
         <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Status transitions
         </div>
+        <p className="text-xs text-muted-foreground">
+          Each line is a real signal from the system — either the cloud agent pushed us an
+          update (“from the agent”), our background checker polled and saw a change (“from our
+          minute check”), or our controller changed the run itself (“from the app”).
+        </p>
         {eventsError && (
           <p className="text-xs text-destructive">Could not load event history: {eventsError}</p>
         )}
@@ -1118,7 +1123,9 @@ function RunDetailPanel({ run }: { run: AgentRun }) {
                   <span className="font-mono text-muted-foreground">{formatTs(entry.at)}</span>
                   <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{entry.status}</span>
                   {entry.source && (
-                    <span className="text-muted-foreground">via {entry.source}</span>
+                    <span className="text-muted-foreground" title={`raw source: ${entry.source}`}>
+                      {friendlySource(entry.source)}
+                    </span>
                   )}
                 </div>
                 {entry.note && <div className="text-muted-foreground">{entry.note}</div>}
@@ -1129,6 +1136,22 @@ function RunDetailPanel({ run }: { run: AgentRun }) {
       </div>
     </section>
   );
+}
+
+/** Turn internal event-source names into plain English for the timeline. */
+function friendlySource(source: string): string {
+  switch (source) {
+    case "reconciler":
+      return "from our minute check";
+    case "webhook":
+      return "from the agent (push)";
+    case "controller":
+      return "from the app";
+    case "edge":
+      return "from the app";
+    default:
+      return `via ${source}`;
+  }
 }
 
 function Stat({ label, value, mono }: { label: string; value: string; mono?: boolean }) {

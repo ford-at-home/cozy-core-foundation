@@ -264,6 +264,35 @@ const primaryBtn =
 const secondaryBtn =
   "inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-4 text-sm font-medium hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/60 sm:w-auto";
 
+/** Live "we're still watching" indicator for in-flight runs. Ticks each
+ *  second so users can see the app is actively tracking the agent, and
+ *  explains in plain English how the backend keeps checking in. */
+function LiveHeartbeat({ since }: { since: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  const startMs = new Date(since).getTime();
+  const secs = Number.isFinite(startMs) ? Math.max(0, Math.floor((now - startMs) / 1000)) : 0;
+  const mins = Math.floor(secs / 60);
+  const rem = secs % 60;
+  const elapsed =
+    mins > 0 ? `${mins}m ${String(rem).padStart(2, "0")}s` : `${rem}s`;
+  return (
+    <div className="flex items-start gap-2 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+      <span
+        aria-hidden
+        className="mt-1 inline-block h-1.5 w-1.5 flex-none animate-pulse rounded-full bg-emerald-500"
+      />
+      <span>
+        Working for <span className="font-mono text-foreground">{elapsed}</span>. We check in on
+        the cloud agent every ~60 seconds — if it stalls or fails, this page will say so.
+      </span>
+    </div>
+  );
+}
+
 function StageCard({
   view,
   pieceId,
@@ -298,6 +327,7 @@ function StageCard({
               ? "Deep research is running — reading sources and assembling evidence. This usually takes 2–10 minutes."
               : "The research is done; your packet — findings, sources, and questions written for this specific research — is being prepared."}
           </p>
+          <LiveHeartbeat since={view.activeRun.created_at} />
           <div className="flex flex-col gap-2 sm:flex-row">
             <Link to="/runs/$runId" params={{ runId: view.activeRun.id }} className={secondaryBtn}>
               Watch progress
