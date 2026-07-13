@@ -360,9 +360,12 @@ async function listVerifiedReturnIds(): Promise<Set<string>> {
 
 export async function artifactDownloadUrl(artifact: FinalArtifact): Promise<string> {
   if (!artifact.storage_path) throw new Error("Artifact has no file yet");
+  // `download` sets Content-Disposition: attachment with a friendly filename,
+  // so tapping the link saves the file instead of showing bytes in the tab.
+  const filename = artifact.storage_path.split("/").pop() ?? `final.${artifact.kind}`;
   const { data, error } = await supabase.storage
     .from("final-artifacts")
-    .createSignedUrl(artifact.storage_path, 60 * 10);
+    .createSignedUrl(artifact.storage_path, 60 * 10, { download: filename });
   if (error || !data?.signedUrl) throw new Error(error?.message ?? "Could not sign URL");
   return data.signedUrl;
 }

@@ -248,6 +248,22 @@ function RunDetailPage() {
             </div>
           )}
 
+          {(run.kind === "final_docx" || run.kind === "final_pptx") &&
+            run.status === "completed" && (
+              <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm">
+                Your final {run.kind === "final_docx" ? "document" : "presentation"} is ready.{" "}
+                {run.piece_id && (
+                  <Link
+                    to="/project/$pieceId"
+                    params={{ pieceId: run.piece_id }}
+                    className="font-medium underline"
+                  >
+                    Download it from your project page →
+                  </Link>
+                )}
+              </div>
+            )}
+
           {run.kind === "followup_research" && run.status === "completed" && (
             <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm">
               Follow-up research complete — your questions were answered and a revised packet was
@@ -499,6 +515,24 @@ function activeStatusMessage(status: RunStatus, kind: string): string {
         return "Working — analyzing the research and writing questions tailored to its findings. This page updates live.";
       case "awaiting_fetch":
         return "Almost done — the packet is written; fetching it back and saving the questions for review.";
+      default:
+        return "In progress.";
+    }
+  }
+  if (kind === "final_docx" || kind === "final_pptx") {
+    const artifact = kind === "final_docx" ? "document" : "presentation";
+    switch (status) {
+      case "requested":
+      case "dispatching":
+        return `Starting — handing the final ${artifact} build to the cloud agent.`;
+      case "dispatch_unknown":
+        return "Starting… — dispatch is unconfirmed; the reconciler is resolving it. This page updates live.";
+      case "queued":
+        return "Queued — the agent's workspace is being prepared.";
+      case "running":
+        return `Working — building the ${artifact} from the research and your verified words. This page updates live.`;
+      case "awaiting_fetch":
+        return `Almost done — the ${artifact} is built; saving it for download.`;
       default:
         return "In progress.";
     }

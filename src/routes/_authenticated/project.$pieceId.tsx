@@ -1,15 +1,20 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { brand, pageTitle } from "@/config/brand";
+import { FINAL_ARTIFACT_COST, createFinalDocumentJob } from "@/lib/final-artifacts.functions";
+import { isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
 import {
+  artifactDownloadUrl,
   getPiece,
   listArtifactsByPiece,
   listFollowupsByPackets,
   listPacketsByPiece,
   listRunsByPiece,
   loadReturnSummaries,
+  type FinalArtifact,
 } from "@/lib/packet-workflow";
 import {
   derivePacketWorkflow,
@@ -165,6 +170,7 @@ function ProjectHubPage() {
                 ? (data.packets.find((p) => p.id === view.packet?.id) ?? null)
                 : null
             }
+            docxArtifact={data.artifacts.find((a) => a.id === view.docx?.id) ?? null}
           />
           <WhoDoesWhat />
         </>
@@ -212,6 +218,7 @@ function StageCard({
   pieceId,
   followupRun,
   revisedPacket,
+  docxArtifact,
 }: {
   view: PacketWorkflowView;
   pieceId: string;
@@ -219,8 +226,12 @@ function StageCard({
   followupRun: { id: string } | null;
   /** The latest packet when it's a follow-up product (version > 1). */
   revisedPacket: { id: string; run_id: string; status: string } | null;
+  /** Full row for the latest docx artifact (view.docx carries only the summary). */
+  docxArtifact: FinalArtifact | null;
 }) {
-  void pieceId;
+  // Follow-up is optional: skipping shows the Finish card without recording
+  // anything server-side (creating the document is what commits the skip).
+  const [skipFollowup, setSkipFollowup] = useState(false);
   const packetRunId = view.packet?.run_id ?? null;
 
   if (view.current === "research") {
@@ -357,7 +368,7 @@ function StageCard({
     );
   }
 
-  if (view.current === "follow_up") {
+  if (view.current === "follow_up" && !skipFollowup) {
     if (view.followupResearchActive) {
       return (
         <StageShell title="Follow up" status="Researching your questions…" optional>
@@ -386,23 +397,101 @@ function StageCard({
           typed directly — and a focused second research pass answers them with authoritative
           sources. This step is optional and costs 2 credits only when you run it.
         </p>
-        {view.packet && (
-          <Link
-            to="/followup/$packetId"
-            params={{ packetId: view.packet.id }}
-            className={primaryBtn}
-          >
-            Ask follow-up questions
-          </Link>
-        )}
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {view.packet && (
+            <Link
+              to="/followup/$packetId"
+              params={{ packetId: view.packet.id }}
+              className={primaryBtn}
+            >
+              Ask follow-up questions
+            </Link>
+          )}
+          <button type="button" onClick={() => setSkipFollowup(true)} className={secondaryBtn}>
+            Skip — go to the final document
+          </button>
+        </div>
       </StageShell>
     );
   }
 
   return (
+    <FinishCard
+      pieceId={pieceId}
+      docx={docxArtifact}
+      revisedPacket={revisedPacket}
+      onBackToFollowup={
+        view.current === "follow_up" && skipFollowup ? () => setSkipFollowup(false) : null
+      }
+    />
+  );
+}
+
+function FinishCard({
+  pieceId,
+  docx,
+  revisedPacket,
+  onBackToFollowup,
+}: {
+  pieceId: string;
+  docx: FinalArtifact | null;
+  revisedPacket: { id: string; run_id: string; status: string } | null;
+  /** Set when the student skipped follow-up locally and can change their mind. */
+  onBackToFollowup: (() => void) | null;
+}) {
+  const queryClient = useQueryClient();
+  const createJob = useServerFn(createFinalDocumentJob);
+  const { balance } = useCreditBalance();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Idempotency seed; regenerated after every dispatch so "Try again" after a
+  // failed run creates a NEW run instead of resolving to the failed one.
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
+
+  const status = docx?.status ?? null;
+  const generating = status === "pending" || status === "generating";
+  const ready = status === "ready";
+  const outOfCredits = balance !== null && balance < FINAL_ARTIFACT_COST;
+  const paywalled = error !== null && isInsufficientCreditsError(error);
+
+  async function createDocument() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await createJob({ data: { pieceId, requestId } });
+      await queryClient.invalidateQueries({ queryKey: ["project", pieceId] });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start the document");
+    } finally {
+      setRequestId(crypto.randomUUID());
+      setBusy(false);
+    }
+  }
+
+  async function download() {
+    if (!docx) return;
+    setError(null);
+    try {
+      window.location.assign(await artifactDownloadUrl(docx));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not prepare the download");
+    }
+  }
+
+  return (
     <StageShell
       title="Finish"
-      status={view.docx?.status === "ready" ? "Ready to download" : "Almost there"}
+      status={
+        ready
+          ? "Ready to download"
+          : generating
+            ? "Writing your document…"
+            : status === "failed"
+              ? "Something needs another try"
+              : "One step left"
+      }
+      tone={status === "failed" ? "error" : undefined}
     >
       {revisedPacket && (
         <div className="space-y-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
@@ -428,9 +517,92 @@ function StageCard({
           </div>
         </div>
       )}
-      <p>
-        Create a final, editable document built from the research and your verified contributions.
-      </p>
+
+      {ready && docx ? (
+        <>
+          <p>
+            Your final Word document is ready — the research findings, every source, and your own
+            verified words, kept verbatim, in one editable file.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button type="button" onClick={download} className={primaryBtn}>
+              Download the Word document
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Downloading is free, as often as you like. The file opens in Word, Google Docs, or
+            Pages.
+          </p>
+        </>
+      ) : generating && docx ? (
+        <>
+          <p>
+            The document is being written from the research and your verified contributions. This
+            usually takes a few minutes — this page updates on its own, and you can close it.
+          </p>
+          {docx.run_id && (
+            <Link to="/runs/$runId" params={{ runId: docx.run_id }} className={secondaryBtn}>
+              Watch progress
+            </Link>
+          )}
+        </>
+      ) : (
+        <>
+          {status === "failed" && (
+            <p>
+              The document run didn't finish. The credit hold was released — you were not charged.
+              Try again below.
+            </p>
+          )}
+          <p>
+            Create a final, editable Word document built from the research and your verified
+            contributions — your own words stay verbatim, every source is preserved as a link.
+          </p>
+
+          {(outOfCredits || paywalled) && (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+              The final document uses {FINAL_ARTIFACT_COST} credits
+              {balance !== null ? ` and you have ${balance}` : ""}.{" "}
+              <Link to="/billing" className="font-medium underline">
+                Get credits →
+              </Link>
+            </div>
+          )}
+          {error && !paywalled && (
+            <p
+              role="alert"
+              className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              {error}
+            </p>
+          )}
+
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={createDocument}
+              disabled={busy || outOfCredits}
+              aria-busy={busy}
+              className={primaryBtn}
+            >
+              {busy
+                ? "Starting…"
+                : status === "failed"
+                  ? `Try again — ${FINAL_ARTIFACT_COST} credits`
+                  : `Create the final document — ${FINAL_ARTIFACT_COST} credits`}
+            </button>
+            {onBackToFollowup && (
+              <button type="button" onClick={onBackToFollowup} className={secondaryBtn}>
+                Back to follow-up questions
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {FINAL_ARTIFACT_COST} credits are held when the run starts and only kept if it completes
+            — a failed run releases the hold.
+          </p>
+        </>
+      )}
     </StageShell>
   );
 }
