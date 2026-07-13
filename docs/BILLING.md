@@ -6,6 +6,25 @@ compose. New users get 3 credits on signup. Credits are held when a
 generation is dispatched and **consumed only when it completes**; failed,
 cancelled, and stuck runs release the hold automatically.
 
+**What is billable, precisely:** dispatching a generation (compose,
+deep-research start, resynth, ready, revise — costs in
+`supabase/functions/_shared/credits.ts` `CREDIT_COST`, mirrored in
+`src/lib/use-credits.ts`). Viewing a finished run, printing it, re-printing
+it, and Save-as-PDF are **never** billable — the artifact was paid for when
+its generation settled. Regenerating (a new resynth/ready/revise/compose) is
+a new generation and reserves again.
+
+## Two credit systems (do not conflate)
+
+- **App credits** — this document: `credit_ledger` / `credit_accounts`,
+  purchased on `/billing`, spent on generations.
+- **Operator workspace allowance** — the Lovable AI gateway key
+  (`LOVABLE_API_KEY`) pays for dictation transcription, PDF OCR, and image
+  generation. When the gateway returns 402, that is the **operator's**
+  balance, not the user's; the UI shows a temporary-unavailability message
+  and must never point users to `/billing` for it. (Cost telemetry in
+  `/sessions` is USD accounting for the operator, also not user credits.)
+
 ## Money rules (do not break these)
 
 - **Stripe is the source of truth for payment state.** Postgres is the
@@ -26,6 +45,13 @@ cancelled, and stuck runs release the hold automatically.
 - Every grant/consumption has an idempotency key; duplicate webhooks,
   double-clicks, retries, and re-sweeps cannot double-charge or
   double-grant.
+- **Refunds are incremental.** Stripe's `charge.amount_refunded` is
+  cumulative, so the webhook computes the cumulative target reversal and
+  subtracts what prior `refund_reversal` / `chargeback_reversal` ledger
+  entries for the purchase already took back (key
+  `refund:<charge>:<cumulative-cents>`). Sequential partial refunds each
+  reverse their delta; a dispute after a partial refund reverses only what is
+  left. See `supabase/functions/_shared/billing.ts` and its Deno tests.
 
 ## Secrets (never in code, git, VITE_*, or logs)
 
@@ -41,6 +67,11 @@ Set in **Supabase Edge Function secrets** (Lovable Cloud → backend secrets):
 The frontend needs **no Stripe key at all**: the browser is redirected to a
 server-created, Stripe-hosted Checkout URL. No card data ever touches the
 app.
+
+Naming note: edge functions read the anon key as `SUPABASE_ANON_KEY`
+(Supabase-injected); the app reads the same key as
+`SUPABASE_PUBLISHABLE_KEY` / `VITE_SUPABASE_PUBLISHABLE_KEY`. One key, two
+names — see the configuration inventory in the [README](../README.md).
 
 ## Manual configuration checklist (owner)
 
@@ -76,7 +107,8 @@ backfilled with the 3-credit signup grant).
 Automated (run locally / CI):
 
 ```sh
-deno test --allow-env supabase/functions/_tests/          # unit suite
+npm run test:edge                                          # Deno unit suite
+npm test                                                   # Vitest (incl. CREDIT_COST mirror check)
 psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/credits.test.sql   # SQL invariants
 DATABASE_URL="$DB" supabase/tests/credit-concurrency.sh   # concurrent-spend race
 ```
@@ -107,8 +139,8 @@ Product-side:
 
 - Signup → exactly 3 credits, once (re-login, profile edits, replays grant
   nothing — verified by `credits.test.sql`).
-- Spend to 0 → generation buttons become "Get credits" CTAs; direct edge
-  function invocation returns 402.
+- Spend to 0 → generation buttons disable and an amber "Get credits →"
+  banner links to `/billing`; direct edge function invocation returns 402.
 - Failed/cancelled/stuck generation → hold released, banner on the run page.
 - Two tabs racing the last credit → one wins (verified by
   `credit-concurrency.sh`).
@@ -156,7 +188,7 @@ LEFT JOIN (SELECT user_id, SUM(amount) held FROM credit_reservations
            WHERE status = 'held' GROUP BY 1) h USING (user_id)
 WHERE a.balance <> GREATEST(0, COALESCE(l.total, 0) - COALESCE(h.held, 0));
 
--- Purchases stuck pending (the reconciler also heals these hourly):
+-- Purchases stuck pending (the 2-min reconciler heals these after a 1h grace):
 SELECT * FROM purchases WHERE status = 'pending' AND created_at < now() - interval '1 hour';
 ```
 

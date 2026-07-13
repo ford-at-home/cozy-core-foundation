@@ -75,7 +75,8 @@ disappear." CTAs: "Start a working draft" / "See how it works". Closing:
 | Title "Run — Compose" | "Run — Hardcopy Draft" | Suffix |
 | Kicker "Studio" | "Hardcopy Draft" | Product label |
 | H1 "Run", "Run detail", timeline, stats | **retained** | Technical concepts; renaming would confuse |
-| Status messages ("the agent is authoring the brief and synthesizing the piece") | "…preparing the brief and drafting the piece…" | Small alignment, same meaning |
+| Status messages ("the agent is authoring the brief and synthesizing the piece") | "…preparing the brief and writing the draft…" | Terminology |
+| Research-complete banner ("The piece is now being composed… follow the compose run") | "Your draft is now being prepared… follow the drafting run" | Terminology (missed in the first pass) |
 | "Print this draft for pen markup, then type your annotations back here…" | "Print this draft for pen markup, then return your annotations here…" (anchor examples retained) | "Return annotations" territory; instructions unchanged |
 | "Ready → final draft PR", "Resynth", "Revise → final PR" | **retained** | Exact state-machine actions; accurate |
 | "brief.md (generated)" tabs | **retained** | Real file names |
@@ -87,8 +88,11 @@ disappear." CTAs: "Start a working draft" / "See how it works". Closing:
 | Title "Print — Compose" | "Print — Hardcopy Draft" | Suffix |
 | Kicker "Studio" | "Hardcopy Draft" | Product label |
 | H1 "Print for markup" + margins/anchors copy | **retained** | Already the brand's best copy |
-| PDF filename `compose-run-<id>.pdf` | `hardcopy-draft-<id>.pdf` | Brand artifact naming |
 | Print dialog hints (Letter, background graphics) | **retained** | Functional |
+
+(PDF filename: the print flow uses the browser's native Save-as-PDF dialog and
+does not set a suggested filename — an earlier claim of `hardcopy-draft-<id>.pdf`
+here described behavior that was never implemented.)
 
 ## Sessions (`sessions.tsx`, `sessions.$sessionId.tsx`)
 
@@ -96,7 +100,30 @@ disappear." CTAs: "Start a working draft" / "See how it works". Closing:
 |---|---|---|
 | Titles "… — Compose" | "… — Hardcopy Draft" | Suffix |
 | Kicker "Studio" | "Hardcopy Draft" | Product label |
-| Everything else (cost tables, empty states) | **retained** | Accurate accounting language |
+| Empty state "Start a piece… / Create a piece" | "Start a draft… / Start a draft" | Terminology (missed in the first pass) |
+| Everything else (cost tables) | **retained** | Accurate accounting language |
+
+## Billing & credits (`billing.tsx`, `CreditBalance.tsx`, paywall banners)
+
+Added after the brand pass — the payments layer landed in a separate branch
+and the original map never covered it.
+
+| Surface | Copy | Why |
+|---|---|---|
+| `/billing` kicker + H1 | "Hardcopy Draft" / "Billing" | Product label + plain functional title |
+| Intro | "Each generation uses 1 credit; a deep-research start uses 2… Printing… never uses credits." | States the real model incl. the free print boundary |
+| Credits vs Cost note | one quiet line distinguishing `/billing` (credits) from `/sessions` (USD telemetry) | Two accounting systems must not blur |
+| Header chip (`CreditBalance.tsx`) | coin + count, links to `/billing` | Calm; no urgency styling |
+| Paywall banners (`new.tsx`, `runs.$runId.tsx`) | amber note + "Get credits →" link; buttons disable | Clear without being loud — no modal, no countdown |
+| Ledger labels | "Welcome credits", "Generation", "Refund", "Chargeback", "Adjustment" | Human words for ledger entry types |
+| Checkout return | success = "credits added as soon as Stripe confirms"; canceled = "you were not charged" | Honest about the webhook being the granting path |
+| Dictation 402 (`profile.tsx`, `/api/transcribe`) | "Dictation is temporarily unavailable." | Bills the operator's workspace allowance, **not** user credits — never send users to `/billing` for it |
+| Landing product section | one sentence: 3 welcome credits, 1/draft, 2/deep research, failures free | Landing claims must match the implemented model |
+| Pack names Starter / Writer / Studio | **retained** (DB `credit_products` seed) | Commerce SKUs; note "Studio" coincides with the retired in-app kicker — flagged as an open naming decision in the README |
+
+Tone rule: billing copy stays as quiet as the rest of the brand. State costs
+plainly, never gamify, never count down, never interrupt a working session
+with an upsell.
 
 ## Explicitly not renamed
 

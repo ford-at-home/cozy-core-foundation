@@ -36,9 +36,11 @@
 - **GitHub issue thread + labels** (peer comments, `resynth`/`ready` labels
   mirroring the UI buttons) — requires a GitHub App the owner must register;
   the UI buttons already provide the same actions without it.
-- **Dictation** (Whisper) — v1 annotation read-back is typed text.
-- **Style questionnaire** — profile is a free-text `style_text` until the
-  elicitation questions land.
+
+Previously listed here but since built: **dictation** (profile voice notes via
+`/api/transcribe`, billed to the operator's Lovable workspace allowance — see
+[docs/BILLING.md](BILLING.md) "Two credit systems") and **style presets**
+(profile offers text + image style presets; both fields required on save).
 
 ## Deep research flow (kind: research)
 
@@ -60,8 +62,13 @@ failed with guidance; check https://platform.parallel.ai for the task.
   pause the pg_cron job. In-flight agents can be stopped from cursor.com/agents.
 - `agent_run_events` holds verbatim webhook/poll payloads per run — first stop
   when a run misbehaves.
-- Backend tests: `deno test --allow-env supabase/functions/_tests/`
-  (`--allow-env` is required by the research-chain tests).
+- Backend tests: `npm run test:edge`
+  (= `deno test --allow-env supabase/functions/_tests/`; `--allow-env` is
+  required by the research-chain and credits tests).
+- Reconciler cadence: the cron fires every **2 minutes**; within each pass the
+  grace windows are longer — pending purchases are healed from Stripe after
+  **1 h**, stale credit holds are swept after **1 h**, and unconfirmed
+  dispatches are failed after **30 min**.
 
 ## Billing and credits
 

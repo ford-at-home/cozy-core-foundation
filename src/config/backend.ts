@@ -1,6 +1,6 @@
 // Centralized configuration for backend service names and browser-safe URLs.
-// Do NOT put worker URLs, tokens, or any secret here — server-only secrets
-// (WORKER_URL, WORKER_TOKEN) live in the edge function's environment.
+// Do NOT put secrets here — server-only secrets live in the edge functions'
+// environment (see README.md "Configuration inventory").
 
 export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 export const SUPABASE_PUBLISHABLE_KEY = import.meta.env
