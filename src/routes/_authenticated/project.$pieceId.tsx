@@ -282,12 +282,19 @@ function StageCard({
       );
     }
     if (view.failedRun) {
+      const detail = interpretRunError(view.failedRun.error);
       return (
         <StageShell title="Research" status="Something needs another try" tone="error">
           <p>
             The research run didn't finish. Nothing you entered was lost, and any credit held for it
             was released — you were not charged.
           </p>
+          {detail && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <p className="font-medium">{detail.title}</p>
+              <p className="mt-1 text-destructive/90">{detail.body}</p>
+            </div>
+          )}
           <div className="flex flex-col gap-2 sm:flex-row">
             <Link to="/new" className={primaryBtn}>
               Start the research again
