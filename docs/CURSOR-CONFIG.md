@@ -83,13 +83,15 @@ updated table.
 
 The recommended set from research §13 is: **Composer 2.5, Sonnet-class,
 Opus-class enabled; everything else disabled.** Record the current state
-and any deltas.
+and any deltas. "Enabled" below means present in `GET /v1/models` for
+this API key (Cloud Agents / API surface). IDE Settings → Models may
+still differ — fill that separately under Cursor product / installation.
 
 | Recommended model    | Enabled in this account? | Substituted with (if rotated out) | Verified on |
 | -------------------- | ------------------------ | --------------------------------- | ----------- |
-| Composer 2.5         | _(fill in)_              | —                                 | _(YYYY-MM-DD)_ |
-| Claude Sonnet 4.6    | _(fill in)_              | _(e.g. Sonnet 5 if rotated in)_   | _(YYYY-MM-DD)_ |
-| Claude Opus 4.8      | _(fill in)_              | _(e.g. Opus 4.9 if rotated in)_   | _(YYYY-MM-DD)_ |
+| Composer 2.5         | Yes (`composer-2.5`; aliases `composer-latest`, `composer`, `composer-2-5`) | — | 2026-07-13 |
+| Claude Sonnet 4.6    | Yes (`claude-sonnet-4-6`; aliases `sonnet-latest`, `sonnet`, `sonnet-4.6`, `sonnet-4-6`) | — | 2026-07-13 |
+| Claude Opus 4.8      | Yes (`claude-opus-4-8`; aliases `opus-latest`, `opus`, `opus-4.8`, `opus-4-8`) | — | 2026-07-13 |
 
 ### Cloud Agents
 
@@ -98,7 +100,9 @@ and any deltas.
 | Cloud Agent default model                                  | _(fill in)_ | Cloud Agents settings                            |
 | Max Mode                                                   | Always on (forced by Cursor for Cloud Agents) | Documented; no toggle |
 | Long-running agents enabled?                               | _(fill in)_ | Cloud Agents team settings                      |
-| Model IDs exposed by `GET /v1/models` on this account      | _(fill in)_ | `curl -H "Authorization: Bearer $CURSOR_API_KEY" https://api.cursor.com/v1/models` |
+| v1 REST API enabled for this account?                      | **Yes.** `GET /v1/me` returned HTTP 200 JSON for API key `macbook` (userId `189016502`, userEmail `priorww@gmail.com`, createdAt `2026-07-10T12:18:40.785Z`). | `curl -u "$CURSOR_API_KEY:" https://api.cursor.com/v1/me` — JSON body = yes, 401/404/HTML = no |
+| Model IDs exposed by `GET /v1/models` on this account      | **33 IDs** in `items[]` (2026-07-13): `default` (Auto), `grok-4.5`, `composer-2.5`, `claude-opus-4-8`, `gpt-5.6-sol`, `gpt-5.5`, `claude-fable-5`, `claude-sonnet-5`, `gpt-5.6-terra`, `claude-sonnet-4-6`, `gpt-5.3-codex`, `claude-opus-4-7`, `gpt-5.4`, `claude-opus-4-6`, `claude-opus-4-5`, `gpt-5.2`, `gpt-5.6-luna`, `gemini-3.1-pro`, `gpt-5.4-mini`, `gpt-5.4-nano`, `claude-haiku-4-5`, `claude-sonnet-4-5`, `gpt-5.2-codex`, `gpt-5.1-codex-max`, `gpt-5.1`, `gemini-3-flash`, `gemini-3.5-flash`, `gpt-5.1-codex-mini`, `claude-sonnet-4`, `gpt-5-mini`, `gemini-2.5-flash`, `kimi-k2.7-code`, `glm-5.2`. Each item has `id`, `displayName`, optional `aliases` / `parameters` / `variants`. | `curl -u "$CURSOR_API_KEY:" https://api.cursor.com/v1/models` |
+| v1 launch payload subagent shape                           | **`customSubagents` on `POST /v1/agents` (not a separate endpoint).** Optional array (max 20). Each entry requires `name`, `description`, and `prompt`; optional `model` may be a model ID string, a `ModelSelection` object (`{id, params?}`), or `"inherit"`. Names must be unique and must not collide with built-ins (`explore`, `debug`, `shell`, `computerUse`, …). Create response returns durable `agent` + initial `run`; accepted `customSubagents` are echoed on `agent.customSubagents`. v1 create body uses `prompt` / `model` / `repos` / `env` / `autoCreatePR` / `customSubagents` — **not** the v0 `source`/`target` keys (those return `400 validation_error`). Cancel via `POST /v1/agents/{id}/runs/{runId}/cancel` (documented Follow-up 1 `/stop` path is v0-shaped and 404s on v1). Live probe 2026-07-13: create with `customSubagents` → 201; cancel → run `CANCELLED`; agent archived. | See Follow-up 1 in Cloud Agent workflow configuration below |
 
 ## Recommended settings
 
@@ -139,6 +143,170 @@ substitutions in the [substitution log](#model-substitution-log).
   routine, so the default doesn't silently escalate.
 - Use per-subagent `model` fields for planner / executor / reviewer splits.
 - Confirm a spend limit is set on the account before the first run.
+
+## Cloud Agent workflow configuration for this repo
+
+Cursor does not expose "named Cloud Agent products with bound models" as a
+first-class concept. The four specialization mechanisms are:
+
+| Mechanism                                     | What it configures                                                | When to reach for it                                          | Used in this repo today? |
+| --------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------ |
+| Per-dispatch `model` on `POST /v0/agents`     | The model on a single Cloud Agent run                             | Any programmatic dispatch, including this repo's edge functions | Yes (via `AGENT_MODEL` env var — global, not per-workflow) |
+| Per-subagent `model` inside a run (SDK / v1 API only) | Different models on planner / executor / reviewer sub-tasks | Cheap-implement + premium-review pattern in unattended runs   | No — v0 does not expose subagents; requires dispatch migration to v1 or the SDK |
+| Automations                                   | A named schedule / trigger + model + tools + prompt on the account | Recurring or event-triggered runs; the closest thing to a "named workflow Cloud Agent" | No |
+| Custom Modes (beta)                           | IDE-side preset (model + tools + instructions)                    | Interactive human turns, not Cloud Agent runs                 | No                       |
+
+### Workflows this repo dispatches to Cursor
+
+Enumerated by `agent_runs.kind`. The two research kinds go to Parallel AI
+and are out of scope for Cursor model selection.
+
+| Kind          | Dispatched by                                                                                                      | What the Cloud Agent does           | Recommended model class          |
+| ------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------- | -------------------------------- |
+| `packet`      | `supabase/functions/start-workflow/index.ts` → `_shared/dispatch.ts` → `_shared/provider.cursor.ts` `POST /v0/agents` | Compose the research packet         | High-intelligence (Sonnet-class) |
+| `final_docx`  | `supabase/functions/create-final-document-job/index.ts` → same dispatch path                                       | Generate DOCX artifact              | High-intelligence (Sonnet-class), tight spend limit |
+| `final_pptx`  | `supabase/functions/create-presentation-job/index.ts` → same dispatch path                                         | Generate PPTX artifact              | High-intelligence (Sonnet-class), tight spend limit |
+| `research`    | `supabase/functions/start-workflow` (Parallel AI provider)                                                         | Deep research task                  | Not applicable (Parallel model, not Cursor) |
+| `followup_research` | `supabase/functions/run-follow-up-research/index.ts` (Parallel AI)                                           | Follow-up research task             | Not applicable (Parallel model, not Cursor) |
+
+### Current dispatch reads one env var
+
+`supabase/functions/_shared/dispatch.ts` line 73:
+
+```
+model: Deno.env.get("AGENT_MODEL") ?? undefined,
+```
+
+Every Cursor dispatch resolves to the same `AGENT_MODEL`. This is
+functional but not optimal — the three workflows above have different cost
+sensitivities but currently share a model. Set `AGENT_MODEL` to a
+Sonnet-class model ID exposed by your account (see the substitution log
+below). If left unset, the Cursor account's user default → team default →
+system default resolves it, and that default is where you land — the repo
+does not force a choice.
+
+### Specializing per workflow (out of scope for this pass)
+
+To make the model per-workflow instead of global, the smallest change is
+to thread `run.kind` into `dispatch.ts`'s model resolution. Two shapes
+work:
+
+- **Per-`kind` env vars.** Read `AGENT_MODEL_PACKET`, `AGENT_MODEL_FINAL_DOCX`,
+  `AGENT_MODEL_FINAL_PPTX`, falling back to `AGENT_MODEL`, then to
+  `undefined` (account default). ~15 lines in `dispatch.ts`, one line in
+  `docs/CONFIGURATION.md`, secret setup as a Lovable-side action.
+- **Static map in `dispatch.ts`.** A `KIND_MODEL: Record<RunKind, string>`
+  constant hard-coded in the file, overridable by env var. Cheaper to
+  deploy (no new secrets) but less operable — every model change requires
+  a code push.
+
+Either shape belongs behind its own work item. Not part of this policy
+pass.
+
+### Per-subagent split (out of scope for this pass — ordered follow-ups)
+
+The `packet` workflow is the natural fit for a planner (Opus) → executor
+(Sonnet) → reviewer (Opus) subagent split — most of the reasoning value is
+in the plan, most of the output tokens are in the compose. This is
+**not** a prompt-engineering task. Writing "act as planner then executor"
+in a single prompt runs the whole thing on one model. Per-subagent
+`model` is a first-class configuration surface that only exists on the
+Cloud Agents SDK and the v1 REST API.
+
+Two ordered follow-ups are required. Do the migration first; the subagent
+work depends on it.
+
+**Follow-up 1: v0 → v1 (or SDK) dispatch migration.** This repo currently
+dispatches on `/v0/agents` (`supabase/functions/_shared/provider.cursor.ts`
+line 12: `const BASE_URL = "https://api.cursor.com"; ... "/v0/agents"`).
+v0 does not expose subagents. The `docs/cursor-api-research.md` file
+notes that the v1 endpoint schemas were "not established" in retrievable
+first-party content at the time of that research; that gap has to close
+before code is written.
+
+*Live-probe the account first.* The v1 REST API is a public beta at
+`https://api.cursor.com/v1/` and supports both Basic and Bearer
+authentication with the same `crsr_...` API key used for v0. Verify
+availability on this account before writing dispatch code:
+
+```bash
+# Confirm the API key is valid on v1 and that v1 is enabled for the account.
+curl --request GET \
+  --url https://api.cursor.com/v1/me \
+  -u "$CURSOR_API_KEY:"
+# Success: JSON body describing the API key holder. Anything else (401, 404,
+# HTML) means v1 is not enabled or the endpoint is not reachable from your
+# network — stop and record the failure in the substitution log before proceeding.
+
+# List the model IDs v1 exposes for this account (schema may differ from v0).
+curl --request GET \
+  --url https://api.cursor.com/v1/models \
+  -u "$CURSOR_API_KEY:"
+
+# Minimal launch call to capture the actual v1 launch schema. Use a throwaway
+# prompt and a spend limit. Cancel the returned run afterwards to avoid billing.
+curl --request POST \
+  --url https://api.cursor.com/v1/agents \
+  -u "$CURSOR_API_KEY:" \
+  --header 'content-type: application/json' \
+  --data '{"prompt":{"text":"noop probe — cancel immediately"},"source":{"repository":"https://github.com/ford-at-home/cozy-core-foundation","ref":"main"},"target":{"autoCreatePr":false}}'
+```
+
+Save the returned JSON bodies alongside the model substitution log — those
+are the authoritative schema the new provider file must be typed against.
+The subagent shape (nested under the launch payload, or a separate
+endpoint) is one of the facts to record from the launch response.
+
+Approximate scope of the migration itself:
+
+- New `provider.cursor.v1.ts` or a version parameter on `CursorProvider`.
+- Update `dispatch.ts` to select the transport (fallback to v0 for
+  compatibility during rollout).
+- Update `cursor-webhook` and `reconcile-runs` for any v1 status/event
+  differences (v1 introduces run IDs vs v0's single agent ID; this repo
+  already reserves `external_run_id` for it).
+- Lovable-side redeploy.
+
+Sized as: medium — new provider file (~100 lines), dispatch and
+reconciler updates, webhook handling, plus the live-probe verification
+above and one work item to Lovable for the deploy.
+
+**Follow-up 2: subagent split on the migrated transport.** Once v1 / SDK
+dispatch is live, add the planner / executor / reviewer subagent config
+to the create-agent payload for the `packet` workflow. Approximate scope:
+
+- Prompt-template changes to bound each sub-task (planner produces a
+  plan; executor consumes plan and produces the packet; reviewer consumes
+  the diff and produces a verdict).
+- `dispatch.ts` extension to emit the subagent config with per-subagent
+  `model` fields.
+- Reconciler awareness of `subagentStart` / subagent completion events
+  (per the research §6 hook payload).
+- Cost projection review before enabling: per-run cost may go up in
+  exchange for reduced retry cost — worth measuring 30 days per
+  `docs/agent-metrics.md` before generalising to `final_docx` / `final_pptx`.
+
+Sized as: medium — depends entirely on the shape of Follow-up 1. Do not
+start until Follow-up 1 has produced verified live evidence of the v1
+subagent schema.
+
+### Automations (not currently used)
+
+Automations persist their own trigger + model + tools + prompt on the
+Cursor dashboard, and are the right home for any scheduled / recurring
+Cloud Agent workflow (e.g. a nightly release-certification pass). This
+repo has no scheduled Cloud Agent workflows today. If one is added, an
+Automation with its own explicit `model` is the correct configuration
+site — not a repo env var.
+
+### Custom Modes (IDE only)
+
+The instructions inside a Custom Mode can live in the repo (Cursor
+exposes an export path), but the model binding itself is a per-user
+preference set in the IDE. Useful for interactive workflows: a
+"Deep-Reasoning" preset (Opus, no auto-run, plan-mode default) and a
+"Certification" preset (Opus, review-oriented prompt) are the two
+research recommends. Not applicable to Cloud Agent dispatch.
 
 ## Cloud Agents caveats
 
@@ -187,9 +355,14 @@ Recommended models rotate. When a recommended model is not available in
 this account, substitute the current in-product equivalent in the same
 class and record the substitution here.
 
+Verified 2026-07-13 via `GET /v1/models`: all three recommended models
+are present (`composer-2.5` for cheap-fast / general, `claude-sonnet-4-6`
+for high-intelligence, `claude-opus-4-8` for premium). No substitution
+rows required.
+
 | Date       | Class             | Recommended        | Substituted with | Reason                    | Recorded by |
 | ---------- | ----------------- | ------------------ | ---------------- | ------------------------- | ----------- |
-| _(none yet — add rows as substitutions occur)_ | | | | | |
+| _(none — all recommended models present as of 2026-07-13)_ | | | | | |
 
 ## Verification cadence
 

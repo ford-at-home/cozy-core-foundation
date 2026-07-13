@@ -32,7 +32,10 @@ in [docs/CURSOR-CONFIG.md](../../docs/CURSOR-CONFIG.md):
 - Cursor CLI `-m` / `--model` / `/model`, `cli-config.json`
 - SDK `Agent.create({ model: { id, params } })`
 - Cloud Agents REST API `POST /v1/agents` `model` field
-- Per-subagent `model` inside a Cloud Agents run
+- Per-subagent `model` inside a Cloud Agents run — documented on the SDK
+  and v1 API; **not available on the `/v0/agents` endpoint this repo
+  currently dispatches through** (see the Cloud Agent workflows section
+  below).
 - Custom Modes (beta) — the closest thing to a pre-wired preset
 - A `beforeSubmitPrompt` guardrail hook (`deny` / `ask` only — cannot
   switch models; no hooks file is currently checked in, see
@@ -176,8 +179,71 @@ Because Cloud Agents are premium + Max Mode by construction:
   Cloud Agent run of the month
   ([CURSOR-CONFIG.md → Recommended settings](../../docs/CURSOR-CONFIG.md#recommended-settings)).
 - For high-risk unattended work, use the cheap-implement + premium-review
-  pattern with per-subagent `model` fields — plan and review with Opus,
-  execute with Composer / Sonnet.
+  pattern. In the IDE this is separate turns on different models. In a
+  single Cloud Agents run the per-subagent `model` field is the mechanism,
+  but note it requires the SDK or the v1 API — the `/v0/agents` endpoint
+  this repo currently dispatches through does not expose it. Adding it is
+  a structural change (dispatch migration + subagent config), not a
+  prompt convention: writing "act as planner then executor" in a single
+  prompt runs the whole thing on one model.
+
+## Cloud Agent workflows in this repo
+
+Cursor does not expose "named Cloud Agent products with bound models" as a
+first-class concept. The mechanisms for per-workflow specialization are:
+
+1. **Per-dispatch `model` on `POST /v0/agents`** (the current transport,
+   used by [supabase/functions/_shared/dispatch.ts](../../supabase/functions/_shared/dispatch.ts)).
+   Every dispatch can carry its own model. **Available now.**
+2. **Per-subagent `model`** inside a single Cloud Agents run — the only
+   way to run different models on different sub-tasks (e.g. planner Opus →
+   executor Composer → reviewer Opus). **Documented on the SDK and v1
+   API; not available on `/v0/agents` this repo currently uses.** Adopting
+   it is a structural change — dispatch migration to v1 or the SDK, plus
+   subagent configuration in the create-agent payload — not a prompt
+   convention. A single-prompt "act as planner then executor" runs on one
+   model.
+3. **Automations** — persist their own trigger + model + tools + prompt
+   in the Cursor dashboard. This is the closest thing to a "named
+   workflow Cloud Agent" in the product; not currently used in this repo.
+4. **Custom Modes (beta)** — IDE-side presets, useful for the human's
+   interactive turns but not for the Cloud Agent workflows.
+
+The `.cursor/agents/*.md` reviewer subagents in this repo
+(`backend-integrity-reviewer`, `mobile-ux-reviewer`,
+`print-layout-reviewer`) are a different concept: they are IDE-side
+review subagents invoked from a Cursor session, their frontmatter carries
+`name` + `description` only, and they run on the parent session's model.
+They are same-model-different-prompt, not a per-subagent model split.
+
+This repo has three Cursor Cloud Agent run kinds (the two research kinds
+dispatch to Parallel AI, not Cursor, so their model choice is a separate
+concern):
+
+| `agent_runs.kind` | Provider  | What runs                                    | Recommended class | Escalate when                       |
+| ----------------- | --------- | -------------------------------------------- | ----------------- | ----------------------------------- |
+| `packet`          | Cursor    | Compose the research packet from artifacts   | High-intelligence (Sonnet-class) | Packet spans many modules or requires deep synthesis |
+| `final_docx`      | Cursor    | Generate the DOCX final artifact             | High-intelligence (Sonnet-class) | Never — this is structurally routine; if cost bites, move off Cloud Agents |
+| `final_pptx`      | Cursor    | Generate the PPTX final artifact             | High-intelligence (Sonnet-class) | Same as `final_docx`                |
+| `research`        | Parallel  | Deep-research task (not Cursor Cloud Agent) | n/a               | See research skill                  |
+| `followup_research` | Parallel | Follow-up research (not Cursor Cloud Agent) | n/a               | See research skill                  |
+
+Structural tension worth calling out: Cloud Agents do not expose the cheap
+Composer pool, so `final_docx` and `final_pptx` — which the general
+taxonomy would put on Composer 2.5 as artifact generation — are forced
+into Sonnet-class pricing here. If per-run cost becomes a problem, moving
+artifact generation off the Cloud Agent path entirely is the correct
+remediation, not further model tuning.
+
+**How dispatch reads a model today.** A single global env var
+`AGENT_MODEL` in `dispatch.ts` line 73. That means all three workflows use
+the same model. To specialize per workflow requires a small code change to
+thread `run.kind` into the model resolution (either per-`kind` env vars
+like `AGENT_MODEL_PACKET` or a mapping in `dispatch.ts`). Sized as ~15
+lines + docs + a Lovable-side env-var deploy. That work is not part of
+this policy pass; see
+[CURSOR-CONFIG.md → Cloud Agent workflow configuration](../../docs/CURSOR-CONFIG.md#cloud-agent-workflow-configuration-for-this-repo)
+for the specialization options.
 
 ## Recording model and cost
 
