@@ -8,7 +8,7 @@ import {
   type AgentRun,
   type RunStatus,
 } from "@/lib/workflows.functions";
-import { runPieceAction, type PieceAction } from "@/lib/pieces.functions";
+import { approveRevisionPr, runPieceAction, type PieceAction } from "@/lib/pieces.functions";
 import { isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
 import type { Json } from "@/integrations/supabase/types";
 import MarkdownView from "@/components/MarkdownView";
@@ -490,10 +490,7 @@ function ActionsPanel({ run }: { run: AgentRun }) {
       )}
 
       {run.kind === "revision" && (
-        <p className="text-sm text-muted-foreground">
-          Final version produced. Approve its pull request on GitHub, then copy the piece from the
-          tabs above wherever it's going.
-        </p>
+        <RevisionApprovalPanel pieceId={run.piece_id!} runId={run.id} />
       )}
 
       <p className="text-xs text-muted-foreground">
