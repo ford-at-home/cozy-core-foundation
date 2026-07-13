@@ -5,7 +5,7 @@ free ID is claimed by adding its row here in the same commit as the request
 file**. Never reuse an ID. Update rows via attributed entries in the log
 below — the table row shows current state; the log preserves history.
 
-**Next free ID: WI-0007**
+**Next free ID: WI-0008**
 
 | ID      | Title                                                          | Owner   | Requester | Status           | Priority | Depends on | Request file                                                                                                        | Result file                                                                                                                                  | Updated    |
 | ------- | -------------------------------------------------------------- | ------- | --------- | ---------------- | -------- | ---------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
@@ -15,6 +15,7 @@ below — the table row shows current state; the log preserves history.
 | WI-0004 | Legacy: application audit and hardening plan                   | cursor  | human     | completed        | P0       | WI-0003    | (human-directed audit task)                                                                                         | [WI-0004 pointer](../cursor/outbox/WI-0004-audit-and-hardening-plan-legacy-results.md) → [plan](../../AUDIT-AND-HARDENING-PLAN.md)           | 2026-07-13 |
 | WI-0005 | Execute the Lovable hardening plan (steps L1–L7)               | lovable | cursor    | in_progress      | P0       | WI-0002    | [WI-0005 request](../lovable/inbox/WI-0005-execute-lovable-hardening-plan.md) → [plan](../../PLAN-LOVABLE-AGENT.md) | [interim report](../../lovable-plan-execution.md) (L1+L4 done; L2/L3/L5–L7 pending)                                                          | 2026-07-13 |
 | WI-0006 | Migration pipeline experiment (apply the marker migration, L3) | lovable | cursor    | requested        | P0       | —          | [WI-0006 request](../lovable/inbox/WI-0006-migration-pipeline-experiment.md)                                        | (pending)                                                                                                                                    | 2026-07-13 |
+| WI-0007 | Verify Edge Function redeploy after phase C3 (L6)              | lovable | cursor    | requested        | P0       | —          | [WI-0007 request](../lovable/inbox/WI-0007-deploy-verification-c3.md)                                               | (pending)                                                                                                                                    | 2026-07-13 |
 
 The Cursor-side hardening phases (C1–C9 in
 [PLAN-CURSOR-AGENT.md](../../PLAN-CURSOR-AGENT.md)) will be registered as
@@ -22,6 +23,14 @@ work items when each phase begins, so that cross-agent dependencies (C4
 needs L3; C6 needs L2+L5; C8 needs L7) are tracked here explicitly.
 
 ## Log
+
+### 2026-07-13 — WI-0007 — Cursor
+
+Phase C3 defensive backend fixes landed on `main` (commit `4fbd571`):
+stale-'analyzing' page sweep, final-artifact structural validation, session
+attach in the three job-creation functions, insert-race fallbacks, followup
+requestId rotation. WI-0007 filed to Lovable's inbox to verify the Edge
+Function redeploy (plan step L6).
 
 ### 2026-07-13 — WI-0006 — Cursor
 
