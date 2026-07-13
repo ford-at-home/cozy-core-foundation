@@ -37,9 +37,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Turn a raw provider/edge-function error string into a short student-readable
 // explanation. Returns null when we have nothing useful to say beyond the
 // generic "run didn't finish" copy.
-function interpretRunError(
-  raw: string | null | undefined,
-): { title: string; body: string } | null {
+function interpretRunError(raw: string | null | undefined): { title: string; body: string } | null {
   if (!raw) return null;
   const msg = raw.toLowerCase();
   if (msg.includes("hard limit") || msg.includes("increase your hard limit")) {
@@ -124,24 +122,20 @@ function ProjectHubPage() {
     ? derivePacketWorkflow({
         runs: data.runs as StageRun[],
         packets: data.packets as StagePacket[],
-        returns: data.returns.map(
-          (r): StageReturn => ({
-            id: r.id,
-            status: r.uiStatus,
-            created_at: r.created_at,
-          }),
-        ),
+        returns: data.returns.map((r): StageReturn => ({
+          id: r.id,
+          status: r.uiStatus,
+          created_at: r.created_at,
+        })),
         followups: data.followups as StageFollowup[],
         artifacts: data.artifacts
           .filter((a) => a.kind === "docx" || a.kind === "pptx")
-          .map(
-            (a): StageArtifact => ({
-              id: a.id,
-              kind: a.kind as "docx" | "pptx",
-              status: a.status,
-              created_at: a.created_at,
-            }),
-          ),
+          .map((a): StageArtifact => ({
+            id: a.id,
+            kind: a.kind as "docx" | "pptx",
+            status: a.status,
+            created_at: a.created_at,
+          })),
       })
     : null;
 
@@ -277,8 +271,7 @@ function LiveHeartbeat({ since }: { since: string }) {
   const secs = Number.isFinite(startMs) ? Math.max(0, Math.floor((now - startMs) / 1000)) : 0;
   const mins = Math.floor(secs / 60);
   const rem = secs % 60;
-  const elapsed =
-    mins > 0 ? `${mins}m ${String(rem).padStart(2, "0")}s` : `${rem}s`;
+  const elapsed = mins > 0 ? `${mins}m ${String(rem).padStart(2, "0")}s` : `${rem}s`;
   return (
     <div className="flex items-start gap-2 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
       <span
@@ -286,8 +279,8 @@ function LiveHeartbeat({ since }: { since: string }) {
         className="mt-1 inline-block h-1.5 w-1.5 flex-none animate-pulse rounded-full bg-emerald-500"
       />
       <span>
-        Working for <span className="font-mono text-foreground">{elapsed}</span>. We check in on
-        the cloud agent every ~60 seconds — if it stalls or fails, this page will say so.
+        Working for <span className="font-mono text-foreground">{elapsed}</span>. We check in on the
+        cloud agent every ~60 seconds — if it stalls or fails, this page will say so.
       </span>
     </div>
   );

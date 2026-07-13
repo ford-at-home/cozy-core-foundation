@@ -1103,9 +1103,7 @@ function RunDetailPanel({ run }: { run: AgentRun }) {
             rel="noreferrer"
             className="underline hover:text-foreground"
           >
-            {run.external_agent_id
-              ? "Open this agent on cursor.com →"
-              : "Open cursor.com/agents →"}
+            {run.external_agent_id ? "Open this agent on cursor.com →" : "Open cursor.com/agents →"}
           </a>
           {run.branch && (
             <span className="ml-1 text-muted-foreground">
@@ -1135,9 +1133,9 @@ function RunDetailPanel({ run }: { run: AgentRun }) {
           Status transitions
         </div>
         <p className="text-xs text-muted-foreground">
-          Each line is a real signal from the system — either the cloud agent pushed us an
-          update (“from the agent”), our background checker polled and saw a change (“from our
-          minute check”), or our controller changed the run itself (“from the app”).
+          Each line is a real signal from the system — either the cloud agent pushed us an update
+          (“from the agent”), our background checker polled and saw a change (“from our minute
+          check”), or our controller changed the run itself (“from the app”).
         </p>
         {eventsError && (
           <p className="text-xs text-destructive">Could not load event history: {eventsError}</p>
