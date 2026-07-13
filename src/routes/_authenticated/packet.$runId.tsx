@@ -157,7 +157,9 @@ function PacketReviewPage() {
 
           <AddQuestionForm
             packetId={packet.id}
-            nextPosition={(questions[questions.length - 1]?.position ?? 0) + 1}
+            // Max position + 1, not last-item position + 1: the list is in
+            // print order (followup last), which is not position order.
+            nextPosition={questions.reduce((m, q) => Math.max(m, q.position), 0) + 1}
             onAdded={reload}
             onError={setError}
           />
