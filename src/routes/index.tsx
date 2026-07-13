@@ -471,7 +471,7 @@ function FinalAction() {
           {brand.company.philosophy}
         </h2>
         <Link to="/auth" className={primaryCta}>
-          Start your first working draft
+          Start your first project
         </Link>
       </div>
     </section>
