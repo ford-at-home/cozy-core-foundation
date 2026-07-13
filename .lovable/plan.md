@@ -1,82 +1,133 @@
 
-## Reframed
+# Parity Check: Clarity & Simplification Brief vs. Current Code
 
-The dictation-driven annotation return **is** the input to `revise`. Today that input is a plain textarea on the draft-run page. The plan is to make it a real capture flow, once, before the revision run kicks off. The revision panel's job stays narrow: approve, detect external merges, and if the revision is off — go back and dictate more.
+Not an implementation plan — a map of where the brief's asks already exist, where they exist partially, and where they don't exist at all. Approve this and I'll turn the gaps into a scoped implementation plan.
 
-## The intended loop (make it visible in copy and UI)
+## TL;DR
 
-1. Draft run completes → **Print draft** (already works).
-2. Mark up on paper.
-3. **Dictate the markup** into the draft-run's revise panel → Revise (1 credit) → revision PR.
-4. Revision run completes → Approve & merge, or return to step 3 with another dictation pass.
-5. Merged → piece is finalized.
+Most of the brief's **stage model, naming, and workflow narrative already exist** for the research-packet workflow (`/project/$pieceId`, `src/lib/packet-stage.ts`, `docs/research-workflow/`, `docs/brand/UI-COPY-MAP.md`). The big real gaps are: (1) the app runs **two parallel workflows** ("draft" and "research-packet") and top-level surfaces still lead with the draft one, (2) **transition copy between stages** is thin, (3) **professor role doesn't exist in the schema at all**, (4) **error/recovery copy** and **credit explanations at point-of-value** are inconsistent, (5) **printed packet return instructions** exist but haven't been audited against the brief's checklist.
 
-No new run kinds, no schema changes. `revise` accepts the transcript in its existing `feedback` field.
+## Legend
 
-## Plan
+- ✅ Parity — implemented and consistent with the brief
+- 🟡 Partial — exists but incomplete or inconsistent
+- ❌ Gap — not implemented
+- ⛔ Out of scope for this codebase (would require new features/schema — brief says "no new features")
 
-### 1. Draft-run: dictation as the primary annotation input
+## Phase-by-phase parity
 
-Edit `ActionsPanel` in `src/routes/_authenticated/runs.$runId.tsx`, the `isDraft` branch (lines 455–490). Reuse `useDictation` from `src/hooks/use-dictation.ts` exactly as the profile page does — it already handles mic permissions, WAV encoding, `/api/transcribe`, retry, and error copy.
+### Core Product Promise & Core Experience
+| Brief ask | Status | Where |
+|---|---|---|
+| One-sentence promise | 🟡 | `src/config/brand.ts` has `brand.meta.description` and `brand.product.descriptor`; both are draft-workflow-centric, not the "research → paper → return → refine → present" arc the brief wants. |
+| 7-step human arc (Research → Print → Think → Return → Review → Follow-up → Present) | ✅ (packet flow) / 🟡 (landing) | `PACKET_STAGES` in `src/lib/packet-stage.ts` matches almost exactly (`research, print, think, return, review, follow_up, finish`). Landing page `HOW_IT_WORKS` in `src/routes/index.tsx` tells a *different* 7-step story (Research/Prepare/Print/Think by hand/Return your marks/Refine/Keep the result) — the draft workflow, not the packet workflow. |
 
-- Add a **Dictate** button above the textarea:
-  - Idle: "🎙 Dictate annotations"
-  - Recording: "■ Stop (0:12)" with elapsed timer.
-  - Transcribing: "Transcribing…" (disabled).
-  - On success, **append** the returned text to `transcript` (with a leading newline if the box isn't empty), never overwrite.
-  - Show `useDictation`'s `error` + Retry inline; do not eat errors.
-- Keep the textarea editable — the user often cleans up "S2P1" anchor callouts by hand after dictating.
-- Update the helper copy:
-  *"Print this draft, mark it up on paper, then dictate what you wrote — anchors like 'S2P1' and marks like 'mark three: cut'. Revise reconciles them into the final version."*
-- Optional (nice): store `lastBlob` reference so the same audio can be re-transcribed via Retry without re-recording — `useDictation` already exposes this, just wire the button.
+### Phase 1 — Map existing workflow
+| Brief ask | Status | Where |
+|---|---|---|
+| Full audit doc | ✅ | `docs/research-workflow/01-current-state-audit.md` + `BACKEND-CAPABILITY-MATRIX.md` already do this exhaustively. |
+| Two workflows coexist and confuse | ❌ (not surfaced) | `pieces.workflow` = `longform` vs `research_packet`. Dashboard, `/new`, and landing don't distinguish or guide the choice; a first-time user won't know which they're starting. **This is the biggest information-architecture gap.** |
 
-Server-side: **no changes.** `piece-action`'s `revise` branch already reads `feedback`, builds `buildRevisionPrompt`, and dispatches. The transcript arrives at the agent identically whether typed or dictated.
+### Phase 2 — Main path vs. optional paths
+| Brief ask | Status | Where |
+|---|---|---|
+| Progressive disclosure of return methods, follow-up, output formats | 🟡 | Project hub gates by derived stage, so downstream cards don't show until relevant. But `/return/$packetId` presents upload + dictation side-by-side without framing as "one decision", and follow-up doesn't have an explicit "Skip follow-up" affordance. |
 
-### 2. Revision-run panel: approve, or send it back to be re-dictated
+### Phase 3 — Define 4–7 user-facing stages
+| Brief ask | Status | Where |
+|---|---|---|
+| 4–7 stages, each with title/goal/primary action/completion/next | ✅ (structurally) / 🟡 (copy) | `STAGE_LABELS` + `derivePacketWorkflow` deliver 7 stages with one primary action each. Missing: one-sentence explanation per stage, explicit "completion condition", explicit "next-stage transition" copy. |
 
-Rewrite `RevisionApprovalPanel` (lines 516–620) so it has three states:
+### Phase 4 — Naming audit
+| Brief ask | Status | Where |
+|---|---|---|
+| Internal-to-user language map | ✅ | `docs/brand/UI-COPY-MAP.md` is exactly this artifact, already thorough for chrome/auth/dashboard/new/profile/run/print. |
+| Consistent naming for packet, returned pages, review notes, follow-up, final paper, presentation | 🟡 | Packet workflow terms are consistent inside the packet hub. The **draft workflow still uses "piece" / "draft" / "revision" / "PR"** and those bleed into shared surfaces (Dashboard nav says "New draft"). The two vocabularies don't reconcile. |
+| Retire "artifact"/"ingestion"/"reconciliation"/"rendering" as primary UI terms | 🟡 | `final_artifacts` naming still surfaces in some copy (`FINAL_ARTIFACT_COST`, project-hub Finish card). Not audited end-to-end. |
 
-**a. Not yet merged** (default)
-```
-Final version produced.
-[ Approve & merge ]        [ Not quite — mark up & re-dictate ]
+### Phase 5 — Clarify the beginning
+| Brief ask | Status | Where |
+|---|---|---|
+| Landing page tells the full arc | 🟡 | Exists but tells the *draft* arc, not the packet arc, and doesn't say "what AI will not do". |
+| First-use onboarding | ❌ | No onboarding surface. |
+| `/new` explains the whole loop before starting | 🟡 | `/new` describes brief/draft prep only; doesn't preview return/review/follow-up/present. |
+| Printable packet instructions | 🟡 | `buildPacketPrintDocument` in `src/lib/print-document.ts` renders instructions on the packet — not audited against the brief's checklist (read/respond/dark ink/shorthand/3 questions/photograph/dictate/return-checklist). |
 
-View PR on GitHub ↗ · Refresh status
-```
-- **Approve & merge** — unchanged; calls `approveRevisionPr`.
-- **Not quite — mark up & re-dictate** — links to `/print/$runId` (this revision) and then navigates back to the *draft* run's revise panel with a small banner: *"Dictate your annotations on this revision to produce the next version."* Simplest wiring: the button goes to the draft run (found by looking up the piece's most recent `kind='draft'` completed run) with `?fromRevision=<runId>`; the draft page reads that param and scrolls to the dictation panel.
-  - Alternative if you'd rather keep the input attached to the revision: let `piece-action`'s `revise` accept a prior-kind of `revision` (spot-check confirms it already does — no code change needed, it only rejects `research_packet` and requires a completed prior run). Then the revise panel could live directly on the revision run page too. Pick one; I'd default to keeping revise on the draft page so there's one place users learn the flow.
+### Phase 6 — Transition copy between stages
+| Brief ask | Status | Where |
+|---|---|---|
+| End-of-stage "what happened / what's next / can I leave" copy at every hand-off | ❌ | Project hub renders per-stage status labels but no consistent transition messages. Six of the seven transitions the brief lists have no dedicated copy. |
 
-**b. Merged** (unchanged content, plus one CTA)
-```
-Approved and merged {ts}. The final version is on the main branch — copy the piece from the tabs above wherever it's going.
-View merged PR on GitHub ↗
-[ Start a new piece → /new ]
-```
+### Phase 7 — Reduce cognitive load
+| Brief ask | Status | Where |
+|---|---|---|
+| One primary action per stage, defaults, collapsed advanced | ✅ (hub) / 🟡 (deep pages) | Hub is disciplined. `/runs/$runId`, `/review/$returnId`, `/followup/$packetId` have multiple equal-weight controls; not audited against the "one primary action" rule. |
 
-### 3. Detect external GitHub approvals
+### Phase 8 — Branching clarity
+| Brief ask | Status | Where |
+|---|---|---|
+| Return method as one decision | 🟡 | `/return/$packetId` shows both, not framed as a decision. |
+| Follow-up skippable and explicit | 🟡 | Skip is technically possible (Finish is reachable without follow-up per `packet-stage.ts:85–86`) but not clearly labeled as "Skip". |
+| Final output (docx / pptx / both) shown only after synthesis | ✅ | Project hub Finish card gates on prior stages. |
+| Revised packet rendering strategy (full/addendum/replacement) not user-exposed | ✅ | Only one strategy exists; not user-choice. |
 
-Two additions, independent of the merge button:
+### Phase 9 — Status/progress
+| Brief ask | Status | Where |
+|---|---|---|
+| Plain-language statuses instead of "processing/queued/rendering" | 🟡 | `StatusPill` still shows raw run states in some places (`/runs/$runId`, dashboard). Project hub uses friendlier labels but derives from those raw states. |
+| Show current/completed/next/action-required/safe-to-leave | 🟡 | Stages show complete/current/upcoming; "safe to leave" and "action required" are not consistently signaled. |
 
-**a. Realtime + focus refresh.** In `RevisionApprovalPanel`, subscribe to `pieces` UPDATE for this `pieceId` (mirrors the existing `agent_runs` channel pattern in the same file) and re-read `final_pr_merged_at` on `document.visibilitychange`. Flips the UI as soon as anything stamps the column.
+### Phase 10 — Credits & payments at point-of-value
+| Brief ask | Status | Where |
+|---|---|---|
+| Explain credit cost at the point of action | 🟡 | `CostBadge`, `useCreditBalance`, `isInsufficientCreditsError` exist. Costs are shown near action buttons in most places but the "one credit = complete research packet, one credit = follow-up (up to 3 questions), everything else free" narrative from the brief is not written down in one place a user sees. `docs/BILLING.md` is the internal source of truth. |
+| Failure semantics for credits | ✅ (backend) / 🟡 (UI copy) | `docs/BILLING.md` guarantees reservation/release. User-facing recovery copy on failure is generic. |
 
-**b. Passive status check.** Extend `supabase/functions/approve-revision/index.ts` to accept `{ runId, mode: "status" }`: do the same PR lookup + "if merged, stamp `final_pr_merged_at` + advance stage + log event" branch it already has, but skip the `PUT /merge` call. Expose as `checkRevisionPrStatus` in `src/lib/pieces.functions.ts`. Panel calls it on mount, on focus, and behind a small "Refresh status" link. Idempotent, free, no credit spend.
+### Phase 11 — Empty/error/recovery states
+| Brief ask | Status | Where |
+|---|---|---|
+| "What happened / preserved / do next / credits / continue elsewhere" for every failure | 🟡 | Some paths good (blurred page reshoot on `/return/$packetId`, artifact settle on failure per `01-current-state-audit.md` item 5). Global audit not done. |
 
-This covers the "user merged on GitHub" case without needing a webhook. A GitHub App / webhook stays out of scope.
+### Phase 12 — Printed instructions
+| Brief ask | Status | Where |
+|---|---|---|
+| Return-process instructions on paper (checklist, shorthand legend, dark ink, 3 questions, photograph, dictate) | 🟡 | Print includes packet body + `S{n}P{m}` anchors + `contract/references/MARKUP.md` shorthand. A **final return checklist page** and dark-ink/photograph guidance haven't been verified in the print output. |
 
-## Technical notes
+### Phase 13 — User-facing product language (16 surfaces)
+| Surface | Status |
+|---|---|
+| 1–4 One-sentence / short / expanded / how-it-works | 🟡 (landing tells the wrong arc) |
+| 5 Stage names + descriptions | ✅ names / ❌ descriptions |
+| 6 New-project intro | 🟡 |
+| 7 Printable packet instructions | 🟡 |
+| 8 Upload & dictation instructions | 🟡 |
+| 9 Verification explanation | 🟡 (`/review/$returnId` exists; explanatory copy not audited) |
+| 10 Follow-up explanation | 🟡 |
+| 11 Final output explanation | 🟡 |
+| 12 Professor-facing explanation | ⛔ (no professor role in schema) |
+| 13 Student-facing explanation | 🟡 |
+| 14 Credit explanation | 🟡 |
+| 15 Error/recovery copy | 🟡 |
 
-- **Files changed**
-  - `src/routes/_authenticated/runs.$runId.tsx` — add dictation to `ActionsPanel` (isDraft), rewrite `RevisionApprovalPanel` with realtime + focus refresh + "not quite" CTA + post-merge new-piece CTA.
-  - `src/lib/pieces.functions.ts` — add `checkRevisionPrStatus` server fn.
-  - `supabase/functions/approve-revision/index.ts` — accept `mode: "status"` to short-circuit before the merge PUT.
-- **No schema changes**, **no new secrets** (`GITHUB_TOKEN` and `LOVABLE_API_KEY` already present), **no new run kinds**, **no new billable actions** — the second dictation pass is just another `revise` (1 credit).
-- **Reuse, don't rebuild.** `useDictation` + `/api/transcribe` are the exact same pieces the profile page and packet-return dictation use. No new server route.
-- **Dictation credits** are workspace AI credits, separate from generation credits — `useDictation` already surfaces that copy on 402.
-- **Existing packet-workflow dictation** (return upload, page OCR, `submit-dictation`) is untouched — that's the other workflow and is not what this piece is on.
+### Phase 14 — UX flow spec
+| Brief ask | Status |
+|---|---|
+| High-level + detailed + screen-by-screen + entry/exit + save-return + error paths | 🟡 — `docs/research-workflow/01…09` cover most; no consolidated single-source flow diagram. |
 
-## Out of scope
+### Phase 15 — Implement clarity layer
+Not applicable to parity check — this is where the follow-up implementation plan would land.
 
-- GitHub webhook for instant external-merge detection (polling + focus covers it).
-- Auto-closing the prior open revision PR when a new revise fires.
-- Attaching the actual audio recording to `agent_runs.input` for later replay (transcript is what the agent needs).
+### Phase 16 — Validate with representative users
+❌ — No validation artifacts in repo.
+
+## Two things the brief assumes exist that don't
+
+1. **Professor role / assignments / enrollments.** Brief mentions "professor controls", professor-facing copy, and "professor may require follow-up". Per `BACKEND-CAPABILITY-MATRIX.md` §1: `courses`, `assignments`, `enrollments`, `app_role='professor'` — **all missing**. Would require new schema + RLS + UI. The brief also says "do not add features". These conflict — needs a decision.
+2. **A single workflow.** The brief describes one linear product; the codebase has two (`longform` draft workflow and `research_packet` workflow) that share chrome, `pieces`, `agent_runs`, credits, and print. The clarity work only lands cleanly after a decision about which workflow the product foregrounds — or how the two are named and separated on the landing/`/new`/dashboard surfaces.
+
+## What I'd propose next (if you approve this parity map)
+
+A scoped implementation plan for the 🟡 items in Phases 3, 5, 6, 8, 9, 10, 11, 12, 13 — no new features, no schema changes, no professor role. Two decisions I'd need from you first:
+
+1. **Workflow foregrounding.** Does the landing page + `/new` + dashboard become **research-packet-first** (matches this brief), **draft-first** (matches current copy), or **explicit two-mode chooser**?
+2. **Professor scope.** Drop from clarity pass entirely, or add a follow-on plan to build the schema?
