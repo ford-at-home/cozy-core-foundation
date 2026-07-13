@@ -15,7 +15,7 @@ Every voice, structure, and friction operation built on `markdown-soul` is the s
 
 Every run requires a `brief.md` in the work directory. **No brief, no run.** This is non-negotiable; refuse to proceed if it's missing.
 
-The brief is a five-field structured input — see [`references/BRIEF.template.md`](../../references/BRIEF.template.md) for the template and field semantics. The fields are:
+The brief is a five-field structured input — see [`references/BRIEF.template.md`](references/BRIEF.template.md) for the template and field semantics. The fields are:
 
 | Field | Required | Purpose |
 |---|---|---|
@@ -92,7 +92,7 @@ Trigger phrases (any of these route here; bundle is then chosen):
 Every invocation, in this order:
 
 1. **`brief.md`** at `.input/<bundle-name>/brief.md`. Parse the five fields. Validate that every field has content. If any required field is empty, stop and ask the user to complete it — do NOT make up values.
-2. **The voice file** named in `brief.md`'s `Voice:` field. Resolution order: `<repo>/.me/voices/<name>.md`, falling back to `~/.me/voices/<name>.md`. If present, also load `<name>.anti.md` from the same directory (paired anti-slop catalog). If the named voice doesn't exist at either path, stop and ask the user to either create it (copying [`references/STYLE.template.md`](../../references/STYLE.template.md)) or fix the brief.
+2. **The voice file** named in `brief.md`'s `Voice:` field. Resolution order: `<repo>/.me/voices/<name>.md`, falling back to `~/.me/voices/<name>.md`. If present, also load `<name>.anti.md` from the same directory (paired anti-slop catalog). If the named voice doesn't exist at either path, stop and ask the user to either create it (copying [`references/STYLE.template.md`](references/STYLE.template.md)) or fix the brief.
 3. **The channel definitions** named in `brief.md`'s `Channels:` list. Resolution: `<repo>/.me/channels/<name>.md`, falling back to `~/.me/channels/<name>.md`. Each missing channel → stop and ask.
 4. **The bundle manifest** at `bundles/<name>/BUNDLE.md`. The bundle declares which references to read and which mode to run. Do not work from memory — the bundle file is the source of truth.
 5. **The references the bundle declares** (`reads:` list in the bundle's frontmatter). Read all of them.
@@ -320,9 +320,9 @@ If any check fails, fix before returning.
 
 Refuse first; never substitute defaults for missing structured inputs. The bullshit-prevention contract depends on the brief being real.
 
-- **`brief.md` not found** at `.input/<bundle>/brief.md` → stop. Point the user at [`references/BRIEF.template.md`](../../references/BRIEF.template.md). Do not run with a synthesized brief; do not infer fields from the source materials.
+- **`brief.md` not found** at `.input/<bundle>/brief.md` → stop. Point the user at [`references/BRIEF.template.md`](references/BRIEF.template.md). Do not run with a synthesized brief; do not infer fields from the source materials.
 - **`brief.md` has empty required fields** (Voice, Persona, Throughline, Channels, Why this persona why now) → stop and name every empty field. Do not fill in defaults. Especially: do not invent a persona or throughline from the source materials — that defeats the purpose of the brief.
-- **Voice named in brief not found** at `<repo>/.me/voices/<name>.md` or `~/.me/voices/<name>.md` → stop. Tell the user where the file should live and offer two options: (a) create it from [`references/STYLE.template.md`](../../references/STYLE.template.md), (b) change the brief's `Voice:` to an existing voice. List the voices that *do* exist at both paths.
+- **Voice named in brief not found** at `<repo>/.me/voices/<name>.md` or `~/.me/voices/<name>.md` → stop. Tell the user where the file should live and offer two options: (a) create it from [`references/STYLE.template.md`](references/STYLE.template.md), (b) change the brief's `Voice:` to an existing voice. List the voices that *do* exist at both paths.
 - **Channel named in brief not found** at `<repo>/.me/channels/<name>.md` or `~/.me/channels/<name>.md` → stop. Same shape as voice failure: list available channels, offer to create or change.
 - **Bundle file not found** → stop and ask which bundle to use, listing the available bundles in `bundles/`.
 - **Bundle declares a reference that doesn't exist** → stop and report the missing file. Do not fall back to a heuristic.

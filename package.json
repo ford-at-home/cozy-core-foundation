@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:edge": "deno test --allow-env supabase/functions/_tests/"
   },
   "dependencies": {
     "@fontsource/source-code-pro": "^5.2.7",

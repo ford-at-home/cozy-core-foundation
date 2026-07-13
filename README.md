@@ -72,8 +72,10 @@ npm run lint
 | SQL ledger invariants | `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/credits.test.sql` | Postgres with migrations applied |
 | Credit concurrency race | `DATABASE_URL=… supabase/tests/credit-concurrency.sh` | Postgres |
 
-CI (`.github/workflows/ci.yml`) runs lint, the Vitest suite, and the Deno
-suite on every push and pull request.
+CI (`.github/workflows/ci.yml`) runs the Vitest suite and the Deno suite on
+every push and pull request. (Lint is not in CI yet — the merged branches
+left pre-existing formatting debt; run `npm run lint` locally on the files
+you touch.)
 
 ## Configuration inventory
 
