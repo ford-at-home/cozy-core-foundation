@@ -67,6 +67,9 @@ export type StartWorkflowInput = {
   /** Deep-research entry point: a topic the backend researches for you. */
   topic?: string;
   goal?: string;
+  /** Which pipeline this run feeds: a long-form draft (default) or a
+   *  college research packet (docs/research-workflow/). */
+  workflow?: "longform" | "research_packet";
   requestId?: string;
   attachments?: Array<{
     path: string; // storage path within research-attachments bucket

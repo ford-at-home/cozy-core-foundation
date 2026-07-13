@@ -21,6 +21,7 @@ import {
 } from "../_shared/complete.ts";
 import { recordInference, cursorInferenceUsage } from "../_shared/usage.ts";
 import { releaseRunCredits, settleRunCredits } from "../_shared/credits.ts";
+import { persistPacketResult } from "../_shared/packet.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("method not allowed", { status: 405 });
@@ -135,6 +136,12 @@ Deno.serve(async (req) => {
         const slug = piece?.slug;
         const result = slug ? await fetchRunResult({ ...run, branch } as RunRow, slug) : null;
         if (result) {
+          // Packet runs: persist packets + packet_questions BEFORE completion
+          // (idempotent). A throw leaves the run in awaiting_fetch, and the
+          // reconciler retries the whole fetch+persist.
+          if (run.kind === "packet") {
+            await persistPacketResult(admin, run, result);
+          }
           await admin
             .from("agent_runs")
             .update({

@@ -31,6 +31,7 @@ import { errorResponse, jsonResponse, logEvent, newRequestId } from "../_shared/
 import { recordInference, cursorInferenceUsage } from "../_shared/usage.ts";
 import { releaseRunCredits, settleRunCredits, sweepStaleReservations } from "../_shared/credits.ts";
 import { reconcilePurchases } from "../_shared/stripe-reconcile.ts";
+import { persistPacketResult } from "../_shared/packet.ts";
 
 const FN = "reconcile-runs";
 
@@ -283,6 +284,11 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
       ? await fetchRunResult({ ...run, branch } as RunRow, piece.slug)
       : null;
     if (result) {
+      // Packet runs: persist packets + packet_questions BEFORE completion
+      // (idempotent); a throw keeps the run in awaiting_fetch for re-sweep.
+      if (run.kind === "packet") {
+        await persistPacketResult(admin, run, result);
+      }
       await admin
         .from("agent_runs")
         .update({ status: "completed", result, completed_at: new Date().toISOString() })

@@ -169,6 +169,52 @@ Deno.test("research completion chains exactly one compose run and dispatches it"
   }
 });
 
+Deno.test("research_packet workflow chains a packet run and needs no voice", async () => {
+  const restore = stubParallel(PARALLEL_DONE);
+  try {
+    const { admin, calls } = fakeAdmin({
+      maybeSingle: (table) => {
+        // Empty voice: packets are research artifacts, not authored prose.
+        if (table === "profiles") return { style_text: "", image_style: "" };
+        if (table === "pieces") return { slug: "test-topic-abc123" };
+        return null;
+      },
+      insertSingle: (table, payload) => {
+        if (table === "sessions") return { data: { id: "session-1" }, error: null };
+        assertEquals(table, "agent_runs");
+        const p = payload as Record<string, unknown>;
+        assertEquals(p.kind, "packet");
+        assertEquals(p.idempotency_key, "packet:user-1:research:run-research-1");
+        assertEquals(p.parent_run_id, "run-research-1");
+        assertEquals((p.input as Record<string, unknown>).workflow, "research_packet");
+        return { data: { id: "run-packet-1" }, error: null };
+      },
+    });
+
+    await reconcileResearch(admin, {
+      ...RESEARCH_RUN,
+      input: { ...RESEARCH_RUN.input, workflow: "research_packet" },
+    });
+
+    const completion = calls.find(
+      (c) =>
+        c.table === "agent_runs" && c.op === "update" && (c.payload as any)?.status === "completed",
+    );
+    assert(completion, "research run was not marked completed");
+    assertEquals((completion!.payload as any).result.nextRunId, "run-packet-1");
+
+    const dispatched = calls.find(
+      (c) =>
+        c.op === "update" &&
+        (c.payload as any)?.status === "queued" &&
+        c.filter?.[1] === "run-packet-1",
+    );
+    assert(dispatched, "chained packet run was not dispatched");
+  } finally {
+    restore();
+  }
+});
+
 Deno.test("re-sweep after a crash does not chain a second compose run", async () => {
   const restore = stubParallel(PARALLEL_DONE);
   try {

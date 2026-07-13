@@ -22,6 +22,7 @@ import { Route as ApiPublicGenerateImageRouteImport } from './routes/api/public/
 import { Route as AuthenticatedSessionsSessionIdRouteImport } from './routes/_authenticated/sessions.$sessionId'
 import { Route as AuthenticatedRunsRunIdRouteImport } from './routes/_authenticated/runs.$runId'
 import { Route as AuthenticatedPrintRunIdRouteImport } from './routes/_authenticated/print.$runId'
+import { Route as AuthenticatedPacketRunIdRouteImport } from './routes/_authenticated/packet.$runId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -88,6 +89,12 @@ const AuthenticatedPrintRunIdRoute = AuthenticatedPrintRunIdRouteImport.update({
   path: '/print/$runId',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPacketRunIdRoute =
+  AuthenticatedPacketRunIdRouteImport.update({
+    id: '/packet/$runId',
+    path: '/packet/$runId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -98,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/sessions': typeof AuthenticatedSessionsRouteWithChildren
   '/api/transcribe': typeof ApiTranscribeRoute
+  '/packet/$runId': typeof AuthenticatedPacketRunIdRoute
   '/print/$runId': typeof AuthenticatedPrintRunIdRoute
   '/runs/$runId': typeof AuthenticatedRunsRunIdRoute
   '/sessions/$sessionId': typeof AuthenticatedSessionsSessionIdRoute
@@ -112,6 +120,7 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/sessions': typeof AuthenticatedSessionsRouteWithChildren
   '/api/transcribe': typeof ApiTranscribeRoute
+  '/packet/$runId': typeof AuthenticatedPacketRunIdRoute
   '/print/$runId': typeof AuthenticatedPrintRunIdRoute
   '/runs/$runId': typeof AuthenticatedRunsRunIdRoute
   '/sessions/$sessionId': typeof AuthenticatedSessionsSessionIdRoute
@@ -128,6 +137,7 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/sessions': typeof AuthenticatedSessionsRouteWithChildren
   '/api/transcribe': typeof ApiTranscribeRoute
+  '/_authenticated/packet/$runId': typeof AuthenticatedPacketRunIdRoute
   '/_authenticated/print/$runId': typeof AuthenticatedPrintRunIdRoute
   '/_authenticated/runs/$runId': typeof AuthenticatedRunsRunIdRoute
   '/_authenticated/sessions/$sessionId': typeof AuthenticatedSessionsSessionIdRoute
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/sessions'
     | '/api/transcribe'
+    | '/packet/$runId'
     | '/print/$runId'
     | '/runs/$runId'
     | '/sessions/$sessionId'
@@ -158,6 +169,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/sessions'
     | '/api/transcribe'
+    | '/packet/$runId'
     | '/print/$runId'
     | '/runs/$runId'
     | '/sessions/$sessionId'
@@ -173,6 +185,7 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/_authenticated/sessions'
     | '/api/transcribe'
+    | '/_authenticated/packet/$runId'
     | '/_authenticated/print/$runId'
     | '/_authenticated/runs/$runId'
     | '/_authenticated/sessions/$sessionId'
@@ -280,6 +293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPrintRunIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/packet/$runId': {
+      id: '/_authenticated/packet/$runId'
+      path: '/packet/$runId'
+      fullPath: '/packet/$runId'
+      preLoaderRoute: typeof AuthenticatedPacketRunIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -302,6 +322,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedNewRoute: typeof AuthenticatedNewRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedSessionsRoute: typeof AuthenticatedSessionsRouteWithChildren
+  AuthenticatedPacketRunIdRoute: typeof AuthenticatedPacketRunIdRoute
   AuthenticatedPrintRunIdRoute: typeof AuthenticatedPrintRunIdRoute
   AuthenticatedRunsRunIdRoute: typeof AuthenticatedRunsRunIdRoute
 }
@@ -312,6 +333,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedNewRoute: AuthenticatedNewRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedSessionsRoute: AuthenticatedSessionsRouteWithChildren,
+  AuthenticatedPacketRunIdRoute: AuthenticatedPacketRunIdRoute,
   AuthenticatedPrintRunIdRoute: AuthenticatedPrintRunIdRoute,
   AuthenticatedRunsRunIdRoute: AuthenticatedRunsRunIdRoute,
 }
@@ -329,3 +351,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
