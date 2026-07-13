@@ -82,7 +82,7 @@ credit- or Stripe-adjacent** — its money rules override convenience.
   (reserve/settle/release/sweep), `_shared/stripe-reconcile.ts`,
   `supabase/functions/stripe-webhook/index.ts`,
   `supabase/functions/create-checkout-session/index.ts`, and the ledger
-  schema in `supabase/migrations/20260712140000_credit_ledger.sql`.
+  schema in `supabase/migrations/20260712165810_4626b17d-4b64-4dbe-86b2-ef3a0b53f3c7.sql`.
 - `docs/cloud-agents-architecture-plan.md` (historical — predates credits)
   and `docs/cursor-api-research.md` for design rationale when changing
   behavior.
@@ -134,7 +134,7 @@ calculated → estimated → manual`. New billable operations get a
    arrival, and concurrent duplicate — then implement to match.
 4. For cost changes: route through `recordInference`; add pricing via a
    migration to `model_pricing` (follow
-   `20260712110000_gateway_inference_pricing.sql`); mark estimates as
+   `20260713180100_gateway_pricing_seed.sql`); mark estimates as
    `estimated`, never fake `provider_reported`.
 5. Keep pure logic in `_shared/` and test it there; handlers stay thin.
 6. For credit changes: trace the reservation lifecycle end to end — where the

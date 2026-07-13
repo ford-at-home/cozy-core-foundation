@@ -38,6 +38,7 @@ for (const k of [
   "CREDITS_MODE",
   "APP_PUBLIC_URL",
   "AGENT_IMAGE_SECRET",
+  "TEST_ACCOUNT_IDS",
 ]) {
   Deno.env.delete(k);
 }

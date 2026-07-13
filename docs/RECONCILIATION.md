@@ -72,6 +72,11 @@ for configuration, [CONFIGURATION.md](CONFIGURATION.md).
   revokes INSERT from `authenticated` on both tables; SQL test added.
   No client code performed these inserts (verified: no `.insert()` on either
   table anywhere in `src/`).
+- **2026-07-13 amendment (audit P0.3/P0.4):** that migration was never
+  applied to the live database (hand-authored files do not auto-apply —
+  WI-0006). Its intent was re-issued in
+  `20260713180000_reconcile_live_schema.sql` and the stale file deleted;
+  Lovable applies and verifies under work item WI-0008.
 
 ### G2 — Skills predate the billing system
 

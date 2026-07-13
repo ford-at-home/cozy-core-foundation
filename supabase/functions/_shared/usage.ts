@@ -41,6 +41,26 @@ interface PricingRow {
   output_price_per_million: string | null;
 }
 
+/**
+ * P1.10: inferences from designated test accounts are stamped
+ * context='test' so cost rollups can separate test spend from production
+ * spend. TEST_ACCOUNT_IDS is a comma-separated list of auth user ids set
+ * alongside the test accounts (docs/CONFIGURATION.md). The column is only
+ * written for test accounts — everything else relies on the DB default
+ * 'production' — so this code deploys safely before the migration that
+ * adds the column.
+ */
+export function testAccountContext(userId: string | null | undefined): { context?: "test" } {
+  if (!userId) return {};
+  const raw = Deno.env.get("TEST_ACCOUNT_IDS") ?? "";
+  if (!raw.trim()) return {};
+  const ids = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return ids.includes(userId) ? { context: "test" } : {};
+}
+
 async function lookupPricing(
   admin: any,
   provider: string,
@@ -189,6 +209,7 @@ export async function recordInference(
     pricing_id: pricing?.id ?? null,
     idempotency_key: input.idempotencyKey,
     metadata: input.metadata ?? {},
+    ...testAccountContext(run.user_id),
   };
 
   const { data: upserted, error } = await admin

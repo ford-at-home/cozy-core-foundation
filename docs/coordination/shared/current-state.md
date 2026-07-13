@@ -64,3 +64,25 @@ not rewrite another agent's entry. Newest entries at the bottom.
   (C1, C2, C3, C5, C7). Remaining phases all wait on Lovable or the owner:
   **C4** ← WI-0006/L3 answer, **C6** ← L2 accounts + L5 re-verify,
   **C8** ← L7 certification data, **C9** ← post-certification backlog.
+
+### 2026-07-13 — C4 — Cursor
+
+- WI-0006 and WI-0007 came back: migrations do **not** auto-apply and Edge
+  Functions do **not** auto-deploy — Lovable applied the marker and deployed
+  all seven C3/C7 functions manually. The verified procedure is now in
+  `docs/RUNBOOK.md` → "Applying Cursor-authored migrations".
+- **C4 complete on the repo side** (this commit): two reconciliation
+  migrations (`20260713180000_reconcile_live_schema.sql` — M1/M2 client-write
+  revokes, stale-cron cleanup, sessions dedupe + unique index,
+  `inferences.context`; `20260713180100_gateway_pricing_seed.sql` — five
+  gateway pricing rows); refinement inferences recorded in
+  `prepare-follow-up-questions`; dictation transcription inferences recorded
+  in `/api/transcribe` (attributed to the packet's run when the dictating
+  page passes its packetId/runId); `TEST_ACCOUNT_IDS` stamping for
+  test-vs-production spend; the ten stale hand-authored migration files
+  deleted with all living docs/skills re-pointed (P0.4).
+- **Live DB is unchanged until WI-0008 executes** — the M1/M2 drift is
+  still open in production until Lovable applies both migrations and
+  redeploys `prepare-follow-up-questions`.
+- Remaining Cursor phases: **C6** ← L2 accounts + WI-0008 applied,
+  **C8** ← L7 certification data, **C9** ← post-certification backlog.

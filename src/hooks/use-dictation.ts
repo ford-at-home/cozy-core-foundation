@@ -135,10 +135,17 @@ function transcribeHttpError(status: number, bodyError?: string): DictationError
 }
 
 /**
+ * Where a dictation happened, for server-side cost attribution: transcription
+ * inferences attach to the packet's generation run (or the given run).
+ * Optional — profile-voice dictation has no run and passes nothing.
+ */
+export type DictationContext = { packetId?: string; runId?: string };
+
+/**
  * Record → transcribe → hand the text to `onTranscript`. Keeps the last
  * recording so a failed upload can be retried without re-recording.
  */
-export function useDictation(onTranscript: (text: string) => void) {
+export function useDictation(onTranscript: (text: string) => void, context?: DictationContext) {
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [error, setError] = useState<DictationError | null>(null);
@@ -218,6 +225,8 @@ export function useDictation(onTranscript: (text: string) => void) {
       }
       const fd = new FormData();
       fd.append("file", blob, "recording.wav");
+      if (context?.packetId) fd.append("packetId", context.packetId);
+      if (context?.runId) fd.append("runId", context.runId);
       let res: Response;
       try {
         res = await fetch("/api/transcribe", {

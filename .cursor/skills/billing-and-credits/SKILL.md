@@ -50,7 +50,7 @@ and the cross-skill routing.
 - Changing checkout, the Stripe webhook, purchase/refund/chargeback
   handling, `credit_products`, or `_shared/stripe-reconcile.ts`.
 - Changing the ledger, reservations, grants, or the SECURITY DEFINER money
-  functions in `supabase/migrations/20260712140000_credit_ledger.sql`.
+  functions in `supabase/migrations/20260712165810_4626b17d-4b64-4dbe-86b2-ef3a0b53f3c7.sql`.
 - Changing the paywall, the billing page (`src/routes/_authenticated/billing.tsx`),
   the balance chip (`src/components/CreditBalance.tsx`), or `src/lib/use-credits.ts`.
 - Changing what an action costs, or making a new action billable.
@@ -135,7 +135,7 @@ billing changes are never self-certified.
 - `docs/BILLING.md` — money rules, secrets, owner checklist, test plan,
   operations runbook (authoritative)
 - `docs/ARCHITECTURE.md` → Credits and Stripe billing
-- `supabase/migrations/20260712140000_credit_ledger.sql` — schema + functions
+- `supabase/migrations/20260712165810_4626b17d-4b64-4dbe-86b2-ef3a0b53f3c7.sql` — schema + functions
 - `supabase/functions/_shared/credits.ts`, `_shared/billing.ts`,
   `_shared/stripe-reconcile.ts`
 - `supabase/functions/create-checkout-session/index.ts`,

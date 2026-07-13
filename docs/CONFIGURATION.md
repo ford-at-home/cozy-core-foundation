@@ -65,6 +65,7 @@ see the owner checklist in `docs/BILLING.md`).
 | `LOVABLE_API_KEY`       | `start-workflow` (PDF OCR)             | **yes** | Lovable gateway from edge functions                  |
 | `AGENT_IMAGE_SECRET`    | `_shared/prompt.ts`                    | **yes** | Must match the SSR value (token mint + verify)       |
 | `RECONCILE_TOKEN`       | `reconcile-runs`                       | **yes** | Optional bearer gate for manual reconciler calls     |
+| `TEST_ACCOUNT_IDS`      | `_shared/usage.ts`, SSR `record-inference.server.ts` | no | Comma-separated auth user ids of the designated test accounts; their inferences are stamped `context='test'` so cost rollups separate test from production spend (audit P1.10). Set in BOTH Edge Function secrets and the SSR environment once the L2 test accounts exist; unset = everything records as production |
 
 ## CI (`.github/workflows/ci.yml`)
 

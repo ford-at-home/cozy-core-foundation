@@ -6,7 +6,7 @@
 // unique(piece_id) race, and stamp session_id + provider onto the run.
 
 import { assert, assertEquals } from "jsr:@std/assert@1";
-import { ensureRunSession } from "../_shared/usage.ts";
+import { ensureRunSession, testAccountContext } from "../_shared/usage.ts";
 
 type Q = {
   table: string;
@@ -106,4 +106,22 @@ Deno.test("ensureRunSession: losing the unique(piece_id) race re-reads the winne
   });
   const id = await ensureRunSession(admin, { runId: "run-1", userId: "u1", pieceId: "piece-1" });
   assertEquals(id, "sess-winner");
+});
+
+Deno.test("testAccountContext (P1.10): stamps 'test' only for listed accounts", () => {
+  const prev = Deno.env.get("TEST_ACCOUNT_IDS");
+  try {
+    // Unset: never writes the column (safe before the migration applies).
+    Deno.env.delete("TEST_ACCOUNT_IDS");
+    assertEquals(testAccountContext("u1"), {});
+
+    Deno.env.set("TEST_ACCOUNT_IDS", " u1 , u2 ");
+    assertEquals(testAccountContext("u1"), { context: "test" });
+    assertEquals(testAccountContext("u2"), { context: "test" });
+    assertEquals(testAccountContext("u3"), {});
+    assertEquals(testAccountContext(null), {});
+  } finally {
+    if (prev === undefined) Deno.env.delete("TEST_ACCOUNT_IDS");
+    else Deno.env.set("TEST_ACCOUNT_IDS", prev);
+  }
 });

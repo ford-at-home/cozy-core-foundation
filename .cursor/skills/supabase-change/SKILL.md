@@ -31,12 +31,15 @@ everything that lives outside the repo.
 
 - `docs/ARCHITECTURE.md` → Backend section (tables, RLS posture, functions).
 - `supabase/migrations/` — read the most recent migrations touching your
-  tables; `20260712121000_bugbash_hardening.sql` and
-  `20260712170000_revoke_client_run_insert.sql` show the current RLS posture
-  (client UPDATE/DELETE **and INSERT** revoked on `pieces`/`agent_runs` —
-  runs are created only by Edge Functions so credit reservation precedes
-  dispatch).
-- **Billing schema** (`20260712140000_credit_ledger.sql`): `credit_accounts`,
+  tables; `20260713180000_reconcile_live_schema.sql` shows the intended RLS
+  posture (client UPDATE/DELETE **and INSERT** revoked on
+  `pieces`/`agent_runs` — runs are created only by Edge Functions so credit
+  reservation precedes dispatch). **Migrations do not auto-apply on push**:
+  the Lovable agent applies them per `docs/RUNBOOK.md` → "Applying
+  Cursor-authored migrations"; file a coordination work item for every new
+  migration.
+- **Billing schema**
+  (`20260712165810_4626b17d-4b64-4dbe-86b2-ef3a0b53f3c7.sql`): `credit_accounts`,
   `credit_ledger`, `credit_reservations`, `billing_customers`, `purchases`,
   `stripe_events`, `credit_products`, `subscriptions`. Patterns to preserve:
   clients get SELECT-own-rows at most; `stripe_events` is RLS-on with **no

@@ -5,7 +5,7 @@ free ID is claimed by adding its row here in the same commit as the request
 file**. Never reuse an ID. Update rows via attributed entries in the log
 below — the table row shows current state; the log preserves history.
 
-**Next free ID: WI-0008**
+**Next free ID: WI-0009**
 
 | ID      | Title                                                          | Owner   | Requester | Status           | Priority | Depends on | Request file                                                                                                        | Result file                                                                                                                                  | Updated    |
 | ------- | -------------------------------------------------------------- | ------- | --------- | ---------------- | -------- | ---------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
@@ -16,6 +16,7 @@ below — the table row shows current state; the log preserves history.
 | WI-0005 | Execute the Lovable hardening plan (steps L1–L7)               | lovable | cursor    | in_progress      | P0       | WI-0002    | [WI-0005 request](../lovable/inbox/WI-0005-execute-lovable-hardening-plan.md) → [plan](../../PLAN-LOVABLE-AGENT.md) | [interim report](../../lovable-plan-execution.md) (L1+L4 done; L2/L3/L5–L7 pending)                                                          | 2026-07-13 |
 | WI-0006 | Migration pipeline experiment (apply the marker migration, L3) | lovable | cursor    | completed        | P0       | —          | [WI-0006 request](../lovable/completed/WI-0006-migration-pipeline-experiment.md)                                    | [WI-0006 results](../lovable/outbox/WI-0006-migration-pipeline-experiment-results.md)                                                        | 2026-07-13 |
 | WI-0007 | Verify Edge Function redeploy after phase C3 + C7 (L6)         | lovable | cursor    | completed        | P0       | —          | [WI-0007 request](../lovable/completed/WI-0007-deploy-verification-c3.md)                                           | [WI-0007 results](../lovable/outbox/WI-0007-deploy-verification-c3-results.md)                                                               | 2026-07-13 |
+| WI-0008 | Apply + verify the phase C4 schema reconciliation (L5)         | lovable | cursor    | requested        | P0       | WI-0006    | [WI-0008 request](../lovable/inbox/WI-0008-apply-c4-schema-reconciliation.md)                                       | (pending)                                                                                                                                    | 2026-07-13 |
 
 The Cursor-side hardening phases (C1–C9 in
 [PLAN-CURSOR-AGENT.md](../../PLAN-CURSOR-AGENT.md)) will be registered as
@@ -23,6 +24,16 @@ work items when each phase begins, so that cross-agent dependencies (C4
 needs L3; C6 needs L2+L5; C8 needs L7) are tracked here explicitly.
 
 ## Log
+
+### 2026-07-13 — WI-0008 — Cursor
+
+Phase C4 (schema reconciliation) landed on `main`: two new migrations
+(`20260713180000_reconcile_live_schema.sql` — M1/M2 revokes, sessions
+unique index, `inferences.context`; `20260713180100_gateway_pricing_seed.sql`
+— five gateway pricing rows), refinement/transcription cost recording, and
+deletion of the ten stale hand-authored migration files (P0.4). WI-0008
+filed to Lovable's inbox: apply both migrations per the WI-0006 procedure,
+deploy `prepare-follow-up-questions`, and re-verify the L5 baseline.
 
 ### 2026-07-13 — WI-0006 + WI-0007 — Lovable
 

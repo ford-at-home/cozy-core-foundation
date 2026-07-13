@@ -27,10 +27,34 @@
    - `PARALLEL_PROCESSOR` — optional; overrides the research depth
      (`lite-fast`/`base-fast`/`core-fast`/`pro-fast`/`ultra-fast`,
      default `ultra-fast`).
-3. **Reconciler schedule** — migration `20260711150000_reconciler_cron.sql`
-   schedules it every 2 min via pg_cron/pg_net. `[Unverified]` on Lovable
-   Cloud: confirm with `select * from cron.job;`. Manual fallback:
+3. **Reconciler schedule** — applied migration
+   `20260712093004_78fc7af4-9a44-4873-a443-92835b8ea0d4.sql` schedules
+   `reconcile-runs-every-minute` via pg_cron/pg_net (verified live by the
+   Lovable agent, 2026-07-13). Confirm with `select * from cron.job;`.
+   Manual fallback:
    `curl -X POST https://dlaojinagezrlbwyritd.supabase.co/functions/v1/reconcile-runs`.
+
+## Applying Cursor-authored migrations (verified procedure, WI-0006)
+
+Migration files pushed to `main` do **not** auto-apply, and Edge Function
+edits do **not** auto-deploy. For every backend change:
+
+1. Cursor pushes the SQL under `supabase/migrations/<version>_<name>.sql`
+   (and/or the function edits) and files a work item to
+   `docs/coordination/lovable/inbox/`.
+2. The Lovable agent applies the SQL with its `supabase--migration` tool.
+   That tool records its own UUID wrapper row in
+   `supabase_migrations.schema_migrations`, so the apply call must ALSO
+   insert the file's intended `(version, name, statements)` row with
+   `ON CONFLICT (version) DO NOTHING` — otherwise the file's version never
+   appears in the history. (Consequence: every applied Cursor migration
+   produces two history rows — intended version + Lovable wrapper.)
+3. The Lovable agent deploys changed Edge Functions with its deploy tool
+   (the frontend, including `src/routes/api/`, deploys automatically with
+   the app build).
+4. The Lovable agent verifies (`SELECT version FROM
+   supabase_migrations.schema_migrations WHERE version = '<version>'`,
+   plus a behavior probe for functions) and reports to its outbox.
 
 ## Not built yet (deferred, by design)
 

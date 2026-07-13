@@ -9,6 +9,11 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import {
+  estimateTokens,
+  recordInferenceServer,
+  resolveOwnedRunId,
+} from "@/lib/record-inference.server";
 
 const MAX_BYTES = 24 * 1024 * 1024; // 24 MiB — under the Gateway's 25 MiB cap
 const MODEL = "openai/gpt-4o-mini-transcribe";
@@ -99,8 +104,46 @@ export const Route = createFileRoute("/api/transcribe")({
             502,
           );
         }
-        const body = (await res.json().catch(() => ({}))) as { text?: string };
-        return json({ text: body.text ?? "" });
+        const body = (await res.json().catch(() => ({}))) as {
+          text?: string;
+          usage?: { input_tokens?: number; output_tokens?: number };
+        };
+        const text = body.text ?? "";
+
+        // Cost accounting (audit P1.6): transcription is free to the student
+        // but the gateway call is real spend. It can only attach to a run —
+        // callers with one (packet return / follow-up / run pages) pass their
+        // packetId or runId; profile-voice dictation has no run and stays
+        // unrecorded (documented limitation). Ownership of the passed id is
+        // verified server-side; recording never blocks the response.
+        const runId = await resolveOwnedRunId({
+          userId: String(claims.claims.sub),
+          runId: typeof form.get("runId") === "string" ? (form.get("runId") as string) : null,
+          packetId:
+            typeof form.get("packetId") === "string" ? (form.get("packetId") as string) : null,
+        });
+        if (runId) {
+          // WAV uploads are 16 kHz 16-bit mono (use-dictation.ts encoder).
+          const audioSeconds = Math.max(0, Math.round((file.size - 44) / 32000));
+          await recordInferenceServer({
+            runId,
+            provider: "lovable",
+            model: MODEL,
+            operationType: "llm",
+            idempotencyKey: `lovable:stt:${runId}:${crypto.randomUUID()}`,
+            inputTokens: body.usage?.input_tokens ?? null,
+            outputTokens: body.usage?.output_tokens ?? estimateTokens(text),
+            metadata: {
+              kind: "dictation_transcription",
+              audio_bytes: file.size,
+              audio_seconds: audioSeconds,
+              usage_reported: Boolean(body.usage),
+            },
+            rawPayload: { audio_bytes: file.size, text_chars: text.length, usage: body.usage },
+          });
+        }
+
+        return json({ text });
       },
     },
   },

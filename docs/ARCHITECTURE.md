@@ -114,6 +114,15 @@ Project id `dlaojinagezrlbwyritd` (`supabase/config.toml`).
 
 ### Tables (from `supabase/migrations/`)
 
+Migration files do **not** auto-apply on push (proven by the WI-0006
+pipeline experiment): the Lovable agent must apply each Cursor-authored
+migration explicitly — procedure in `docs/RUNBOOK.md` → "Applying
+Cursor-authored migrations". Historical note: ten early hand-authored
+migration files duplicated (or were superseded by) the Lovable-applied
+UUID-named migrations and were deleted in the phase-C4 reconciliation;
+their unapplied intents live on in `20260713180000_reconcile_live_schema.sql`
+and `20260713180100_gateway_pricing_seed.sql`.
+
 | Table                                             | Role                                                                                                     |
 | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `profiles`                                        | Per-user voice/style (`style_text`, `image_style`, presets)                                              |
@@ -143,10 +152,11 @@ Project id `dlaojinagezrlbwyritd` (`supabase/config.toml`).
 
 RLS: users read/write their own rows where user-editable (profiles, sessions,
 inferences); **INSERT/UPDATE/DELETE on `pieces`/`agent_runs` are revoked for
-`authenticated`** (bugbash hardening +
-`20260712170000_revoke_client_run_insert.sql`) — all mutations to controller
-tables go through Edge Functions with the service role, so a credit
-reservation always precedes a run's existence. `model_pricing` is read-only to
+`authenticated`** (`20260713180000_reconcile_live_schema.sql`; apply status
+tracked as work item WI-0008 — until Lovable confirms it applied, the live
+DB still allows these writes) — all mutations to controller tables go
+through Edge Functions with the service role, so a credit reservation
+always precedes a run's existence. `model_pricing` is read-only to
 signed-in users. Storage bucket `research-attachments` is scoped to the
 `auth.uid()/` folder prefix.
 
@@ -220,8 +230,8 @@ User-facing credits (1 credit = 1 completed generation; research = 2):
   projection. All balance mutation goes through SECURITY DEFINER Postgres
   functions (`grant_credits`, `reserve_credits`, `settle_reservation`,
   `release_reservation`, `admin_adjust_credits`) executable only by
-  `service_role` — defined in
-  `supabase/migrations/20260712140000_credit_ledger.sql`.
+  `service_role` — defined in the applied migration
+  `supabase/migrations/20260712165810_4626b17d-4b64-4dbe-86b2-ef3a0b53f3c7.sql`.
 - Reserve at dispatch → settle on completion → release on failure/cancel;
   `sweepStaleReservations` in the reconciler recovers stuck holds
   (`_shared/credits.ts`).

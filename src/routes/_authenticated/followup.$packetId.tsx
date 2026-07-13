@@ -305,20 +305,23 @@ function QuestionEditor({
   // time (onFocus updates both so the label never goes stale).
   const [activeSlot, setActiveSlot] = useState(0);
   const activeSlotRef = useRef(0);
-  const dictation = useDictation((text) => {
-    const i = Math.min(activeSlotRef.current, slots.length - 1);
-    setSlots((prev) =>
-      prev.map((s, j) =>
-        j === i
-          ? {
-              ...s,
-              student: s.student.trim() ? `${s.student.trim()} ${text}` : text,
-              suggested: null,
-            }
-          : s,
-      ),
-    );
-  });
+  const dictation = useDictation(
+    (text) => {
+      const i = Math.min(activeSlotRef.current, slots.length - 1);
+      setSlots((prev) =>
+        prev.map((s, j) =>
+          j === i
+            ? {
+                ...s,
+                student: s.student.trim() ? `${s.student.trim()} ${text}` : text,
+                suggested: null,
+              }
+            : s,
+        ),
+      );
+    },
+    { packetId },
+  );
 
   const hasSuggestions = slots.some((s) => s.suggested);
   const filled = slots.filter((s) => s.student.trim() !== "");

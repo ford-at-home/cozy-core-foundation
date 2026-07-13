@@ -485,9 +485,12 @@ function DictationSection({
   const [draft, setDraft] = useState("");
   const [questionId, setQuestionId] = useState<string>("");
   const [saving, setSaving] = useState(false);
-  const dictation = useDictation((text) => {
-    setDraft((prev) => (prev.trim() ? `${prev.replace(/\s+$/, "")}\n\n${text}` : text));
-  });
+  const dictation = useDictation(
+    (text) => {
+      setDraft((prev) => (prev.trim() ? `${prev.replace(/\s+$/, "")}\n\n${text}` : text));
+    },
+    { packetId },
+  );
 
   async function saveSegment() {
     const text = draft.trim();

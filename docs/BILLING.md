@@ -105,8 +105,9 @@ names — see the configuration inventory in the [README](../README.md).
 
 **Supabase:** enable email confirmation and captcha on signup (reduces
 free-credit farming), verify leaked-password protection, and confirm
-migration `20260712140000_credit_ledger.sql` applied (existing users are
-backfilled with the 3-credit signup grant).
+the credit-ledger migration
+(`20260712165810_4626b17d-4b64-4dbe-86b2-ef3a0b53f3c7.sql`) applied
+(existing users are backfilled with the 3-credit signup grant).
 
 ## Test plan (test mode; all must pass before live keys)
 

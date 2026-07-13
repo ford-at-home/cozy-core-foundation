@@ -394,9 +394,12 @@ function ActionsPanel({ run }: { run: AgentRun }) {
     start: startDictation,
     stop: stopDictation,
     retry: retryDictation,
-  } = useDictation((text) => {
-    setTranscript((prev) => (prev.trim() ? `${prev.replace(/\s+$/, "")}\n${text}` : text));
-  });
+  } = useDictation(
+    (text) => {
+      setTranscript((prev) => (prev.trim() ? `${prev.replace(/\s+$/, "")}\n${text}` : text));
+    },
+    { runId: run.id },
+  );
 
   // Elapsed timer while recording, purely presentational.
   const [recordingSecs, setRecordingSecs] = useState(0);

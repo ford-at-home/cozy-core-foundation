@@ -22,6 +22,8 @@
 // deno-lint-ignore-file no-explicit-any
 import { serve, authenticate, j, e } from "../_shared/http.ts";
 import { advanceStage, logPieceEvent } from "../_shared/workflow.ts";
+import { recordInference } from "../_shared/usage.ts";
+import { logEvent } from "../_shared/observability.ts";
 
 const FN = "prepare-follow-up-questions";
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -78,7 +80,7 @@ Deno.serve(
 
     const { data: packet } = await admin
       .from("packets")
-      .select("id, user_id, piece_id")
+      .select("id, user_id, piece_id, run_id")
       .eq("id", packetId)
       .maybeSingle();
     if (!packet || packet.user_id !== userId)
@@ -147,6 +149,36 @@ Deno.serve(
         });
         if (res.ok) {
           const j0 = await res.json();
+          // Cost accounting (audit P1.6): refinement is free to the student
+          // but the gateway call is real spend — record it against the
+          // packet's generation run. Each call is a genuinely new inference,
+          // so the idempotency key is unique per call. Never fail the
+          // request over bookkeeping.
+          if (packet.run_id) {
+            try {
+              await recordInference(admin, {
+                runId: packet.run_id,
+                provider: "lovable",
+                model: "google/gemini-2.5-flash-lite",
+                operationType: "llm",
+                idempotencyKey: `lovable:refine:${packetId}:${crypto.randomUUID()}`,
+                inputTokens: j0?.usage?.prompt_tokens ?? null,
+                outputTokens: j0?.usage?.completion_tokens ?? null,
+                metadata: {
+                  kind: "followup_refinement",
+                  packetId,
+                  questionCount: questions.length,
+                },
+                rawPayload: { usage: j0?.usage ?? null },
+              });
+            } catch (err) {
+              logEvent(FN, "warn", {
+                requestId: rid,
+                event: "record_inference_failed",
+                message: (err as Error).message,
+              });
+            }
+          }
           const raw = j0?.choices?.[0]?.message?.content ?? "{}";
           const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
           if (Array.isArray(parsed?.refinements)) {

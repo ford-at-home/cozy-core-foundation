@@ -44,6 +44,59 @@ function adminClient(): SupabaseClient | null {
   });
 }
 
+/**
+ * P1.10: stamp context='test' for designated test accounts
+ * (TEST_ACCOUNT_IDS, comma-separated auth user ids — docs/CONFIGURATION.md).
+ * Only written for test accounts so the code is safe before the migration
+ * that adds the column; everyone else gets the DB default 'production'.
+ */
+function testAccountContext(userId: string | null | undefined): { context?: "test" } {
+  if (!userId) return {};
+  const raw = process.env.TEST_ACCOUNT_IDS ?? "";
+  if (!raw.trim()) return {};
+  const ids = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return ids.includes(userId) ? { context: "test" } : {};
+}
+
+/**
+ * Resolve the run an out-of-band inference (e.g. dictation transcription)
+ * should attach to, verifying the caller owns it. Accepts either a runId or
+ * a packetId (resolved to the packet's generation run). Returns null when
+ * nothing valid/owned is found — callers then simply skip cost recording.
+ */
+export async function resolveOwnedRunId(args: {
+  userId: string;
+  runId?: string | null;
+  packetId?: string | null;
+}): Promise<string | null> {
+  const admin = adminClient();
+  if (!admin) return null;
+  try {
+    if (args.runId) {
+      const { data: run } = await admin
+        .from("agent_runs")
+        .select("id, user_id")
+        .eq("id", args.runId)
+        .maybeSingle();
+      return run && run.user_id === args.userId ? run.id : null;
+    }
+    if (args.packetId) {
+      const { data: packet } = await admin
+        .from("packets")
+        .select("id, user_id, run_id")
+        .eq("id", args.packetId)
+        .maybeSingle();
+      return packet && packet.user_id === args.userId ? (packet.run_id ?? null) : null;
+    }
+  } catch {
+    // Attribution is best-effort; transcription itself must not fail on it.
+  }
+  return null;
+}
+
 function toNum(v: string | number | null | undefined): number | null {
   if (v === null || v === undefined) return null;
   const n = typeof v === "number" ? v : Number(v);
@@ -183,6 +236,7 @@ export async function recordInferenceServer(input: ServerRecordInferenceInput): 
           pricing_id: pricing?.id ?? null,
           idempotency_key: input.idempotencyKey,
           metadata: input.metadata ?? {},
+          ...testAccountContext(run.user_id),
         },
         { onConflict: "provider,idempotency_key" },
       )
