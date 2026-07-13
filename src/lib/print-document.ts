@@ -1,8 +1,8 @@
 import { markdown, extractTitle } from "@/lib/markdown";
 import type { Json } from "@/integrations/supabase/types";
 import { brand } from "@/config/brand";
-// Paper-markup stylesheet; its S{n}P{m} block-anchor counting rule must stay
-// in sync with contract/references/MARKUP.md.
+// Printable-draft stylesheet; its S{n}P{m} block-anchor counting rule must
+// stay in sync with contract/references/MARKUP.md.
 import printCss from "@/styles/print.css?raw";
 // Fonts are embedded as data URIs so the printed document uses the exact same
 // faces on every OS. Font metrics drive line breaks, and line breaks drive

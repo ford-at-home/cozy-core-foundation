@@ -258,8 +258,9 @@ User-facing credits (1 credit = 1 completed generation; research = 2):
   `RECONCILE_TOKEN`, `AGENT_MODEL` / `AGENT_REPO_URL` / `AGENT_REPO_REF`.
 - The **complete** environment/configuration inventory (every variable, where
   it is read, which are secrets): `docs/CONFIGURATION.md`.
-- `src/lib/admin.functions.ts` contains a demo admin bootstrap with a
-  hardcoded password — known debt, do not extend it.
+- `src/lib/admin.functions.ts` (a demo admin bootstrap with a hardcoded
+  password) was removed in the post-merge reconciliation; do not
+  reintroduce it.
 - `scripts/check-secrets.sh` scans source and built assets for secret leakage.
 
 ## Content contract (verified — for cloud _content_ agents, not implementation agents)

@@ -4,7 +4,7 @@
 >
 > Copy this file to `.input/<bundle-name>/brief.md` in your work repo
 > and fill in every field below. Empty fields are not allowed.
-> See [`SKILL.md`](../skills/synthesize/SKILL.md) for resolution rules.
+> See [`SKILL.md`](../SKILL.md) for resolution rules.
 
 ## Voice
 

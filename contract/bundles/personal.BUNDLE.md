@@ -1,11 +1,10 @@
 ---
 name: personal
-description: Long-form posts iterated via printed-and-marked-up paper. Use when the user dictates edits against a target doc, synthesizes a new post from marked-up source materials, or otherwise applies the paper-markup vocabulary. Reads MARKUP for the symbol/handle/directive vocabulary, STORYTELLING for piece architecture, and KSP only when the KSP directive appears in markup. Voice (and its anti-slop) resolves per-run from the brief — see synthesize SKILL.md.
+description: Long-form posts iterated via printed-and-marked-up paper. Use when the user dictates edits against a target doc, synthesizes a new post from marked-up source materials, or otherwise applies the paper-markup vocabulary. Reads MARKUP for the symbol/handle/directive vocabulary and STORYTELLING for piece architecture. Voice (and its anti-slop) resolves per-run from the brief — see synthesize SKILL.md.
 mode: edit-or-synthesis
 reads:
   - references/MARKUP.md
   - references/STORYTELLING.md
-  - references/KSP.md # only when the KSP directive appears
 voice: required # synthesize resolves from brief.md's Voice field; ~/.me/voices/<name>.md + <name>.anti.md
 triggers:
   - "apply my edits"
@@ -42,7 +41,7 @@ Two operations, auto-detected from inputs:
 - Input: one target `.md` / `.txt` doc + dictated edits.
 - Output: a new file at `<source>.v2.md` (auto-increments on subsequent passes) plus a "What I Changed" checklist (one bullet per dictated operation) plus an "Unresolved" list (anything that couldn't be matched — never silently skipped).
 - Applies the user's edits **surgically**. Does not restructure or re-voice beyond what was asked.
-- Resolves dictated references against the source in this order: by block anchor (`S{n}P{m}` / "section 4 paragraph 3" — the pre-printed margin labels from the app's print view), by hand-numbered handle (① ② ③), by symbol class ("all the strikethroughs"), or by content fuzzy-match ("the bit about ownership"). See `skills/synthesize/SKILL.md` step 4 for the resolution rule and `references/MARKUP.md` for the block-counting definition.
+- Resolves dictated references against the source in this order: by block anchor (`S{n}P{m}` / "section 4 paragraph 3" — the pre-printed margin labels from the app's print view), by hand-numbered handle (① ② ③), by symbol class ("all the strikethroughs"), or by content fuzzy-match ("the bit about ownership"). See `../SKILL.md` step 4 for the resolution rule and `references/MARKUP.md` for the block-counting definition.
 
 ### Synthesis mode
 
@@ -52,19 +51,21 @@ Two operations, auto-detected from inputs:
 
 ## References composed
 
-> Paths below are relative to the composed plugin (`dist/plugin/`) where all sibling-package references live in a single `references/` directory. In monorepo source, `STORYTELLING.md` ships with `markdown-soul` and `KSP.md` ships with `ksp`; `make plugin` is how they become co-resident with this bundle's references.
+> Paths below are relative to this vendored `contract/` directory. The `ksp`
+> package (and its `KSP.md` friction rubric) is **not vendored** here — if the
+> KSP directive appears in markup, surface it in `unresolved.md` instead of
+> guessing at the rubric. See `contract/README.md` "Not vendored".
 
-| File                                                             | Role                                                                                                                                                                                                                                                                                                                                             |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [`references/MARKUP.md`](../../references/MARKUP.md)             | Source of truth for the markup protocol — symbols, numbered handles, all named directives. Read every invocation. Ships with this package.                                                                                                                                                                                                       |
-| [`references/STORYTELLING.md`](../../references/STORYTELLING.md) | Piece-architecture philosophy (translated Chappelle). Governs _how the whole piece is built_ — casual entry, named gap between public posture and private knowledge, implicated narrator, reframing closer. Edit mode honors existing architecture; synthesis mode uses this to construct it. Read every invocation. Ships with `markdown-soul`. |
-| `~/.me/voices/<name>.md`                                         | Voice texture for any connective writing or directive-driven expansion (DEEPEN, HOOK, LAND, etc.). Resolved from `brief.md`'s `Voice:` field. Loaded every invocation.                                                                                                                                                                           |
-| `~/.me/voices/<name>.anti.md`                                    | Catalog of AI tells scrubbed by the SLOP directive. Resolved alongside the voice file. Loaded when SLOP appears in dictation.                                                                                                                                                                                                                    |
-| [`references/KSP.md`](../../references/KSP.md)                   | Friction rubric. Read only when the KSP directive appears in markup (restructures the passage to Pulse / Catalyst / Context / Handoff). Ships with `ksp`.                                                                                                                                                                                        |
+| File                                                          | Role                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`references/MARKUP.md`](../references/MARKUP.md)             | Source of truth for the markup protocol — symbols, numbered handles, all named directives. Read every invocation. Ships with this package.                                                                                                                                                                           |
+| [`references/STORYTELLING.md`](../references/STORYTELLING.md) | Piece-architecture philosophy (translated Chappelle). Governs _how the whole piece is built_ — casual entry, named gap between public posture and private knowledge, implicated narrator, reframing closer. Edit mode honors existing architecture; synthesis mode uses this to construct it. Read every invocation. |
+| `~/.me/voices/<name>.md`                                      | Voice texture for any connective writing or directive-driven expansion (DEEPEN, HOOK, LAND, etc.). In this product the voice is injected inline by the agent prompt — see `contract/README.md` override 1.                                                                                                           |
+| `~/.me/voices/<name>.anti.md`                                 | Catalog of AI tells scrubbed by the SLOP directive. Same inline override applies.                                                                                                                                                                                                                                    |
 
 ## Output format
 
-See `skills/synthesize/SKILL.md` "Output format — personal bundle" for the exact structure. Summary:
+See `../SKILL.md` "Output format — personal bundle" for the exact structure. Summary:
 
 - The transformed/new draft, complete and shippable.
 - "What I Changed" or "Synthesis Map" (one bullet per dictated operation or per source-passage placement).

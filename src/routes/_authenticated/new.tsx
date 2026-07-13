@@ -8,10 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { brand, pageTitle } from "@/config/brand";
 import { CREDIT_COST, isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
 
-// Composer: paste research, optionally steer with a goal, and compose.
-// Voice is NOT an input here — it comes from the signed-in user's profile
-// (style_text) and is resolved server-side at dispatch. The browser sends
-// only safe inputs: research, goal, requestId.
+// New draft: paste research, optionally steer with a goal, and prepare a
+// draft. Voice is NOT an input here — it comes from the signed-in user's
+// profile (style_text) and is resolved server-side at dispatch. The browser
+// sends only safe inputs: research, goal, requestId.
 export const Route = createFileRoute("/_authenticated/new")({
   head: () => ({
     meta: [
@@ -20,10 +20,10 @@ export const Route = createFileRoute("/_authenticated/new")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: NewPiecePage,
+  component: NewDraftPage,
 });
 
-function NewPiecePage() {
+function NewDraftPage() {
   const router = useRouter();
   const start = useServerFn(startWorkflow);
   const fetchProfile = useServerFn(getMyProfile);

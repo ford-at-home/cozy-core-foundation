@@ -70,48 +70,60 @@ disappear." CTAs: "Start a working draft" / "See how it works". Closing:
 
 ## Run detail (`runs.$runId.tsx`)
 
-| Was                                                                             | Now                                                                                              | Why                                                    |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
-| Title "Run — Compose"                                                           | "Run — Hardcopy Draft"                                                                           | Suffix                                                 |
-| Kicker "Studio"                                                                 | "Hardcopy Draft"                                                                                 | Product label                                          |
-| H1 "Run", "Run detail", timeline, stats                                         | **retained**                                                                                     | Technical concepts; renaming would confuse             |
-| Status messages ("the agent is authoring the brief and synthesizing the piece") | "…preparing the brief and drafting the piece…"                                                   | Small alignment, same meaning                          |
-| "Print this draft for pen markup, then type your annotations back here…"        | "Print this draft for pen markup, then return your annotations here…" (anchor examples retained) | "Return annotations" territory; instructions unchanged |
-| "Ready → final draft PR", "Resynth", "Revise → final PR"                        | **retained**                                                                                     | Exact state-machine actions; accurate                  |
-| "brief.md (generated)" tabs                                                     | **retained**                                                                                     | Real file names                                        |
+| Was                                                                                  | Now                                                                                              | Why                                                    |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| Title "Run — Compose"                                                                | "Run — Hardcopy Draft"                                                                           | Suffix                                                 |
+| Kicker "Studio"                                                                      | "Hardcopy Draft"                                                                                 | Product label                                          |
+| H1 "Run", "Run detail", timeline, stats                                              | **retained**                                                                                     | Technical concepts; renaming would confuse             |
+| Status messages ("the agent is authoring the brief and synthesizing the piece")      | "…preparing the brief and writing the draft…"                                                    | Terminology                                            |
+| Research-complete banner ("The piece is now being composed… follow the compose run") | "Your draft is now being prepared… follow the drafting run" (packet runs keep "packet run")      | Terminology (missed in the first pass)                 |
+| "Print this draft for pen markup, then type your annotations back here…"             | "Print this draft for pen markup, then return your annotations here…" (anchor examples retained) | "Return annotations" territory; instructions unchanged |
+| "Ready → final draft PR", "Resynth", "Revise → final PR"                             | **retained**                                                                                     | Exact state-machine actions; accurate                  |
+| "brief.md (generated)" tabs                                                          | **retained**                                                                                     | Real file names                                        |
 
 ## Print (`print.$runId.tsx`)
 
-| Was                                              | Now                       | Why                           |
-| ------------------------------------------------ | ------------------------- | ----------------------------- |
-| Title "Print — Compose"                          | "Print — Hardcopy Draft"  | Suffix                        |
-| Kicker "Studio"                                  | "Hardcopy Draft"          | Product label                 |
-| H1 "Print for markup" + margins/anchors copy     | **retained**              | Already the brand's best copy |
+| Was                                              | Now                                                                                                                                                                        | Why                             |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| Title "Print — Compose"                          | "Print — Hardcopy Draft"                                                                                                                                                   | Suffix                          |
+| Kicker "Studio"                                  | "Hardcopy Draft"                                                                                                                                                           | Product label                   |
+| H1 "Print for markup" + margins/anchors copy     | **retained**                                                                                                                                                               | Already the brand's best copy   |
 | PDF filename                                     | **none set** — Save-as-PDF goes through the browser print dialog, which names the file from the document `<title>` (the piece title, falling back to `brand.product.name`) | No programmatic download exists |
-| Print dialog hints (Letter, background graphics) | **retained**              | Functional                    |
+| Print dialog hints (Letter, background graphics) | **retained**                                                                                                                                                               | Functional                      |
 
 ## Billing (`billing.tsx`, `CreditBalance.tsx`, paywall banners)
 
 Added with the credit system; written to the same register — clear, quiet,
 never louder than the rest of the product.
 
-| Surface                                            | Copy                                                                | Why                                                                    |
-| -------------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Title / kicker                                     | "Billing — Hardcopy Draft" / "Hardcopy Draft"                        | Product-level page, standard suffix                                     |
-| Unit of purchase                                   | **credits** — 1 credit = 1 generation, deep research = 2             | Matches the implemented ledger; never call them "tokens" or "points"    |
-| Header chip (`CreditBalance.tsx`)                  | "N credits" (amber at ≤1)                                            | Status, not a sales pitch                                               |
-| Out-of-credits banners (`new.tsx`, `runs.$runId.tsx`) | Calm amber banner + "Get credits" link to `/billing`               | The paywall is a door, not a slot machine                               |
-| Checkout return                                    | success/canceled banners are **display only** — credits "appear when the payment is confirmed" | Honest: grants come from the Stripe webhook, never the redirect |
-| Failed/cancelled run                               | Notes the credit hold was released                                   | A system failure never quietly costs the user a credit                  |
-| Dictation 402 (`profile.tsx`)                      | "workspace AI credits — separate from the generation credits on your Billing page" | Two billing domains exist; the copy must not conflate them |
+| Surface                                               | Copy                                                                                           | Why                                                                   |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Title / kicker                                        | "Billing — Hardcopy Draft" / "Hardcopy Draft"                                                  | Product-level page, standard suffix                                   |
+| Unit of purchase                                      | **credits** — 1 credit = 1 generation, deep research = 2                                       | Matches the implemented ledger; never call them "tokens" or "points"  |
+| Header chip (`CreditBalance.tsx`)                     | "N credits" (amber at ≤1)                                                                      | Status, not a sales pitch                                             |
+| Out-of-credits banners (`new.tsx`, `runs.$runId.tsx`) | Calm amber banner + "Get credits" link to `/billing`                                           | The paywall is a door, not a slot machine                             |
+| Checkout return                                       | success/canceled banners are **display only** — credits "appear when the payment is confirmed" | Honest: grants come from the Stripe webhook, never the redirect       |
+| Failed/cancelled run                                  | Notes the credit hold was released                                                             | A system failure never quietly costs the user a credit                |
+| Dictation 402 (`profile.tsx`)                         | "workspace AI credits — separate from the generation credits on your Billing page"             | Two billing domains exist; the copy must not conflate them            |
+| Landing product section                               | one sentence: 3 welcome credits, 1/draft, 2/deep research, failures free                       | Landing claims must match the implemented model                       |
+| Pack names Starter / Writer / Studio                  | **retained** (DB `credit_products` seed)                                                       | Commerce SKUs; note "Studio" coincides with the retired in-app kicker |
+
+Tone rule: billing copy stays as quiet as the rest of the brand. State costs
+plainly, never gamify, never count down, never interrupt a working session
+with an upsell.
+
+(PDF filename: the print flow uses the browser's native Save-as-PDF dialog and
+does not set a suggested filename — an earlier claim of `hardcopy-draft-<id>.pdf`
+here described behavior that was never implemented.)
 
 ## Sessions (`sessions.tsx`, `sessions.$sessionId.tsx`)
 
-| Was                                         | Now                  | Why                          |
-| ------------------------------------------- | -------------------- | ---------------------------- |
-| Titles "… — Compose"                        | "… — Hardcopy Draft" | Suffix                       |
-| Kicker "Studio"                             | "Hardcopy Draft"     | Product label                |
-| Everything else (cost tables, empty states) | **retained**         | Accurate accounting language |
+| Was                                           | Now                              | Why                                    |
+| --------------------------------------------- | -------------------------------- | -------------------------------------- |
+| Titles "… — Compose"                          | "… — Hardcopy Draft"             | Suffix                                 |
+| Kicker "Studio"                               | "Hardcopy Draft"                 | Product label                          |
+| Empty state "Start a piece… / Create a piece" | "Start a draft… / Start a draft" | Terminology (missed in the first pass) |
+| Everything else (cost tables)                 | **retained**                     | Accurate accounting language           |
 
 ## Explicitly not renamed
 

@@ -87,8 +87,9 @@ Build uses publishable values only: `VITE_SUPABASE_URL`,
 
 ## Known non-standard items
 
-- `src/lib/admin.functions.ts` hardcodes a demo admin email/password — known
-  debt, unused by any route; do not extend it.
+- `src/lib/admin.functions.ts` (a demo admin bootstrap with a hardcoded
+  password, unused by any route) was removed in the post-merge
+  reconciliation; do not reintroduce it.
 - Duplicate naming `VITE_SUPABASE_*` (client) vs `SUPABASE_*` (SSR) is by
   design: Vite only exposes `VITE_`-prefixed values to the browser bundle,
   and `scripts/check-secrets.sh` scans the built assets for leaks.

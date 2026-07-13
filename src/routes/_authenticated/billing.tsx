@@ -158,7 +158,12 @@ function BillingPage() {
         <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Billing</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           Each generation uses 1 credit; a deep-research start uses 2. Credits are only consumed
-          when a generation finishes — failures release the hold.
+          when a generation finishes — failures release the hold. Printing, re-printing, or saving a
+          finished draft as PDF never uses credits.
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Credits are what you spend here. The Cost page tracks underlying model spend in dollars —
+          a separate accounting view, not your balance.
         </p>
       </div>
 

@@ -32,32 +32,23 @@ One color = **"use this as-is."** (Preserve in Edit Mode. Pull into new post in 
 
 ### Directives
 
-| Token               | Does                                             | Backed by         |
-| ------------------- | ------------------------------------------------ | ----------------- |
-| **VISUALIZE** / VIZ | insert a visual                                  | STYLE.md visuals  |
-| **SLOP**            | scrub AI tells, re-voice                         | ANTI-SLOP.md      |
-| **DEEPEN**          | expand with accent layer                         | STYLE.md accents  |
-| **TIGHTEN** / TIGHT | compress                                         | STYLE.md          |
-| **KSP**             | restructure Pulse / Catalyst / Context / Handoff | KSP.md            |
-| **EXAMPLE** / EX    | insert concrete example                          | STYLE.md          |
-| **HOOK**            | rework as opener                                 | STYLE.md          |
-| **LAND**            | rework as closer / punchline                     | STYLE.md          |
-| **PIVOT**           | transitional bridge                              | STYLE.md          |
-| **STAKES**          | make stakes explicit                             | STYLE.md          |
-| **CLAIM**           | restate as one sharp line                        | STYLE.md          |
-| **SCENE**           | concretize into a moment                         | STYLE.md + Noonan |
-| **EVIDENCE** / EV   | add citation / source                            | STYLE.md          |
-| **CALLBACK** / CB   | reference earlier in the doc                     | STYLE.md          |
-| **ASIDE**           | Holmberg-style parenthetical                     | STYLE.md          |
-
-### Dials (always signed: + / –, double for "a lot")
-
-| Dial | + | – |
-|---|---|---|
-| **WC** | stronger word | plainer word |
-| **REG** | more formal | more casual |
-| **VOI** | more me | more neutral |
-| **RH** | more cadence | smoother |
+| Token               | Does                                             | Backed by                                             |
+| ------------------- | ------------------------------------------------ | ----------------------------------------------------- |
+| **VISUALIZE** / VIZ | insert a visual                                  | STYLE.md visuals                                      |
+| **SLOP**            | scrub AI tells, re-voice                         | ANTI-SLOP.md                                          |
+| **DEEPEN**          | expand with accent layer                         | STYLE.md accents                                      |
+| **TIGHTEN** / TIGHT | compress                                         | STYLE.md                                              |
+| **KSP**             | restructure Pulse / Catalyst / Context / Handoff | KSP.md (not vendored here — surface in unresolved.md) |
+| **EXAMPLE** / EX    | insert concrete example                          | STYLE.md                                              |
+| **HOOK**            | rework as opener                                 | STYLE.md                                              |
+| **LAND**            | rework as closer / punchline                     | STYLE.md                                              |
+| **PIVOT**           | transitional bridge                              | STYLE.md                                              |
+| **STAKES**          | make stakes explicit                             | STYLE.md                                              |
+| **CLAIM**           | restate as one sharp line                        | STYLE.md                                              |
+| **SCENE**           | concretize into a moment                         | STYLE.md + Noonan                                     |
+| **EVIDENCE** / EV   | add citation / source                            | STYLE.md                                              |
+| **CALLBACK** / CB   | reference earlier in the doc                     | STYLE.md                                              |
+| **ASIDE**           | Holmberg-style parenthetical                     | STYLE.md                                              |
 
 ### Voice grammar — four ways to point at something
 
@@ -177,49 +168,25 @@ A second color is reserved for future use. Do not invent meaning until a real ne
 
 Write as short uppercase tokens, in the margin or inline-circled. Each directive triggers a specific operation backed by a reference file.
 
-| Directive             | Operation                                                                     | Backed by                                                                        |
-| --------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| **VISUALIZE** (`VIZ`) | Insert a visual marker. Voice picks type.                                     | STYLE.md "Visual Instinct" → `[Diagram: …]` / `[Infographic: …]` / `[Sketch: …]` |
-| **SLOP**              | Scrub AI tells, re-voice per STYLE.md.                                        | ANTI-SLOP.md                                                                     |
-| **DEEPEN**            | Expand with an accent layer. Voice picks which.                               | STYLE.md accent layers                                                           |
-| **TIGHTEN** (`TIGHT`) | Compress. Cut filler. Bukowski-default.                                       | STYLE.md compression patterns                                                    |
-| **KSP**               | Restructure to Pulse / Catalyst / Context / Handoff.                          | KSP.md                                                                           |
-| **EXAMPLE** (`EX`)    | Insert a concrete example. Voice can hint at flavor.                          | STYLE.md "concrete > abstract"                                                   |
-| **HOOK**              | Rework as opener.                                                             | STYLE.md "Paragraph Openings"                                                    |
-| **LAND**              | Rework as closer / punchline.                                                 | STYLE.md "Final Output Standard"                                                 |
-| **PIVOT**             | Transitional bridge between sections.                                         | STYLE.md "Argumentation Style"                                                   |
-| **STAKES**            | Make the stakes explicit.                                                     | STYLE.md "Argumentation Style"                                                   |
-| **CLAIM**             | Restate as one sharp declarative line.                                        | STYLE.md "Argumentation Style"                                                   |
-| **SCENE**             | Concretize abstract argument into a moment.                                   | STYLE.md "Visual Instinct" + Noonan accent                                       |
-| **EVIDENCE** (`EV`)   | Add citation / link / source. Flag `[Source needed: …]` if research required. | STYLE.md "Argumentation Style"                                                   |
-| **CALLBACK** (`CB`)   | Reference something earlier in the doc.                                       | STYLE.md "Dual Voice Mechanism"                                                  |
-| **ASIDE**             | Holmberg-style parenthetical.                                                 | STYLE.md "Mark Holmberg" accent                                                  |
+| Directive             | Operation                                                                     | Backed by                                                                                                                                                            |
+| --------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **VISUALIZE** (`VIZ`) | Insert a visual marker. Voice picks type.                                     | STYLE.md "Visual Instinct" → `[Diagram: …]` / `[Infographic: …]` / `[Sketch: …]`                                                                                     |
+| **SLOP**              | Scrub AI tells, re-voice per STYLE.md.                                        | ANTI-SLOP.md                                                                                                                                                         |
+| **DEEPEN**            | Expand with an accent layer. Voice picks which.                               | STYLE.md accent layers                                                                                                                                               |
+| **TIGHTEN** (`TIGHT`) | Compress. Cut filler. Bukowski-default.                                       | STYLE.md compression patterns                                                                                                                                        |
+| **KSP**               | Restructure to Pulse / Catalyst / Context / Handoff.                          | KSP.md — **not vendored** in this repo; record the directive in `notes/unresolved.md` instead of restructuring from memory (see `contract/README.md` "Not vendored") |
+| **EXAMPLE** (`EX`)    | Insert a concrete example. Voice can hint at flavor.                          | STYLE.md "concrete > abstract"                                                                                                                                       |
+| **HOOK**              | Rework as opener.                                                             | STYLE.md "Paragraph Openings"                                                                                                                                        |
+| **LAND**              | Rework as closer / punchline.                                                 | STYLE.md "Final Output Standard"                                                                                                                                     |
+| **PIVOT**             | Transitional bridge between sections.                                         | STYLE.md "Argumentation Style"                                                                                                                                       |
+| **STAKES**            | Make the stakes explicit.                                                     | STYLE.md "Argumentation Style"                                                                                                                                       |
+| **CLAIM**             | Restate as one sharp declarative line.                                        | STYLE.md "Argumentation Style"                                                                                                                                       |
+| **SCENE**             | Concretize abstract argument into a moment.                                   | STYLE.md "Visual Instinct" + Noonan accent                                                                                                                           |
+| **EVIDENCE** (`EV`)   | Add citation / link / source. Flag `[Source needed: …]` if research required. | STYLE.md "Argumentation Style"                                                                                                                                       |
+| **CALLBACK** (`CB`)   | Reference something earlier in the doc.                                       | STYLE.md "Dual Voice Mechanism"                                                                                                                                      |
+| **ASIDE**             | Holmberg-style parenthetical.                                                 | STYLE.md "Mark Holmberg" accent                                                                                                                                      |
 
 Abbreviations in parentheses are accepted shorthand. Use whichever fits your remaining pen-stroke budget.
-
-### Dials (bidirectional directives, take + / –)
-
-Most directives are actions or flags — there's no "more move" or "less cite." But some
-edits name a *scalar property* of the prose, and for those a bare token underdetermines
-the fix. Dials are directives that always carry a `+` or `–`:
-
-| Dial | Axis | `+` means | `–` means |
-|---|---|---|---|
-| **WC** | Word choice | stronger, more vivid word | too ornate — plainer, quieter word |
-| **REG** | Register | more formal | more casual |
-| **VOI** | Voice | amplify personality, sound more like me | dial back idiosyncrasy, flatten toward neutral |
-| **RH** | Rhythm | more musical / varied cadence | choppy — smooth it out |
-
-Rules:
-
-- **A dial always points somewhere.** A bare `WC` with no sign is malformed; AI treats it
-  as `?` on the word and asks (or picks per STYLE.md and flags the guess).
-- **Magnitude by doubling.** Single sign = some (`WC–`). Doubled = a lot (`WC––`,
-  `REG++`). Same grammar written or spoken: "WC minus" / "WC double-minus."
-- **Length is not a dial.** Compression and expansion already have marks: **TIGHTEN**
-  (`TIGHT`) and **★** / **DEEPEN**. Don't write `LEN±`.
-- **Target via voice when it matters.** `WC–` in a margin flags the block; voice narrows
-  it: *"WC minus on S3P4 — 'optimize.'"*
 
 ---
 
@@ -370,7 +337,9 @@ When a paper symbol has no voice content but requires it (e.g., `~` without a "h
 
 ## What This File is Not
 
-- Not a comprehensive editorial guide. See `STYLE.md` for voice.
-- Not a friction rubric. See `KSP.md` for that.
-- Not a channel strategy. See `CHANNELS.md` for that.
+- Not a comprehensive editorial guide. Voice arrives inline in this product
+  (see `contract/README.md` override 1; `STYLE.template.md` shows the shape).
+- Not a friction rubric. That was `KSP.md`, which is not vendored here.
+- Not a channel strategy. Channels are supplied inline too
+  (`CHANNELS.template.md` shows the shape).
 - Not exhaustive — directives can be added. Each new directive must declare its backing reference file before it ships.

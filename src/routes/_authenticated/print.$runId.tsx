@@ -179,8 +179,8 @@ function PrintPage() {
         } else {
           setError(
             data.status === "completed"
-              ? "This run has no printable piece."
-              : "This run hasn't completed yet — the piece isn't available to print.",
+              ? "This run has no printable draft."
+              : "This run hasn't completed yet — the draft isn't available to print.",
           );
         }
       }

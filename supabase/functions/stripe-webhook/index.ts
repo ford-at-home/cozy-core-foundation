@@ -20,7 +20,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@18.5.0?target=denonext";
 import { logEvent } from "../_shared/observability.ts";
-import { refundCreditsToReverse } from "../_shared/billing.ts";
+import { refundCreditsToReverse, reversalDelta } from "../_shared/billing.ts";
 import { resolveCheckoutBeneficiary, shouldReprocessDuplicate } from "../_shared/stripe-events.ts";
 
 const FN = "stripe-webhook";
@@ -227,11 +227,16 @@ async function handleChargeRefunded(
   if (!purchase) return "skipped"; // not one of our credit purchases
 
   // Partial refunds reverse a proportional share (rounded down); a full
-  // refund reverses everything. The balance floors at 0 if already spent —
-  // the ledger records the full reversal either way.
+  // refund reverses everything. charge.amount_refunded is CUMULATIVE, so a
+  // second partial refund on the same charge must reverse only the delta
+  // beyond what earlier refund/chargeback events already took back. The
+  // balance floors at 0 if already spent — the ledger records the full
+  // reversal either way.
   const total = purchase.amount_total_cents ?? charge.amount;
   const refunded = charge.amount_refunded;
-  const reverseCredits = refundCreditsToReverse(purchase.credits, total, refunded);
+  const targetReversal = refundCreditsToReverse(purchase.credits, total, refunded);
+  const alreadyReversed = await creditsAlreadyReversed(admin, purchase.id);
+  const reverseCredits = reversalDelta(targetReversal, alreadyReversed);
   if (reverseCredits <= 0) return "skipped";
 
   await admin
@@ -239,11 +244,14 @@ async function handleChargeRefunded(
     .update({ status: "refunded", updated_at: new Date().toISOString() })
     .eq("id", purchase.id);
 
+  // Key includes the cumulative refunded amount so each successive partial
+  // refund gets its own ledger entry, while redelivery of the same event
+  // (same cumulative amount) still dedups.
   const { error } = await admin.rpc("grant_credits", {
     _user_id: purchase.user_id,
     _amount: -reverseCredits,
     _entry_type: "refund_reversal",
-    _idempotency_key: `refund:${charge.id}`,
+    _idempotency_key: `refund:${charge.id}:${refunded}`,
     _stripe_event_id: event.id,
     _purchase_id: purchase.id,
     _actor: "stripe_webhook",
@@ -251,6 +259,20 @@ async function handleChargeRefunded(
   });
   if (error) throw new Error(`refund reversal failed: ${error.message}`);
   return "processed";
+}
+
+/** Credits already taken back for this purchase (refunds + chargebacks). */
+async function creditsAlreadyReversed(admin: any, purchaseId: string): Promise<number> {
+  const { data, error } = await admin
+    .from("credit_ledger")
+    .select("amount, entry_type")
+    .eq("purchase_id", purchaseId)
+    .in("entry_type", ["refund_reversal", "chargeback_reversal"]);
+  if (error) throw new Error(`reversal lookup failed: ${error.message}`);
+  return (data ?? []).reduce(
+    (sum: number, row: { amount: number }) => sum + Math.abs(row.amount),
+    0,
+  );
 }
 
 async function handleDispute(admin: any, event: Stripe.Event): Promise<"processed" | "skipped"> {
@@ -273,9 +295,15 @@ async function handleDispute(admin: any, event: Stripe.Event): Promise<"processe
     .update({ status: "disputed", updated_at: new Date().toISOString() })
     .eq("id", purchase.id);
 
+  // A dispute takes back the whole purchase, but never more than what prior
+  // refund reversals left standing — refund-then-dispute must not over-reverse.
+  const alreadyReversed = await creditsAlreadyReversed(admin, purchase.id);
+  const reverseCredits = reversalDelta(purchase.credits, alreadyReversed);
+  if (reverseCredits <= 0) return "processed"; // fully reversed already; status update stands
+
   const { error } = await admin.rpc("grant_credits", {
     _user_id: purchase.user_id,
-    _amount: -purchase.credits,
+    _amount: -reverseCredits,
     _entry_type: "chargeback_reversal",
     _idempotency_key: `dispute:${dispute.id}`,
     _stripe_event_id: event.id,

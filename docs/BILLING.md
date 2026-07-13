@@ -8,14 +8,14 @@ cancelled, and stuck runs release the hold automatically.
 
 ## What costs what
 
-| Action                                                      | Credits | Reserved by                                          |
-| ----------------------------------------------------------- | ------- | ---------------------------------------------------- |
-| Compose from pasted research (`compose`)                    | 1       | `start-workflow` (`CREDIT_COST` in `_shared/credits.ts`) |
-| Deep research + chained compose or packet (`research`)      | 2       | `start-workflow`                                     |
-| Resynthesize / finalize / revise (`resynth`/`ready`/`revise`) | 1     | `piece-action`                                       |
-| Follow-up research pass (`followup_research`)               | 2       | `run-follow-up-research` (`COST` const)              |
-| Final Word document (`final_docx`)                          | 2       | `create-final-document-job` (`COST` const)           |
-| Presentation (`final_pptx`)                                 | 2       | `create-presentation-job` (`COST` const)             |
+| Action                                                        | Credits | Reserved by                                              |
+| ------------------------------------------------------------- | ------- | -------------------------------------------------------- |
+| Compose from pasted research (`compose`)                      | 1       | `start-workflow` (`CREDIT_COST` in `_shared/credits.ts`) |
+| Deep research + chained compose or packet (`research`)        | 2       | `start-workflow`                                         |
+| Resynthesize / finalize / revise (`resynth`/`ready`/`revise`) | 1       | `piece-action`                                           |
+| Follow-up research pass (`followup_research`)                 | 2       | `run-follow-up-research` (`COST` const)                  |
+| Final Word document (`final_docx`)                            | 2       | `create-final-document-job` (`COST` const)               |
+| Presentation (`final_pptx`)                                   | 2       | `create-presentation-job` (`COST` const)                 |
 
 Client mirrors of these numbers (display only, never authoritative):
 `CREDIT_COST` in `src/lib/use-credits.ts`, `FOLLOWUP_RESEARCH_COST` in
@@ -51,6 +51,13 @@ student's generation credits.
 - Every grant/consumption has an idempotency key; duplicate webhooks,
   double-clicks, retries, and re-sweeps cannot double-charge or
   double-grant.
+- **Refunds are incremental.** Stripe's `charge.amount_refunded` is
+  cumulative, so the webhook computes the cumulative target reversal and
+  subtracts what prior `refund_reversal` / `chargeback_reversal` ledger
+  entries for the purchase already took back (key
+  `refund:<charge>:<cumulative-cents>`). Sequential partial refunds each
+  reverse their delta; a dispute after a partial refund reverses only what is
+  left. See `supabase/functions/_shared/billing.ts` and its Deno tests.
 
 ## Secrets (never in code, git, VITE_*, or logs)
 
@@ -66,6 +73,11 @@ Set in **Supabase Edge Function secrets** (Lovable Cloud → backend secrets):
 The frontend needs **no Stripe key at all**: the browser is redirected to a
 server-created, Stripe-hosted Checkout URL. No card data ever touches the
 app.
+
+Naming note: edge functions read the anon key as `SUPABASE_ANON_KEY`
+(Supabase-injected); the app reads the same key as
+`SUPABASE_PUBLISHABLE_KEY` / `VITE_SUPABASE_PUBLISHABLE_KEY`. One key, two
+names — see the configuration inventory in the [README](../README.md).
 
 ## Manual configuration checklist (owner)
 
@@ -101,7 +113,8 @@ backfilled with the 3-credit signup grant).
 Automated (run locally / CI):
 
 ```sh
-deno test --allow-env supabase/functions/_tests/          # unit suite
+npm run test:functions                                     # Deno unit suite
+npm test                                                   # Vitest (incl. CREDIT_COST mirror check)
 psql "$DB" -v ON_ERROR_STOP=1 -f supabase/tests/credits.test.sql   # SQL invariants
 DATABASE_URL="$DB" supabase/tests/credit-concurrency.sh   # concurrent-spend race
 ```
@@ -132,8 +145,8 @@ Product-side:
 
 - Signup → exactly 3 credits, once (re-login, profile edits, replays grant
   nothing — verified by `credits.test.sql`).
-- Spend to 0 → generation buttons become "Get credits" CTAs; direct edge
-  function invocation returns 402.
+- Spend to 0 → generation buttons disable and an amber "Get credits →"
+  banner links to `/billing`; direct edge function invocation returns 402.
 - Failed/cancelled/stuck generation → hold released, banner on the run page.
 - Two tabs racing the last credit → one wins (verified by
   `credit-concurrency.sh`).
@@ -181,13 +194,17 @@ LEFT JOIN (SELECT user_id, SUM(amount) held FROM credit_reservations
            WHERE status = 'held' GROUP BY 1) h USING (user_id)
 WHERE a.balance <> GREATEST(0, COALESCE(l.total, 0) - COALESCE(h.held, 0));
 
--- Purchases stuck pending (the reconciler also heals these hourly):
+-- Purchases stuck pending (the 2-min reconciler heals these after a 1h grace):
 SELECT * FROM purchases WHERE status = 'pending' AND created_at < now() - interval '1 hour';
 ```
 
 **Incident lever:** set `CREDITS_MODE=log` in edge function secrets to stop
 blocking generations (usage is still metered and recorded); unset to
 re-enforce.
+
+Deferred (schema exists, no code path — see "Unresolved product decisions" in
+[docs/RECONCILIATION.md](RECONCILIATION.md)): subscriptions, promo grants,
+credit expiration.
 
 ## Failure scenarios (authoritative state → recovery)
 

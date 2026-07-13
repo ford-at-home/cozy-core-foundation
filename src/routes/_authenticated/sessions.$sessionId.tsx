@@ -5,7 +5,7 @@ import { getSessionDetail, type PricingSource } from "@/lib/costs.functions";
 import { CostBadge, formatDuration, formatUsd } from "@/components/CostBadge";
 import { StatusPill } from "@/components/StatusPill";
 import { Skeleton } from "@/components/ui/skeleton";
-import { pageTitle } from "@/config/brand";
+import { brand, pageTitle } from "@/config/brand";
 
 export const Route = createFileRoute("/_authenticated/sessions/$sessionId")({
   head: () => ({
@@ -51,7 +51,10 @@ function SessionDetailPage() {
         >
           ← Cost
         </Link>
-        <h1 className="mt-2 font-serif text-3xl tracking-tight sm:text-4xl">
+        <p className="mt-3 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          {brand.product.name}
+        </p>
+        <h1 className="mt-1 font-serif text-3xl tracking-tight sm:text-4xl">
           {data.title || `Session ${sessionId.slice(0, 8)}`}
         </h1>
         <div className="mt-4 flex flex-wrap items-baseline gap-x-6 gap-y-3">

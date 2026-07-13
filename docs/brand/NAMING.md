@@ -75,6 +75,24 @@ draft").
 4. All occurrences flow from `src/config/brand.ts` (`brand.product.name` and
    `pageTitle()`), so final adoption is a one-line change plus a copy review.
 
+## Credit and billing vocabulary
+
+The payments layer uses these terms; keep them stable across UI, docs, and
+receipts (see `docs/BILLING.md` for the mechanics):
+
+- **credit** — the unit of generation. "Each generation uses 1 credit."
+  Never "token", "point", or "coin" (the header chip's coin is iconography,
+  not vocabulary).
+- **welcome credits** — the 3-credit signup grant (`signup_grant` ledger
+  entries render as "Welcome credits").
+- **generation** — the billable act (compose, deep-research start, resynth,
+  ready, revise). Printing and PDF export are not generations and are free.
+- **credit pack** — a one-time purchase: **Starter** (5), **Writer** (20),
+  **Studio** (50). "Studio" coincides with the retired in-app kicker; whether
+  to rename the pack is an open decision tracked in the README.
+- Billing tone: as quiet as everything else. State the cost, link to
+  `/billing`, and get out of the way.
+
 ## Before final adoption
 
 - Trademark search (US + EU, software classes) for the chosen name.

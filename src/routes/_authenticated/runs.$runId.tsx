@@ -14,7 +14,7 @@ import {
   runPieceAction,
   type PieceAction,
 } from "@/lib/pieces.functions";
-import { isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
+import { CREDIT_COST, isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
 import type { Json } from "@/integrations/supabase/types";
 import MarkdownView from "@/components/MarkdownView";
 import { RunCostCard } from "@/components/RunCostCard";
@@ -229,20 +229,20 @@ function RunDetailPage() {
                   </>
                 ) : (
                   <>
-                    The piece is now being composed from this report in your voice —{" "}
+                    Your draft is now being prepared from this report in your voice —{" "}
                     <Link
                       to="/runs/$runId"
                       params={{ runId: nextRunId }}
                       className="font-medium underline"
                     >
-                      follow the compose run →
+                      follow the drafting run →
                     </Link>
                   </>
                 )
               ) : isPacketWorkflow(run) ? (
                 "The packet run is being prepared; it will appear on your dashboard within a couple of minutes."
               ) : (
-                "The compose run is being prepared; it will appear on your dashboard within a couple of minutes."
+                "The drafting run is being prepared; it will appear on your dashboard within a couple of minutes."
               )}
             </div>
           )}
@@ -381,10 +381,16 @@ function ActionsPanel({ run }: { run: AgentRun }) {
   const [pending, setPending] = useState<PieceAction | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { balance } = useCreditBalance();
-  const outOfCredits = balance !== null && balance < 1;
+  // Prices come from the CREDIT_COST mirror (kept in sync with the server's
+  // supabase/functions/_shared/credits.ts) so this paywall can't drift if an
+  // action's cost changes.
+  const cannotAfford = (action: PieceAction) => balance !== null && balance < CREDIT_COST[action];
 
   const isProposal = run.kind === "proposal" || run.kind === "resynth";
   const isDraft = run.kind === "draft";
+  const outOfCredits = isDraft
+    ? cannotAfford("revise")
+    : cannotAfford("ready") && cannotAfford("resynth");
 
   // Dictation: transcribed text is appended to the annotation transcript
   // (never overwritten) so the user can dictate in passes and still hand-edit.
@@ -483,7 +489,7 @@ function ActionsPanel({ run }: { run: AgentRun }) {
             <button
               type="button"
               onClick={() => dispatch("ready")}
-              disabled={pending !== null || outOfCredits}
+              disabled={pending !== null || cannotAfford("ready")}
               className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
             >
               {pending === "ready" ? "Starting…" : "Ready → final draft PR"}
@@ -491,7 +497,7 @@ function ActionsPanel({ run }: { run: AgentRun }) {
             <button
               type="button"
               onClick={() => dispatch("resynth")}
-              disabled={pending !== null || outOfCredits}
+              disabled={pending !== null || cannotAfford("resynth")}
               className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-5 text-sm font-medium text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
             >
               {pending === "resynth" ? "Starting…" : "Resynth"}
@@ -594,7 +600,9 @@ function ActionsPanel({ run }: { run: AgentRun }) {
           <button
             type="button"
             onClick={() => dispatch("revise")}
-            disabled={pending !== null || transcript.trim() === "" || outOfCredits || recording}
+            disabled={
+              pending !== null || transcript.trim() === "" || cannotAfford("revise") || recording
+            }
             className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
           >
             {pending === "revise" ? "Starting…" : "Revise → final PR"}
@@ -606,9 +614,7 @@ function ActionsPanel({ run }: { run: AgentRun }) {
         </div>
       )}
 
-      {run.kind === "revision" && (
-        <RevisionApprovalPanel pieceId={run.piece_id!} runId={run.id} />
-      )}
+      {run.kind === "revision" && <RevisionApprovalPanel pieceId={run.piece_id!} runId={run.id} />}
 
       <p className="text-xs text-muted-foreground">
         <Link
@@ -803,8 +809,8 @@ function RevisionApprovalPanel({ pieceId, runId }: { pieceId: string; runId: str
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Final version produced. Approve to squash-merge the pull request into <code>main</code>,
-        or send it back and dictate another pass over the marked-up printout.
+        Final version produced. Approve to squash-merge the pull request into <code>main</code>, or
+        send it back and dictate another pass over the marked-up printout.
       </p>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <button
@@ -825,11 +831,7 @@ function RevisionApprovalPanel({ pieceId, runId }: { pieceId: string; runId: str
         </button>
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        <Link
-          to="/print/$runId"
-          params={{ runId }}
-          className="underline hover:text-foreground"
-        >
+        <Link to="/print/$runId" params={{ runId }} className="underline hover:text-foreground">
           Print this revision
         </Link>
         {prUrl && (
@@ -941,7 +943,7 @@ function activeStatusMessage(status: RunStatus, kind: string): string {
       case "running":
         return "Researching — scanning sources across the web and assembling a cited report. Deep research usually takes 2–10 minutes. This page updates live.";
       case "awaiting_fetch":
-        return "Almost done — the report is ready; fetching it and starting the compose run.";
+        return "Almost done — the report is ready; fetching it and starting the drafting run.";
       default:
         return "In progress.";
     }
@@ -955,7 +957,7 @@ function activeStatusMessage(status: RunStatus, kind: string): string {
     case "queued":
       return "Queued — the agent's workspace is being prepared.";
     case "running":
-      return "Working — the agent is preparing the brief and drafting the piece. This page updates live.";
+      return "Working — the agent is preparing the brief and writing the draft. This page updates live.";
     case "awaiting_fetch":
       return "Almost done — the draft is written; fetching it back now.";
     case "cancel_requested":

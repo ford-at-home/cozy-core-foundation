@@ -33,4 +33,25 @@ Everything else — brief-first discipline, throughline test, markup resolution 
 unchanged.
 
 The `S{n}P{m}` block-anchor counting rule in `references/MARKUP.md` must stay in sync with
-`src/styles/print.css` (the app's print view). If you change one, change both.
+`src/styles/print.css` (the app's print view). If you change one, change both — `npm test`
+(the anchor and print-fidelity suites) pins them to each other.
+
+## Not vendored
+
+The source repo shipped sibling packages that this product does not use, and
+`SKILL.md` still mentions them:
+
+- **`ksp`** (`references/KSP.md`, the `ksp-compress` bundle, the `ksp-score` skill)
+- **`comm-plan`**
+
+None of these files exist here. Per SKILL.md's own rule, a bundle whose reference
+is missing must stop rather than improvise — so if the **KSP directive** appears in
+markup, record it in `notes/unresolved.md` instead of restructuring from memory.
+The only bundles available in this repo are `personal` and `voice-only`.
+
+## Where this sits in the product
+
+This contract governs **what the cloud agent writes**, not when it runs. Billing
+happens upstream: the control plane reserves credits before dispatching a run and
+settles or releases them on completion (see `docs/BILLING.md`). Nothing in this
+directory should check, grant, or consume credits.

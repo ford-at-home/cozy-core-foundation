@@ -94,8 +94,7 @@ Deno.serve(
       });
     if (run.status !== "completed")
       return e(FN, 409, "Run has not completed", { requestId: rid, code: "not_completed" });
-    if (!run.piece_id)
-      return e(FN, 409, "Run has no piece", { requestId: rid, code: "no_piece" });
+    if (!run.piece_id) return e(FN, 409, "Run has no piece", { requestId: rid, code: "no_piece" });
 
     const { data: piece } = await admin
       .from("pieces")
@@ -106,11 +105,7 @@ Deno.serve(
       return e(FN, 404, "Piece not found", { requestId: rid, code: "piece_not_found" });
 
     if (piece.final_pr_merged_at) {
-      return j(
-        { ok: true, alreadyMerged: true, prUrl: piece.final_pr_url ?? null },
-        200,
-        rid,
-      );
+      return j({ ok: true, alreadyMerged: true, prUrl: piece.final_pr_url ?? null }, 200, rid);
     }
 
     // Resolve PR number: prefer the URL already persisted at completion; fall
@@ -153,10 +148,9 @@ Deno.serve(
     // already knew the PR number and skipped the branch lookup above).
     if (statusOnly) {
       const { owner, repo } = repoOwnerName();
-      const prRes = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`,
-        { headers: ghHeaders(token) },
-      );
+      const prRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`, {
+        headers: ghHeaders(token),
+      });
       if (!prRes.ok) {
         return j({ ok: true, alreadyMerged: false, prUrl }, 200, rid);
       }
