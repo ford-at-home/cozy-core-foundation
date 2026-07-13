@@ -32,7 +32,10 @@ in [docs/CURSOR-CONFIG.md](../../docs/CURSOR-CONFIG.md):
 - Cursor CLI `-m` / `--model` / `/model`, `cli-config.json`
 - SDK `Agent.create({ model: { id, params } })`
 - Cloud Agents REST API `POST /v1/agents` `model` field
-- Per-subagent `model` inside a Cloud Agents run
+- Per-subagent `model` inside a Cloud Agents run — documented on the SDK
+  and v1 API; **not available on the `/v0/agents` endpoint this repo
+  currently dispatches through** (see the Cloud Agent workflows section
+  below).
 - Custom Modes (beta) — the closest thing to a pre-wired preset
 - A `beforeSubmitPrompt` guardrail hook (`deny` / `ask` only — cannot
   switch models; no hooks file is currently checked in, see
@@ -176,8 +179,13 @@ Because Cloud Agents are premium + Max Mode by construction:
   Cloud Agent run of the month
   ([CURSOR-CONFIG.md → Recommended settings](../../docs/CURSOR-CONFIG.md#recommended-settings)).
 - For high-risk unattended work, use the cheap-implement + premium-review
-  pattern with per-subagent `model` fields — plan and review with Opus,
-  execute with Composer / Sonnet.
+  pattern. In the IDE this is separate turns on different models. In a
+  single Cloud Agents run the per-subagent `model` field is the mechanism,
+  but note it requires the SDK or the v1 API — the `/v0/agents` endpoint
+  this repo currently dispatches through does not expose it. Adding it is
+  a structural change (dispatch migration + subagent config), not a
+  prompt convention: writing "act as planner then executor" in a single
+  prompt runs the whole thing on one model.
 
 ## Cloud Agent workflows in this repo
 
@@ -186,15 +194,27 @@ first-class concept. The mechanisms for per-workflow specialization are:
 
 1. **Per-dispatch `model` on `POST /v0/agents`** (the current transport,
    used by [supabase/functions/_shared/dispatch.ts](../../supabase/functions/_shared/dispatch.ts)).
-   Every dispatch can carry its own model.
+   Every dispatch can carry its own model. **Available now.**
 2. **Per-subagent `model`** inside a single Cloud Agents run — the only
    way to run different models on different sub-tasks (e.g. planner Opus →
-   executor Composer → reviewer Opus).
+   executor Composer → reviewer Opus). **Documented on the SDK and v1
+   API; not available on `/v0/agents` this repo currently uses.** Adopting
+   it is a structural change — dispatch migration to v1 or the SDK, plus
+   subagent configuration in the create-agent payload — not a prompt
+   convention. A single-prompt "act as planner then executor" runs on one
+   model.
 3. **Automations** — persist their own trigger + model + tools + prompt
    in the Cursor dashboard. This is the closest thing to a "named
    workflow Cloud Agent" in the product; not currently used in this repo.
 4. **Custom Modes (beta)** — IDE-side presets, useful for the human's
    interactive turns but not for the Cloud Agent workflows.
+
+The `.cursor/agents/*.md` reviewer subagents in this repo
+(`backend-integrity-reviewer`, `mobile-ux-reviewer`,
+`print-layout-reviewer`) are a different concept: they are IDE-side
+review subagents invoked from a Cursor session, their frontmatter carries
+`name` + `description` only, and they run on the parent session's model.
+They are same-model-different-prompt, not a per-subagent model split.
 
 This repo has three Cursor Cloud Agent run kinds (the two research kinds
 dispatch to Parallel AI, not Cursor, so their model choice is a separate

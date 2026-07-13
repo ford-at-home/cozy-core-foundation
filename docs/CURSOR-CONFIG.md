@@ -148,7 +148,7 @@ first-class concept. The four specialization mechanisms are:
 | Mechanism                                     | What it configures                                                | When to reach for it                                          | Used in this repo today? |
 | --------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------ |
 | Per-dispatch `model` on `POST /v0/agents`     | The model on a single Cloud Agent run                             | Any programmatic dispatch, including this repo's edge functions | Yes (via `AGENT_MODEL` env var — global, not per-workflow) |
-| Per-subagent `model` inside a run             | Different models on planner / executor / reviewer sub-tasks       | Cheap-implement + premium-review pattern in unattended runs   | No                       |
+| Per-subagent `model` inside a run (SDK / v1 API only) | Different models on planner / executor / reviewer sub-tasks | Cheap-implement + premium-review pattern in unattended runs   | No — v0 does not expose subagents; requires dispatch migration to v1 or the SDK |
 | Automations                                   | A named schedule / trigger + model + tools + prompt on the account | Recurring or event-triggered runs; the closest thing to a "named workflow Cloud Agent" | No |
 | Custom Modes (beta)                           | IDE-side preset (model + tools + instructions)                    | Interactive human turns, not Cloud Agent runs                 | No                       |
 
@@ -199,17 +199,59 @@ work:
 Either shape belongs behind its own work item. Not part of this policy
 pass.
 
-### Per-subagent split (out of scope for this pass)
+### Per-subagent split (out of scope for this pass — ordered follow-ups)
 
 The `packet` workflow is the natural fit for a planner (Opus) → executor
 (Sonnet) → reviewer (Opus) subagent split — most of the reasoning value is
-in the plan, most of the output tokens are in the compose. Requires:
+in the plan, most of the output tokens are in the compose. This is
+**not** a prompt-engineering task. Writing "act as planner then executor"
+in a single prompt runs the whole thing on one model. Per-subagent
+`model` is a first-class configuration surface that only exists on the
+Cloud Agents SDK and the v1 REST API.
 
-- Prompt-template changes to structure the sub-tasks explicitly.
-- `dispatch.ts` extension to pass a subagent config, per the Cloud Agents
-  API subagent schema.
-- Cost projection review (per-run cost may go up in exchange for reduced
-  retry cost — worth measuring after 30 days).
+Two ordered follow-ups are required. Do the migration first; the subagent
+work depends on it.
+
+**Follow-up 1: v0 → v1 (or SDK) dispatch migration.** This repo currently
+dispatches on `/v0/agents` (`supabase/functions/_shared/provider.cursor.ts`
+line 12: `const BASE_URL = "https://api.cursor.com"; ... "/v0/agents"`).
+v0 does not expose subagents. The `docs/cursor-api-research.md` file
+notes that the v1 endpoint schemas were "not established" in retrievable
+first-party content at the time of that research; that gap has to close
+before code is written. Approximate scope:
+
+- Live probe of the account: `GET /v1/models` and a minimal `POST /v1/agents`
+  call to confirm the schema and the subagent shape on this account.
+- New `provider.cursor.v1.ts` or a version parameter on `CursorProvider`.
+- Update `dispatch.ts` to select the transport (fallback to v0 for
+  compatibility during rollout).
+- Update `cursor-webhook` and `reconcile-runs` for any v1 status/event
+  differences (v1 introduces run IDs vs v0's single agent ID; this repo
+  already reserves `external_run_id` for it).
+- Lovable-side redeploy.
+
+Sized as: medium — new provider file (~100 lines), dispatch and
+reconciler updates, webhook handling, live-probe verification, plus one
+work item to Lovable for the deploy.
+
+**Follow-up 2: subagent split on the migrated transport.** Once v1 / SDK
+dispatch is live, add the planner / executor / reviewer subagent config
+to the create-agent payload for the `packet` workflow. Approximate scope:
+
+- Prompt-template changes to bound each sub-task (planner produces a
+  plan; executor consumes plan and produces the packet; reviewer consumes
+  the diff and produces a verdict).
+- `dispatch.ts` extension to emit the subagent config with per-subagent
+  `model` fields.
+- Reconciler awareness of `subagentStart` / subagent completion events
+  (per the research §6 hook payload).
+- Cost projection review before enabling: per-run cost may go up in
+  exchange for reduced retry cost — worth measuring 30 days per
+  `docs/agent-metrics.md` before generalising to `final_docx` / `final_pptx`.
+
+Sized as: medium — depends entirely on the shape of Follow-up 1. Do not
+start until Follow-up 1 has produced verified live evidence of the v1
+subagent schema.
 
 ### Automations (not currently used)
 
