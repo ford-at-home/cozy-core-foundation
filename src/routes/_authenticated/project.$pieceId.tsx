@@ -4,7 +4,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { brand, pageTitle } from "@/config/brand";
-import { FINAL_ARTIFACT_COST, createFinalDocumentJob } from "@/lib/final-artifacts.functions";
+import {
+  FINAL_ARTIFACT_COST,
+  createFinalDocumentJob,
+  createPresentationJob,
+} from "@/lib/final-artifacts.functions";
 import { isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
 import {
   artifactDownloadUrl,
@@ -171,6 +175,7 @@ function ProjectHubPage() {
                 : null
             }
             docxArtifact={data.artifacts.find((a) => a.id === view.docx?.id) ?? null}
+            pptxArtifact={data.artifacts.find((a) => a.id === view.pptx?.id) ?? null}
           />
           <WhoDoesWhat />
         </>
@@ -219,6 +224,7 @@ function StageCard({
   followupRun,
   revisedPacket,
   docxArtifact,
+  pptxArtifact,
 }: {
   view: PacketWorkflowView;
   pieceId: string;
@@ -226,8 +232,9 @@ function StageCard({
   followupRun: { id: string } | null;
   /** The latest packet when it's a follow-up product (version > 1). */
   revisedPacket: { id: string; run_id: string; status: string } | null;
-  /** Full row for the latest docx artifact (view.docx carries only the summary). */
+  /** Full rows for the latest artifacts (view.docx/pptx carry only summaries). */
   docxArtifact: FinalArtifact | null;
+  pptxArtifact: FinalArtifact | null;
 }) {
   // Follow-up is optional: skipping shows the Finish card without recording
   // anything server-side (creating the document is what commits the skip).
@@ -419,6 +426,7 @@ function StageCard({
     <FinishCard
       pieceId={pieceId}
       docx={docxArtifact}
+      pptx={pptxArtifact}
       revisedPacket={revisedPacket}
       onBackToFollowup={
         view.current === "follow_up" && skipFollowup ? () => setSkipFollowup(false) : null
@@ -430,69 +438,40 @@ function StageCard({
 function FinishCard({
   pieceId,
   docx,
+  pptx,
   revisedPacket,
   onBackToFollowup,
 }: {
   pieceId: string;
   docx: FinalArtifact | null;
+  pptx: FinalArtifact | null;
   revisedPacket: { id: string; run_id: string; status: string } | null;
   /** Set when the student skipped follow-up locally and can change their mind. */
   onBackToFollowup: (() => void) | null;
 }) {
-  const queryClient = useQueryClient();
-  const createJob = useServerFn(createFinalDocumentJob);
-  const { balance } = useCreditBalance();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // Idempotency seed; regenerated after every dispatch so "Try again" after a
-  // failed run creates a NEW run instead of resolving to the failed one.
-  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
+  const docxStatus = docx?.status ?? null;
+  const docxReady = docxStatus === "ready";
+  const pptxStatus = pptx?.status ?? null;
 
-  const status = docx?.status ?? null;
-  const generating = status === "pending" || status === "generating";
-  const ready = status === "ready";
-  const outOfCredits = balance !== null && balance < FINAL_ARTIFACT_COST;
-  const paywalled = error !== null && isInsufficientCreditsError(error);
-
-  async function createDocument() {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await createJob({ data: { pieceId, requestId } });
-      await queryClient.invalidateQueries({ queryKey: ["project", pieceId] });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not start the document");
-    } finally {
-      setRequestId(crypto.randomUUID());
-      setBusy(false);
-    }
-  }
-
-  async function download() {
-    if (!docx) return;
-    setError(null);
-    try {
-      window.location.assign(await artifactDownloadUrl(docx));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not prepare the download");
-    }
-  }
+  // One chip for the card: the document drives it until it's ready, then the
+  // (optional) presentation takes over.
+  const status = !docxReady
+    ? docxStatus === "pending" || docxStatus === "generating"
+      ? "Writing your document…"
+      : docxStatus === "failed"
+        ? "Something needs another try"
+        : "One step left"
+    : pptxStatus === "pending" || pptxStatus === "generating"
+      ? "Building your presentation…"
+      : pptxStatus === "failed"
+        ? "Something needs another try"
+        : pptxStatus === "ready"
+          ? "All materials ready"
+          : "Ready to download";
+  const failed = (!docxReady && docxStatus === "failed") || (docxReady && pptxStatus === "failed");
 
   return (
-    <StageShell
-      title="Finish"
-      status={
-        ready
-          ? "Ready to download"
-          : generating
-            ? "Writing your document…"
-            : status === "failed"
-              ? "Something needs another try"
-              : "One step left"
-      }
-      tone={status === "failed" ? "error" : undefined}
-    >
+    <StageShell title="Finish" status={status} tone={failed ? "error" : undefined}>
       {revisedPacket && (
         <div className="space-y-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
           <p className="text-foreground">
@@ -518,92 +497,200 @@ function FinishCard({
         </div>
       )}
 
-      {ready && docx ? (
-        <>
-          <p>
-            Your final Word document is ready — the research findings, every source, and your own
-            verified words, kept verbatim, in one editable file.
-          </p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <button type="button" onClick={download} className={primaryBtn}>
-              Download the Word document
+      <ArtifactFlow
+        pieceId={pieceId}
+        artifact={docx}
+        kind="docx"
+        secondaryAction={
+          onBackToFollowup ? (
+            <button type="button" onClick={onBackToFollowup} className={secondaryBtn}>
+              Back to follow-up questions
             </button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Downloading is free, as often as you like. The file opens in Word, Google Docs, or
-            Pages.
-          </p>
-        </>
-      ) : generating && docx ? (
-        <>
-          <p>
-            The document is being written from the research and your verified contributions. This
-            usually takes a few minutes — this page updates on its own, and you can close it.
-          </p>
-          {docx.run_id && (
-            <Link to="/runs/$runId" params={{ runId: docx.run_id }} className={secondaryBtn}>
-              Watch progress
-            </Link>
-          )}
-        </>
-      ) : (
-        <>
-          {status === "failed" && (
-            <p>
-              The document run didn't finish. The credit hold was released — you were not charged.
-              Try again below.
-            </p>
-          )}
-          <p>
-            Create a final, editable Word document built from the research and your verified
-            contributions — your own words stay verbatim, every source is preserved as a link.
-          </p>
+          ) : null
+        }
+      />
 
-          {(outOfCredits || paywalled) && (
-            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
-              The final document uses {FINAL_ARTIFACT_COST} credits
-              {balance !== null ? ` and you have ${balance}` : ""}.{" "}
-              <Link to="/billing" className="font-medium underline">
-                Get credits →
-              </Link>
-            </div>
-          )}
-          {error && !paywalled && (
-            <p
-              role="alert"
-              className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-            >
-              {error}
-            </p>
-          )}
-
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <button
-              type="button"
-              onClick={createDocument}
-              disabled={busy || outOfCredits}
-              aria-busy={busy}
-              className={primaryBtn}
-            >
-              {busy
-                ? "Starting…"
-                : status === "failed"
-                  ? `Try again — ${FINAL_ARTIFACT_COST} credits`
-                  : `Create the final document — ${FINAL_ARTIFACT_COST} credits`}
-            </button>
-            {onBackToFollowup && (
-              <button type="button" onClick={onBackToFollowup} className={secondaryBtn}>
-                Back to follow-up questions
-              </button>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {FINAL_ARTIFACT_COST} credits are held when the run starts and only kept if it completes
-            — a failed run releases the hold.
-          </p>
-        </>
+      {/* The presentation is offered only once the document exists — same
+          research, same verified words, so the document is the natural first
+          artifact and a failed presentation never blocks it. */}
+      {docxReady && (
+        <div className="border-t border-border pt-4">
+          <ArtifactFlow pieceId={pieceId} artifact={pptx} kind="pptx" secondaryAction={null} />
+        </div>
       )}
     </StageShell>
+  );
+}
+
+const ARTIFACT_COPY = {
+  docx: {
+    noun: "document",
+    createBody:
+      "Create a final, editable Word document built from the research and your verified contributions — your own words stay verbatim, every source is preserved as a link.",
+    createLabel: "Create the final document",
+    generatingBody:
+      "The document is being written from the research and your verified contributions. This usually takes a few minutes — this page updates on its own, and you can close it.",
+    readyBody:
+      "Your final Word document is ready — the research findings, every source, and your own verified words, kept verbatim, in one editable file.",
+    downloadLabel: "Download the Word document",
+    opensIn: "The file opens in Word, Google Docs, or Pages.",
+  },
+  pptx: {
+    noun: "presentation",
+    createBody:
+      "Want slides too? Create a presentation from the same research and your verified contributions — one slide per key finding, sources preserved. Optional.",
+    createLabel: "Create the presentation",
+    generatingBody:
+      "The presentation is being built from the research and your verified contributions. This usually takes a few minutes — this page updates on its own, and you can close it.",
+    readyBody:
+      "Your presentation is ready — the findings, sources, and your own verified words as slides.",
+    downloadLabel: "Download the presentation",
+    opensIn: "The file opens in PowerPoint, Google Slides, or Keynote.",
+  },
+} as const;
+
+function ArtifactFlow({
+  pieceId,
+  artifact,
+  kind,
+  secondaryAction,
+}: {
+  pieceId: string;
+  /** Latest final_artifacts row of this kind, if any. */
+  artifact: FinalArtifact | null;
+  kind: "docx" | "pptx";
+  /** Extra button next to the create action (e.g. back to follow-up). */
+  secondaryAction: React.ReactNode;
+}) {
+  const queryClient = useQueryClient();
+  const createDocx = useServerFn(createFinalDocumentJob);
+  const createPptx = useServerFn(createPresentationJob);
+  const { balance } = useCreditBalance();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Idempotency seed; regenerated after every dispatch so "Try again" after a
+  // failed run creates a NEW run instead of resolving to the failed one.
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
+
+  const copy = ARTIFACT_COPY[kind];
+  const status = artifact?.status ?? null;
+  const generating = status === "pending" || status === "generating";
+  const ready = status === "ready";
+  const outOfCredits = balance !== null && balance < FINAL_ARTIFACT_COST;
+  const paywalled = error !== null && isInsufficientCreditsError(error);
+
+  async function create() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const createJob = kind === "docx" ? createDocx : createPptx;
+      await createJob({ data: { pieceId, requestId } });
+      await queryClient.invalidateQueries({ queryKey: ["project", pieceId] });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Could not start the ${copy.noun}`);
+    } finally {
+      setRequestId(crypto.randomUUID());
+      setBusy(false);
+    }
+  }
+
+  async function download() {
+    if (!artifact) return;
+    setError(null);
+    try {
+      window.location.assign(await artifactDownloadUrl(artifact));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not prepare the download");
+    }
+  }
+
+  if (ready && artifact) {
+    return (
+      <div className="space-y-4">
+        <p className="text-foreground">{copy.readyBody}</p>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button type="button" onClick={download} className={primaryBtn}>
+            {copy.downloadLabel}
+          </button>
+        </div>
+        {error && (
+          <p
+            role="alert"
+            className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
+            {error}
+          </p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Downloading is free, as often as you like. {copy.opensIn}
+        </p>
+      </div>
+    );
+  }
+
+  if (generating && artifact) {
+    return (
+      <div className="space-y-4">
+        <p className="text-foreground">{copy.generatingBody}</p>
+        {artifact.run_id && (
+          <Link to="/runs/$runId" params={{ runId: artifact.run_id }} className={secondaryBtn}>
+            Watch progress
+          </Link>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {status === "failed" && (
+        <p className="text-foreground">
+          The {copy.noun} run didn't finish. The credit hold was released — you were not charged.
+          Try again below.
+        </p>
+      )}
+      <p className={status === "failed" ? undefined : "text-foreground"}>{copy.createBody}</p>
+
+      {(outOfCredits || paywalled) && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+          The {copy.noun} uses {FINAL_ARTIFACT_COST} credits
+          {balance !== null ? ` and you have ${balance}` : ""}.{" "}
+          <Link to="/billing" className="font-medium underline">
+            Get credits →
+          </Link>
+        </div>
+      )}
+      {error && !paywalled && (
+        <p
+          role="alert"
+          className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          {error}
+        </p>
+      )}
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <button
+          type="button"
+          onClick={create}
+          disabled={busy || outOfCredits}
+          aria-busy={busy}
+          className={primaryBtn}
+        >
+          {busy
+            ? "Starting…"
+            : status === "failed"
+              ? `Try again — ${FINAL_ARTIFACT_COST} credits`
+              : `${copy.createLabel} — ${FINAL_ARTIFACT_COST} credits`}
+        </button>
+        {secondaryAction}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {FINAL_ARTIFACT_COST} credits are held when the run starts and only kept if it completes — a
+        failed run releases the hold.
+      </p>
+    </div>
   );
 }
 

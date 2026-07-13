@@ -28,3 +28,20 @@ export const createFinalDocumentJob = createServerFn({ method: "POST" })
     if (error) throw new Error(await extractEdgeError(error, "create-final-document-job"));
     return result as FinalJobResult;
   });
+
+/**
+ * Create the presentation (2 credits). A separate job from the document by
+ * design: if it fails, the Word document stays available and the
+ * presentation is retryable on its own. Idempotent on requestId.
+ */
+export const createPresentationJob = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { pieceId: string; requestId: string }) => data)
+  .handler(async ({ data, context }): Promise<FinalJobResult> => {
+    const { data: result, error } = await context.supabase.functions.invoke(
+      "create-presentation-job",
+      { body: data },
+    );
+    if (error) throw new Error(await extractEdgeError(error, "create-presentation-job"));
+    return result as FinalJobResult;
+  });
