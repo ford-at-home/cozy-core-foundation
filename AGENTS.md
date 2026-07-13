@@ -76,6 +76,7 @@ Skills live in `.cursor/skills/<name>/SKILL.md`. Select using this table:
 | coordinating with the Lovable agent, backend handoffs, work items, applying/deploying/verifying in the connected environment, inbox/outbox requests | `multi-agent-coordination` |
 | mobile layout, responsive behavior, UI polish, touch/keyboard/viewport issues                                                                       | `mobile-ui-polish`         |
 | the print view, PDF download, page layout, S{n}P{m} anchors, pagination                                                                             | `print-artifact-fidelity`  |
+| reading scanned marked-up pages, recognition prompts, resolving pen annotations to blocks                                                           | `annotation-interpretation` |
 | schema, migrations, RLS, Edge Functions, Supabase config, backend secrets                                                                           | `supabase-change`          |
 | run dispatch, webhooks, the reconciler, run states, idempotency, cost accounting                                                                    | `run-orchestration-change` |
 | credits, the ledger, reservations, Stripe checkout or webhooks, purchases, the paywall                                                              | `billing-and-credits`      |
