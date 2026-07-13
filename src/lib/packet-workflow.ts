@@ -262,6 +262,15 @@ export async function updateReturnMethod(
   if (error) throw new Error(error.message);
 }
 
+/** Dictation-only returns skip recognition and go straight to review. */
+export async function markReturnNeedsReview(returnId: string): Promise<void> {
+  const { error } = await db
+    .from("packet_returns")
+    .update({ status: "needs_review", updated_at: new Date().toISOString() })
+    .eq("id", returnId);
+  if (error) throw new Error(error.message);
+}
+
 /** Owner approval: the verified response set becomes authoritative. */
 export async function markReturnVerified(returnId: string): Promise<void> {
   const { error } = await db
