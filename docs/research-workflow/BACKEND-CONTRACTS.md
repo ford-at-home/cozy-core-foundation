@@ -91,11 +91,20 @@ lifecycle applies. No new ledger paths, no new prices for existing runs.
 ## Known limitations
 
 - `run-follow-up-research`, `create-final-document-job`, and
-  `create-presentation-job` create the `agent_runs` row and reserve credits
-  but the actual provider dispatch and fetch-back writer for these new
-  `kind` values are not implemented in this task. The reconciler will not
-  see completions until that ships. Credits stay reserved until then; the
-  existing 1h `sweepStaleReservations` releases them on failure.
+  `create-presentation-job` now dispatch to the Cursor cloud-agent provider
+  and are handled by `cursor-webhook` and `reconcile-runs` on fetch-back.
+  The follow-up persistor writes a NEW `packets` row (`version = prior + 1`,
+  `supersedes_packet_id = prior`), and the final-artifact persistor uploads
+  the DOCX/PPTX binary the agent commits at
+  `pieces/<slug>/final/{document.docx|presentation.pptx}` to the private
+  `final-artifacts` bucket. The FSM (`workflow_stage`) advances to
+  `follow_up_research_ready`, `final_document_ready`, or
+  `presentation_ready` on success and `failed` on provider failure.
+  Actual DOCX/PPTX rendering runs inside the cloud agent's environment; if
+  that environment lacks a DOCX or PPTX library the artifact fetch-back
+  raises and the run stays in `awaiting_fetch` until the reconciler retries
+  (credits are still held; the 1h `sweepStaleReservations` releases them if
+  the run ultimately fails).
 - Recognition uses `google/gemini-2.5-flash` via Lovable AI Gateway; low
   confidence blocks (<0.5) are still inserted so verification can act on
   them but downstream code should treat them as unverified.

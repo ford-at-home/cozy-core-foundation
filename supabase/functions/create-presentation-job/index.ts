@@ -4,6 +4,8 @@
 import { serve, authenticate, j, e } from "../_shared/http.ts";
 import { creditsEnforced, getBalance, reserveCreditsForRun } from "../_shared/credits.ts";
 import { advanceStage, logPieceEvent } from "../_shared/workflow.ts";
+import { dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
+import { buildFinalPptxPrompt, loadPriorPacketContext } from "../_shared/followup-final.ts";
 
 const FN = "create-presentation-job";
 const COST = 2;
@@ -43,5 +45,30 @@ Deno.serve(serve(FN, async (req, rid) => {
 
   await advanceStage(admin, { pieceId, to: "presentation_pending" });
   await logPieceEvent(admin, { pieceId, userId, event: "final_pptx_started", metadata: { runId: run.id, artifactId: artifact?.id } });
+
+  const { data: pieceRow } = await admin
+    .from("pieces").select("slug, title").eq("id", pieceId).maybeSingle();
+  const { data: profile } = await admin
+    .from("profiles").select("style_text, image_style").eq("user_id", userId).maybeSingle();
+  const ctx = await loadPriorPacketContext(admin, pieceId);
+  const prompt = buildFinalPptxPrompt({
+    pieceSlug: pieceRow?.slug ?? "piece",
+    goal: pieceRow?.title ?? null,
+    styleText: (profile?.style_text ?? "").trim(),
+    imageStyle: (profile?.image_style ?? "").trim() || undefined,
+    packetBody: null,
+    packetAnalysis: ctx.packet?.analysis ?? null,
+    verifiedResponses: ctx.verifiedResponses,
+    followupSummary: null,
+    studentContributions: ctx.studentContributions,
+  });
+  await dispatchRun({
+    admin,
+    provider: resolveProvider(),
+    runId: run.id,
+    prompt,
+    ref: Deno.env.get("AGENT_REPO_REF") ?? "main",
+    autoCreatePr: false,
+  });
   return j({ runId: run.id, artifactId: artifact?.id, cost: COST }, 201, rid);
 }));
