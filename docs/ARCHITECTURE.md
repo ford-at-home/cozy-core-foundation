@@ -1,6 +1,6 @@
 # Architecture Map
 
-Verified against the repository on 2026-07-12. Every claim below is labeled:
+Verified against the repository on 2026-07-13. Every claim below is labeled:
 
 - **Verified** — read directly from repository code.
 - **Partial** — exists but incomplete or unused.
@@ -24,10 +24,15 @@ run.
 
 A second **workflow** (`pieces.workflow = 'research_packet'`, alongside the
 default `'longform'`) turns the same pipeline into a research-and-learning
-loop for college students: research → printable packet with tailored Socratic
-questions and handwriting space → paper annotation → (later phases) photo/
-dictation return, follow-up research, and final Word/PowerPoint artifacts.
-Specification set: `docs/research-workflow/`.
+loop for college students, now implemented end to end: research → printable
+packet with tailored Socratic questions and handwriting space → paper
+annotation → photo/dictation return with mandatory verification → optional
+follow-up research chaining a revised packet (v n+1) → final paper (.docx)
+and class presentation (.pptx). A minimal professor layer (courses with join
+codes, assignments, rosters, course-scoped question review) sits on top.
+The user-facing journey is derived client-side (`src/lib/journey.ts`) and
+presented in the project hub (`/projects/$pieceId`). Specification set:
+`docs/research-workflow/`.
 
 ## Frontend (verified)
 
@@ -39,7 +44,7 @@ Specification set: `docs/research-workflow/`.
 | Server functions | `createServerFn` in `src/lib/*.functions.ts`; server-only helpers in `src/lib/*.server.ts`.                                                                                                                                                                                                        |
 | API routes       | `src/routes/api/transcribe.ts` (Lovable AI gateway proxy), `src/routes/api/public/generate-image.ts` (HMAC-token guarded, used by cloud agents).                                                                                                                                                   |
 | Styling          | Tailwind v4 CSS-first. All tokens/theme in `src/styles.css` (`@theme inline`); **no `tailwind.config.*`**. Editorial dark theme: warm charcoal + amber primary, Inter + Instrument Serif.                                                                                                          |
-| Components       | shadcn/ui (new-york) in `src/components/ui/`; app components `StatusPill`, `MarkdownView`, `RunCostCard`, `CostBadge`, `CreditBalance` (header balance chip → `/billing`) in `src/components/`.                                                                                                                                                        |
+| Components       | shadcn/ui (new-york) in `src/components/ui/`; app components `StatusPill` (plain-language labels via `src/lib/journey.ts`, raw status in the tooltip), `MarkdownView`, `RunCostCard`, `CostBadge`, `CreditBalance` (header balance chip → `/billing`) in `src/components/`.                                                                                                                                                        |
 | Auth guard       | `src/routes/_authenticated/route.tsx` `beforeLoad` → `supabase.auth.getUser()` → redirect to `/auth`. `ssr: false` for the authenticated tree.                                                                                                                                                     |
 | Brand            | All names/messaging come from `src/config/brand.ts` (company "Hardcopy Tools", product "Hardcopy Draft" — provisional). Never hardcode product names in UI copy; use `brand`/`pageTitle`. Voice and copy dispositions: `docs/brand/BRAND.md`, `docs/brand/UI-COPY-MAP.md`, `docs/brand/NAMING.md`. |
 
@@ -49,19 +54,25 @@ Specification set: `docs/research-workflow/`.
 | ----------------------------------- | ----------------------------------------------------------------- |
 | `/`                                 | `src/routes/index.tsx` (landing)                                  |
 | `/auth`                             | `src/routes/auth.tsx` (email/password + Google via Lovable)       |
-| `/dashboard`                        | `src/routes/_authenticated/dashboard.tsx`                         |
-| `/new`                              | `src/routes/_authenticated/new.tsx` (paste research or topic)     |
-| `/profile`                          | `src/routes/_authenticated/profile.tsx` (voice/style + dictation) |
+| `/dashboard`                        | `src/routes/_authenticated/dashboard.tsx` (project-centric list: pieces with humanized stage labels, not raw runs) |
+| `/new`                              | `src/routes/_authenticated/new.tsx` (paste research or topic; longform vs. research-packet mode) |
+| `/profile`                          | `src/routes/_authenticated/profile.tsx` (voice/style + dictation + handwriting-adaptation consent) |
 | `/sessions`, `/sessions/$sessionId` | cost views                                                        |
 | `/runs/$runId`                      | run detail, outputs, actions (ready / resynth / revise)           |
+| `/projects/$pieceId`                | `src/routes/_authenticated/projects.$pieceId.tsx` — research-packet **project hub**: the 7-stage journey rail (`src/lib/journey.ts`), one primary action per stage, follow-up questions, final-artifact generation/downloads |
 | `/packet/$runId`                    | `src/routes/_authenticated/packet.$runId.tsx` (research-packet question review: edit / lock / add / approve) |
+| `/return/$runId`                    | `src/routes/_authenticated/return.$runId.tsx` (photo capture/upload + dictation return of the printed packet) |
+| `/verify/$runId`                    | `src/routes/_authenticated/verify.$runId.tsx` (mandatory verification: photo beside recognized text, corrections, explicit approval) |
 | `/print/$runId`                     | print-for-markup preview + PDF download (packet runs use the packet builder with response areas) |
-| `/billing`                          | `src/routes/_authenticated/billing.tsx` (balance, credit packs, purchase history, ledger, checkout return banners) |
+| `/billing`                          | `src/routes/_authenticated/billing.tsx` (balance, credit packs, what-credits-buy table, purchase history, ledger, checkout return banners) |
+| `/assignments`                      | `src/routes/_authenticated/assignments.tsx` (student: join a course by code, start packets from assignments) |
+| `/teach`                            | `src/routes/_authenticated/teach.tsx` (professor-only: courses, join codes, assignments, roster progress) |
 
 ### Mobile (verified — mobile is the primary interface)
 
 - Bottom tab nav (`sm:hidden`) + desktop header (`hidden sm:flex`) in
-  `src/routes/_authenticated/route.tsx`.
+  `src/routes/_authenticated/route.tsx`. Professors get one extra "Teach"
+  tab (role checked via `isProfessor`); students see the standard set.
 - Safe areas: `env(safe-area-inset-*)` insets; content bottom padding
   `pb-[calc(5.5rem+env(safe-area-inset-bottom))]` clears the tab bar.
 - Touch targets: `min-h-11` (44px) on interactive elements.
@@ -126,8 +137,17 @@ Project id `dlaojinagezrlbwyritd` (`supabase/config.toml`).
 | `credit_products`                                 | Purchasable packs; checkout validates client-sent price ids against this table                           |
 | `purchases`, `billing_customers`, `subscriptions` | Stripe object mirrors (Stripe stays the source of truth for payment state)                               |
 | `stripe_events`                                   | Webhook inbox, PK = Stripe event id (duplicate delivery = no-op insert); RLS deny-all, service-role only |
-| `packets`                                         | One row per completed packet run (`workflow='research_packet'`): analysis jsonb, status `generated → reviewed`; unique `run_id` |
+| `packets`                                         | One row per completed packet run (`workflow='research_packet'`): analysis jsonb, status `generated → reviewed`, `followup_state`, `supersedes_packet_id` (revised-packet chain); unique `run_id` |
 | `packet_questions`                                | Tailored Socratic questions per packet; question text/lock are owner-editable content under RLS; unique `(packet_id, position)` |
+| `packet_returns`                                  | One return per packet (`collecting → verified`); parent of images/segments |
+| `page_images`                                     | Uploaded page photos (`reading → rejected \| recognized`), quality-gate reject reasons |
+| `recognized_blocks`                               | Handwriting-recognition output per image: text, confidence, annotation type, resolved reference (page/Q{n}/S{n}P{m}) |
+| `dictation_segments`                              | Dictated-return transcript segments with resolved references         |
+| `verification_corrections`                        | Student corrections captured on the verification screen (feeds the handwriting profile) |
+| `handwriting_profiles`                            | Consent-gated adaptation profile built from confirmed corrections; deletable from `/profile` |
+| `followup_questions`                              | Follow-up research questions (`submitted → refined → approved → researched`), max 3 per packet |
+| `final_artifacts`                                 | Final paper (.docx) / class presentation (.pptx) rows; written only by the `final-artifacts` function |
+| `user_roles`, `courses`, `enrollments`, `assignments` | Professor layer: role grants, join-code courses, rosters, assignment topics/config; `pieces.assignment_id` links student work |
 
 RLS: users read/write their own rows where user-editable (profiles, sessions,
 inferences); **INSERT/UPDATE/DELETE on `pieces`/`agent_runs` are revoked for
@@ -135,8 +155,13 @@ inferences); **INSERT/UPDATE/DELETE on `pieces`/`agent_runs` are revoked for
 `20260712170000_revoke_client_run_insert.sql`) — all mutations to controller
 tables go through Edge Functions with the service role, so a credit
 reservation always precedes a run's existence. `model_pricing` is read-only to
-signed-in users. Storage bucket `research-attachments` is scoped to the
-`auth.uid()/` folder prefix.
+signed-in users. Professor cross-user reads (packets/questions/returns of
+enrolled students) go through SECURITY DEFINER helpers
+(`is_course_professor`, `is_enrolled`, `is_piece_professor`,
+`is_packet_professor` in `20260713130000_professor_controls.sql`); students
+never see each other's rows. Storage buckets `research-attachments` and
+`packet-returns` are scoped to the `auth.uid()/` folder prefix;
+`final-artifacts` is service-role-write, owner-read via signed URLs.
 
 Triggers: `recompute_run_totals` / `recompute_session_totals` roll `inferences`
 costs up to `agent_runs` and `sessions`. Never write totals directly.
@@ -145,10 +170,13 @@ costs up to `agent_runs` and `sessions`. Never write totals directly.
 
 | Function                  | Auth (config.toml)                                                     | Purpose                                                                            |
 | ------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `start-workflow`          | JWT required                                                           | Create piece + run, reserve credits, dispatch Cursor agent or research             |
+| `start-workflow`          | JWT required                                                           | Create piece + run, reserve credits, dispatch Cursor agent or research; accepts `assignmentId` (enrollment-validated, assignment topic authoritative) |
 | `piece-action`            | JWT required + explicit `piece.user_id` ownership check                | `resynth` / `ready` / `revise` actions (credit-reserving where billable)           |
+| `packet-return`           | JWT required + ownership                                               | Return loop: image quality gate (named retake reasons), multimodal handwriting recognition via the Lovable gateway, dictation segment mapping, verification save/approve. Free to the student — cost accounting only |
+| `packet-action`           | JWT required + ownership                                               | Follow-up questions: submit / refine (suggestion beside the student's wording) / approve / skip; dispatches one 2-credit Parallel pass that chains a revised packet (`version = n+1`) |
+| `final-artifacts`         | JWT required + ownership                                               | Builds the student-contribution model from verified material, LLM synthesis via the Lovable gateway, assembles `.docx` (`docx`) / `.pptx` (`pptxgenjs`) inline, uploads to the `final-artifacts` bucket; 1 credit each, independently retryable |
 | `cursor-webhook`          | `verify_jwt = false`; HMAC-SHA256 over raw body (`_shared/webhook.ts`) | Cursor `statusChange` receiver                                                     |
-| `reconcile-runs`          | `verify_jwt = false`; optional `RECONCILE_TOKEN` bearer                | pg_cron sweep: completes runs, settles/releases credits, sweeps stale reservations |
+| `reconcile-runs`          | `verify_jwt = false`; optional `RECONCILE_TOKEN` bearer                | pg_cron sweep: completes runs, settles/releases credits, sweeps stale reservations; fails inline document/presentation runs stuck >10 min and releases their holds |
 | `create-checkout-session` | JWT required                                                           | Server-created Stripe Checkout; validates price ids against `credit_products`      |
 | `stripe-webhook`          | `verify_jwt = false`; Stripe signature verification                    | Sole grantor of purchased credits; `stripe_events` inbox dedup                     |
 
@@ -160,7 +188,12 @@ Shared modules in `supabase/functions/_shared/`: `state.ts` (run state machine),
 missed webhooks), `prompt.ts` (cloud-agent prompt builders, including
 `buildPacketPrompt`), `packet.ts` (packet JSON validation + idempotent
 persistence into `packets`/`packet_questions`, called before a packet run is
-marked completed), `webhook.ts`, `parallel.ts`, `research.ts`,
+marked completed), `recognition.ts` (quality gate + handwriting-recognition
+parsing and reference resolution), `followup.ts` (follow-up question rules +
+refined-prompt builder), `artifacts.ts` (student-contribution model, synthesis
+prompts, document/presentation spec validation), `artifact-files.ts` (binary
+`.docx`/`.pptx` assembly), `webhook.ts`, `parallel.ts`, `research.ts` (also
+chains the revised packet for `followup_research` runs),
 `provider.cursor.ts`, `provider.stub.ts`, `observability.ts`.
 
 ### Run state machine (verified — `_shared/state.ts`)
@@ -187,7 +220,12 @@ estimated → manual` (`_shared/usage.ts` `computeCost`).
 
 ### Credits and Stripe billing (verified — read `docs/BILLING.md` before touching)
 
-User-facing credits (1 credit = 1 completed generation; research = 2):
+User-facing credits (1 credit = 1 completed generation; deep research and
+follow-up research = 2 each because they include the chained packet/compose;
+final paper and class presentation = 1 each; printing, returning work,
+verification, and downloads are free — `CREDIT_COST` in
+`_shared/credits.ts`, mirrored in `src/lib/use-credits.ts`, drift-guarded by
+`tests/billing-boundaries.test.ts`):
 
 - **Append-only ledger** (`credit_ledger`); `credit_accounts.balance` is a
   projection. All balance mutation goes through SECURITY DEFINER Postgres

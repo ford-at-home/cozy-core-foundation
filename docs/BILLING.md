@@ -1,8 +1,25 @@
 # Billing — credits, Stripe, and money operations
 
-One credit = one completed generation. A deep-research start ("Research it
-for me") uses 2 credits because it runs deep research plus the chained
-compose. New users get 3 credits on signup. Credits are held when a
+One credit = one completed generation. The full price list lives in
+`CREDIT_COST` (`supabase/functions/_shared/credits.ts`, mirrored in
+`src/lib/use-credits.ts`; drift between the two fails
+`tests/billing-boundaries.test.ts`):
+
+| Action                                   | Credits | Why                                                    |
+| ---------------------------------------- | ------- | ------------------------------------------------------ |
+| Start from pasted research (`compose`)   | 1       | One generation                                         |
+| Deep research start (`research`)         | 2       | Deep research + the chained compose/packet             |
+| Resynth / Ready / Revise                 | 1 each  | One generation each                                    |
+| Follow-up research (`followup`)          | 2       | Research pass + the chained revised packet (v n+1)     |
+| Final paper (`document`)                 | 1       | One generation                                         |
+| Class presentation (`presentation`)      | 1       | One generation                                         |
+
+Free by design: printing, returning work (photos or dictation),
+verification and corrections, and every download/re-download of a generated
+artifact. Retries after a failed generation are free because the hold is
+released.
+
+New users get 3 credits on signup. Credits are held when a
 generation is dispatched and **consumed only when it completes**; failed,
 cancelled, and stuck runs release the hold automatically.
 

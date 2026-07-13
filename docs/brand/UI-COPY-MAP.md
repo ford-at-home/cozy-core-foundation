@@ -10,10 +10,12 @@ renaming them would misdescribe what the system does.
 | Location                                     | Was                      | Now                                                                          | Why                                   |
 | -------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------- | ------------------------------------- |
 | Header wordmark (`_authenticated/route.tsx`) | "C" monogram + "Compose" | Folded-page glyph + "Hardcopy Tools"                                         | Company brand                         |
-| Nav "Dashboard"                              | Dashboard                | **retained**                                                                 | Accurate                              |
-| Nav "New piece"                              | New piece                | New draft                                                                    | "Draft" is the product's unit of work |
+| Nav "Dashboard"                              | Dashboard                | **Projects**                                                                 | The list is now project-centric (pieces with stage labels), not raw runs |
+| Nav "New piece"                              | New piece                | New project                                                                  | A start can be a draft or a research packet |
 | Nav "Cost"                                   | Cost                     | **retained**                                                                 | Accurate, honest                      |
 | Nav "Profile"                                | Profile                  | **retained**                                                                 | Accurate                              |
+| Nav "Teach" (professors only)                | —                        | Teach                                                                        | Role-gated extra tab; hidden from students |
+| Nav "Assignments" link (from `/new`)         | —                        | "Working from a class assignment? Join your course and start it there →"    | Discoverable without cluttering the nav |
 | Root `<title>`/OG (`__root.tsx`)             | "Compose" / sign-in copy | "Hardcopy Tools \| AI That Knows When to Disappear" + brand meta description | Brand metadata                        |
 | 404 / error pages                            | generic                  | **retained** (already calm and clear)                                        | No brand value in touching them       |
 
@@ -33,16 +35,18 @@ disappear." CTAs: "Start a working draft" / "See how it works". Closing:
 | "Sign up with an email and password."   | **retained**                              | Plain and accurate                 |
 | Buttons, errors, Google flow            | **retained**                              | Functional controls; already clear |
 
-## Dashboard (`dashboard.tsx`)
+## Dashboard (`dashboard.tsx`) — now "Projects"
 
-| Was                                                            | Now                                                  | Why                                         |
-| -------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------- |
-| Kicker "Studio"                                                | "Hardcopy Draft"                                     | Product label replaces generic category     |
-| "Your 20 most recent workflow runs."                           | "Your 20 most recent runs."                          | Slightly quieter; "run" retained (accurate) |
-| "+ New piece"                                                  | "+ New draft"                                        | Terminology                                 |
-| Empty state "No runs yet / Start one from the New piece page." | "No drafts yet / Start one from the New draft page." | Terminology                                 |
-| "Create your first piece"                                      | "Start your first draft"                             | Terminology                                 |
-| Table columns, StatusPill values                               | **retained**                                         | Technical state machine                     |
+Rewritten for the clarity pass: the page lists **projects** (pieces) with a
+plain-language stage line derived in `src/lib/journey.ts`, instead of raw
+run rows.
+
+| Was                                  | Now                                                        | Why                                              |
+| ------------------------------------ | ---------------------------------------------------------- | ------------------------------------------------ |
+| H1 "Dashboard", run table            | H1 "Projects", project list                                | Users think in projects, not runs                |
+| Raw run kinds/statuses per row       | One humanized line per project ("Building your packet…", "Ready for your review") | Machine statuses stay on the run-detail timeline |
+| Empty state                          | "No projects yet / Start your first project"               | Terminology                                      |
+| StatusPill values                    | Plain-language labels from `runStatusLabel`; raw status in the tooltip | Honest and readable at once |
 
 ## New (`new.tsx`)
 
@@ -112,6 +116,53 @@ never louder than the rest of the product.
 | Titles "… — Compose"                        | "… — Hardcopy Draft" | Suffix                       |
 | Kicker "Studio"                             | "Hardcopy Draft"     | Product label                |
 | Everything else (cost tables, empty states) | **retained**         | Accurate accounting language |
+
+## Research-workflow naming system (internal → user-facing)
+
+The research-packet loop introduced backend vocabulary that must never leak
+into primary UI copy. The canonical mapping (labels implemented in
+`src/lib/journey.ts` — `runStatusLabel`, `runActivityLabel`, `runKindLabel`,
+`projectStageLabel`):
+
+| Internal term                          | User-facing term                        |
+| -------------------------------------- | ---------------------------------------- |
+| OCR / handwriting recognition          | "reading your pages"                     |
+| `packet_return` / return loop          | "Return your work" / "Returned pages"    |
+| verification                           | "Check what was read"                    |
+| `followup_research` run                | "Follow-up research"                     |
+| revised packet (`version = n+1`)       | "Revised packet" with a "What changed" section |
+| `document` run / .docx                 | "Final paper"                            |
+| `presentation` run / .pptx             | "Class presentation"                     |
+| `handwriting_profiles`                 | "Handwriting adaptation" (profile page)  |
+| artifact / ingestion / reconciling / rendering | never in primary copy; run-detail technical timeline only |
+
+## Project hub (`projects.$pieceId.tsx`)
+
+The journey rail names the seven stages in student language: Research →
+Print → Work on paper → Return your work → Check what was read → Follow-up
+research (optional) → Final paper & presentation. One primary action per
+stage; later stages stay hidden until reachable (progressive disclosure —
+no follow-up controls before verification, no output formats before the
+work is returned). Skipping follow-up research is an explicit, free choice.
+
+## Return and verification (`return.$runId.tsx`, `verify.$runId.tsx`)
+
+| Surface                    | Copy                                                                      | Why                                                        |
+| -------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| H1                         | "Return your work" / "Check the reading"                                   | Action language, no "upload/ingest/OCR"                     |
+| Mode choice                | "How would you like to return your work?" — photos and dictation as equals | Neither path is a fallback                                  |
+| Progress                   | "Reading page N of M…"                                                     | Says what the system is doing in plain words                |
+| Retake rejection           | Named reasons (glare, blur, cropped page) with "Retake this page"          | Specific and recoverable, never a bare failure              |
+| Verification               | Photo beside recognized text; low-confidence highlighted; corrections saved; explicit approval | Never presents guesses as confirmed |
+| Cost honesty               | Returning and verifying are free; stated where relevant                    | Credit-honest copy rule                                     |
+
+## Courses (`teach.tsx`, `assignments.tsx`)
+
+Professor surface is titled "Teach" (create course → share join code →
+assignments → roster progress in stage labels). Student surface is
+"Assignments" (join by code, start a packet from an assignment — the
+assignment's topic is authoritative and the UI says so). Professor UI is
+invisible to students.
 
 ## Explicitly not renamed
 

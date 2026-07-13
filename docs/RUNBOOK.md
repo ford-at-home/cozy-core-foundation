@@ -32,6 +32,40 @@
    Cloud: confirm with `select * from cron.job;`. Manual fallback:
    `curl -X POST https://dlaojinagezrlbwyritd.supabase.co/functions/v1/reconcile-runs`.
 
+## Research-packet completion rollout (manual steps — not yet applied)
+
+The end-to-end research workflow (return loop, follow-up research, final
+artifacts, professor layer) ships in this repository but requires these
+external steps before it works in production. None of them can be performed
+from this repo:
+
+1. **Apply migrations** (Lovable Cloud applies `supabase/migrations/` on
+   sync; verify all four landed):
+   - `20260713100000_packet_returns.sql` — `packet-returns` storage bucket +
+     return/recognition/verification/handwriting-profile tables.
+   - `20260713110000_followup_research.sql` — `followup_questions`,
+     `packets.followup_state`, `followup_research` run kind.
+   - `20260713120000_final_artifacts.sql` — `final-artifacts` bucket,
+     `final_artifacts` table, `document`/`presentation` run kinds.
+   - `20260713130000_professor_controls.sql` — roles/courses/enrollments/
+     assignments + SECURITY DEFINER helpers + `pieces.assignment_id`.
+   Confirm buckets exist: `select id, public from storage.buckets;` should
+   list `research-attachments`, `packet-returns`, `final-artifacts` (all
+   private).
+2. **Deploy the new Edge Functions**: `packet-return`, `packet-action`,
+   `final-artifacts` (all `verify_jwt = true` per `supabase/config.toml`).
+   Redeploy `start-workflow`, `reconcile-runs`, and shared-module consumers
+   so they pick up the new `_shared/` code.
+3. **Secrets** — no new ones. The return loop and final artifacts reuse
+   `LOVABLE_API_KEY` (gateway recognition/synthesis) and follow-up research
+   reuses `PARALLEL_API_KEY`. Without `PARALLEL_API_KEY`, follow-up research
+   is rejected with a clear message; the rest of the loop still works.
+4. **Grant the first professor role** (no self-serve professor signup by
+   design): `insert into user_roles (user_id, role) values ('<uuid>', 'professor');`
+5. **Regenerate Supabase types** after migrations apply
+   (`src/integrations/supabase/types.ts` is generated; several client libs
+   carry local casts until then).
+
 ## Not built yet (deferred, by design)
 
 - **GitHub issue thread + labels** (peer comments, `resynth`/`ready` labels
@@ -56,10 +90,18 @@ is the versioned copy in GitHub. The chain is exactly-once (idempotency key
 `compose:<user>:research:<runId>`). A research run stuck past 45 minutes is
 failed with guidance; check https://platform.parallel.ai for the task.
 
+Follow-up research (kind: `followup_research`) rides the same rails: one
+Parallel pass carrying the original report plus the approved questions, then
+an exactly-once chain to a revised packet run (`version = n+1`).
+
 ## Operating notes
 
 - A run stuck in `dispatch_unknown` for >30 min is auto-failed with guidance;
   check the Cursor dashboard for an orphan agent before resubmitting.
+- Inline runs (`document`/`presentation`) execute synchronously inside
+  `final-artifacts`; one still open after 10 min is a crashed invocation —
+  the reconciler fails it and releases the credit hold, and the student can
+  simply retry.
 - Kill switch: unset `CURSOR_API_KEY` (new runs fall back to the stub) or
   pause the pg_cron job. In-flight agents can be stopped from cursor.com/agents.
 - `agent_run_events` holds verbatim webhook/poll payloads per run — first stop
