@@ -150,7 +150,10 @@ export function segmentDictation(transcript: string): DictationSegmentDraft[] {
     const end = i + 1 < groups.length ? groups[i + 1][0].index : text.length;
     const target: DictationTarget = {};
     for (const ref of group) ref.apply(target);
-    const segText = text.slice(start, end).trim().replace(/[\s,;]+$/, "");
+    const segText = text
+      .slice(start, end)
+      .trim()
+      .replace(/[\s,;]+$/, "");
     if (!segText) continue;
     segments.push({ transcript: segText, target });
   }

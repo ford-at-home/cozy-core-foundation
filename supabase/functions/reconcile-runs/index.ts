@@ -37,6 +37,11 @@ const FN = "reconcile-runs";
 
 const RELEASE_AFTER_MIN = 30;
 
+// Inline runs (final paper / presentation) execute synchronously inside the
+// final-artifacts function — a few minutes at most. One still open after
+// this is a crashed invocation, not slow work.
+const INLINE_RELEASE_AFTER_MIN = 10;
+
 function resolveProvider(): AgentProvider {
   if (Deno.env.get("AGENT_PROVIDER") === "stub") return new StubProvider();
   const key = Deno.env.get("CURSOR_API_KEY")?.trim();
@@ -155,6 +160,25 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
     return reconcileResearch(admin, run);
   }
   const ageMin = (Date.now() - new Date(run.created_at).getTime()) / 60_000;
+
+  // Inline runs (document/presentation) have no external agent to poll: the
+  // final-artifacts function walks them to a terminal state itself. Any that
+  // remain open past the inline timeout are crashed invocations — fail them
+  // and release the hold so a retry is a clean fresh request.
+  if (run.kind === "document" || run.kind === "presentation") {
+    if (ageMin > INLINE_RELEASE_AFTER_MIN) {
+      await admin
+        .from("agent_runs")
+        .update({
+          status: "failed",
+          error: "Generation was interrupted. You were not charged — try again.",
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", run.id);
+      await releaseRunCredits(admin, run, "inline generation interrupted", "reconciler");
+    }
+    return;
+  }
 
   // Never dispatched, or ambiguous dispatch: without vendor-side correlation
   // there is nothing safe to match on. Release stale rows to failed.

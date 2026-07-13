@@ -239,7 +239,11 @@ function PhotoPanel({
           (busy ? "pointer-events-none opacity-50" : "")
         }
       >
-        {busy ? (progress ?? "Reading…") : pages.length > 0 ? "+ Add more pages" : "Add page photos"}
+        {busy
+          ? (progress ?? "Reading…")
+          : pages.length > 0
+            ? "+ Add more pages"
+            : "Add page photos"}
       </label>
 
       {notices.map((n, i) => (

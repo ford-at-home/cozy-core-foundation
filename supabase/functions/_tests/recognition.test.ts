@@ -220,7 +220,11 @@ Deno.test("persistPageRecognition upserts the page, replaces blocks, links quest
 Deno.test("persistPageRecognition marks a rejected photo without writing blocks", async () => {
   const { admin, calls } = fakeAdmin();
   const outcome = parseRecognitionResult(
-    JSON.stringify({ page_number: null, quality: { ok: false, problems: ["blurred"] }, blocks: [] }),
+    JSON.stringify({
+      page_number: null,
+      quality: { ok: false, problems: ["blurred"] },
+      blocks: [],
+    }),
   );
   const res = await persistPageRecognition(admin, {
     returnId: "ret-1",

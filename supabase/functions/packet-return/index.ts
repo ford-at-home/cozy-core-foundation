@@ -162,11 +162,7 @@ async function handle(req: Request, rid: string): Promise<Response> {
       .select("id, position, prompt, function")
       .eq("packet_id", packetId)
       .order("position", { ascending: true }),
-    admin
-      .from("handwriting_profiles")
-      .select("profile_text")
-      .eq("user_id", userId)
-      .maybeSingle(),
+    admin.from("handwriting_profiles").select("profile_text").eq("user_id", userId).maybeSingle(),
   ]);
   const packetBody = packetBodyFromResult(run?.result) ?? "";
   // Print order matches src/lib/packets.ts: followup section last.
@@ -231,11 +227,15 @@ async function handle(req: Request, rid: string): Promise<Response> {
   try {
     outcome = parseRecognitionResult(rawText);
   } catch (cause) {
-    return err(502, "Page reading produced an unreadable result. Your photo is saved — try again.", {
-      requestId: rid,
-      code: "parse_failed",
-      cause,
-    });
+    return err(
+      502,
+      "Page reading produced an unreadable result. Your photo is saved — try again.",
+      {
+        requestId: rid,
+        code: "parse_failed",
+        cause,
+      },
+    );
   }
 
   // --- 8. Record the provider cost (idempotent; free to the student) ---------

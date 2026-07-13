@@ -11,13 +11,7 @@
 import type { RunStatus } from "@/lib/workflows.functions";
 
 export type JourneyStageId =
-  | "research"
-  | "print"
-  | "paper"
-  | "return"
-  | "review"
-  | "refine"
-  | "finish";
+  "research" | "print" | "paper" | "return" | "review" | "refine" | "finish";
 
 export type StageState = "done" | "current" | "upcoming";
 
@@ -154,7 +148,14 @@ export function runStatusLabel(status: string): string {
 
 /** Kind-aware in-progress labels ("Gathering sources", not "running"). */
 export function runActivityLabel(kind: string, status: string): string {
-  const active = ["requested", "dispatching", "dispatch_unknown", "queued", "running", "awaiting_fetch"];
+  const active = [
+    "requested",
+    "dispatching",
+    "dispatch_unknown",
+    "queued",
+    "running",
+    "awaiting_fetch",
+  ];
   if (!active.includes(status)) return runStatusLabel(status);
   switch (kind) {
     case "research":

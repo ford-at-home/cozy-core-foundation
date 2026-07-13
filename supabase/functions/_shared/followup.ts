@@ -22,9 +22,7 @@ export function buildFollowupQuery(args: {
   questions: FollowupQuestion[];
   originalReport: string;
 }): string {
-  const list = args.questions
-    .map((q, i) => `${i + 1}. ${q.text.trim()}`)
-    .join("\n");
+  const list = args.questions.map((q, i) => `${i + 1}. ${q.text.trim()}`).join("\n");
   return `This is a FOLLOW-UP research pass. An initial deep-research report on the
 topic below already exists (included at the end). A student worked through
 that report critically and asked the specific questions listed here. Answer

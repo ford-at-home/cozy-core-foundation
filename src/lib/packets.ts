@@ -36,6 +36,8 @@ export type Packet = {
   user_id: string;
   version: number;
   status: "generated" | "reviewed";
+  followup_state: "open" | "skipped" | "researching" | "researched";
+  supersedes_packet_id: string | null;
   analysis: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
@@ -86,6 +88,17 @@ export async function getPacketByRunId(runId: string): Promise<Packet | null> {
   const { data, error } = await db.from("packets").select("*").eq("run_id", runId).maybeSingle();
   if (error) throw new Error(error.message);
   return (data as Packet) ?? null;
+}
+
+/** All packet versions for a project, newest version first. */
+export async function listPacketsByPieceId(pieceId: string): Promise<Packet[]> {
+  const { data, error } = await db
+    .from("packets")
+    .select("*")
+    .eq("piece_id", pieceId)
+    .order("version", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Packet[];
 }
 
 /**

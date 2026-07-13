@@ -78,9 +78,7 @@ export interface RecognitionContext {
 const PACKET_BODY_PROMPT_CAP = 60_000; // chars of printed body included as context
 
 export function buildRecognitionPrompt(ctx: RecognitionContext): string {
-  const questionList = ctx.questions
-    .map((q) => `Q${q.number}: ${q.prompt}`)
-    .join("\n");
+  const questionList = ctx.questions.map((q) => `Q${q.number}: ${q.prompt}`).join("\n");
   const profile = (ctx.handwritingProfile ?? "").trim();
   return `You are reading a photographed page of a printed research packet that a student has worked through by hand. The printed content is known to you (below); everything else on the page is the student's handwriting.
 
@@ -174,8 +172,7 @@ export function parseRecognitionResult(raw: string): RecognitionOutcome {
       if (confidence === null) continue;
       blocks.push({
         position: blocks.length + 1,
-        location:
-          typeof b.location === "string" && b.location.trim() ? b.location.trim() : null,
+        location: typeof b.location === "string" && b.location.trim() ? b.location.trim() : null,
         text: b.text.trim(),
         confidence,
         annotation_type: (ANNOTATION_TYPES as readonly string[]).includes(b.annotation_type)
@@ -217,7 +214,8 @@ export const QUALITY_PROBLEM_MESSAGES: Record<QualityProblem, string> = {
   too_dark: "the photo is too dark — move somewhere brighter",
   too_small: "the writing is too small to read — move the camera closer",
   multiple_pages: "more than one page is in the photo — photograph one page at a time",
-  not_a_packet_page: "this doesn't look like a packet page — check you photographed the right thing",
+  not_a_packet_page:
+    "this doesn't look like a packet page — check you photographed the right thing",
 };
 
 export function retakeMessage(problems: QualityProblem[]): string {

@@ -11,7 +11,9 @@ describe("segmentDictation", () => {
   });
 
   it("keeps an unreferenced transcript as one unplaced segment", () => {
-    const segs = segmentDictation("I mostly agreed with the findings but the second one felt thin.");
+    const segs = segmentDictation(
+      "I mostly agreed with the findings but the second one felt thin.",
+    );
     expect(segs).toHaveLength(1);
     expect(segs[0].target).toBeNull();
   });

@@ -186,16 +186,17 @@ function VerifyPage() {
         <>
           {verified && (
             <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm">
-              You confirmed this reading{ret.verified_at ? ` on ${new Date(ret.verified_at).toLocaleDateString()}` : ""}.
-              You can still make corrections and confirm again.
+              You confirmed this reading
+              {ret.verified_at ? ` on ${new Date(ret.verified_at).toLocaleDateString()}` : ""}. You
+              can still make corrections and confirm again.
             </div>
           )}
 
           {lowConfidenceCount > 0 && (
             <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
               {lowConfidenceCount} passage{lowConfidenceCount === 1 ? "" : "s"} marked{" "}
-              <span className="font-medium">Needs your check</span> — we weren't confident about
-              the handwriting there. Read those first.
+              <span className="font-medium">Needs your check</span> — we weren't confident about the
+              handwriting there. Read those first.
             </div>
           )}
 
@@ -440,9 +441,7 @@ function BlockRow({
         </div>
       ) : (
         <>
-          <p className="mt-1.5 leading-relaxed">
-            {correction?.corrected_text ?? block.text}
-          </p>
+          <p className="mt-1.5 leading-relaxed">{correction?.corrected_text ?? block.text}</p>
           {correction && (
             <p className="mt-1 text-xs text-muted-foreground line-through">{block.text}</p>
           )}

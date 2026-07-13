@@ -81,6 +81,33 @@ export async function getReturnByPacketId(packetId: string): Promise<PacketRetur
   return (data as PacketReturn) ?? null;
 }
 
+/** Returns across a project's packet versions (for the project hub). */
+export async function listReturnsForPackets(packetIds: string[]): Promise<PacketReturn[]> {
+  if (packetIds.length === 0) return [];
+  const { data, error } = await db.from("packet_returns").select("*").in("packet_id", packetIds);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PacketReturn[];
+}
+
+/** Whether any returned material (readable pages or dictation) exists. */
+export async function hasReturnedWork(returnIds: string[]): Promise<boolean> {
+  if (returnIds.length === 0) return false;
+  const [pages, segments] = await Promise.all([
+    db
+      .from("page_images")
+      .select("id", { count: "exact", head: true })
+      .in("return_id", returnIds)
+      .eq("status", "recognized"),
+    db
+      .from("dictation_segments")
+      .select("id", { count: "exact", head: true })
+      .in("return_id", returnIds),
+  ]);
+  if (pages.error) throw new Error(pages.error.message);
+  if (segments.error) throw new Error(segments.error.message);
+  return (pages.count ?? 0) > 0 || (segments.count ?? 0) > 0;
+}
+
 /** Open (or reuse) the packet's return. One return per packet. */
 export async function ensureReturn(packetId: string): Promise<PacketReturn> {
   const existing = await getReturnByPacketId(packetId);

@@ -196,9 +196,8 @@ export async function persistPacketResult(
       : null;
   const version =
     typeof packetMeta?.version === "number" && packetMeta.version > 1 ? packetMeta.version : 1;
-  const supersedes = typeof packetMeta?.supersedes_packet_id === "string"
-    ? packetMeta.supersedes_packet_id
-    : null;
+  const supersedes =
+    typeof packetMeta?.supersedes_packet_id === "string" ? packetMeta.supersedes_packet_id : null;
 
   const analysisRaw = fileFromResult(result, "analysis.json");
   const questionsRaw = fileFromResult(result, "questions.json");

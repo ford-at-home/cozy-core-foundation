@@ -131,82 +131,88 @@ function fakeAdmin() {
   return { admin, calls };
 }
 
-Deno.test("persistPacketResult writes version n+1 with supersedes and closes the loop", async () => {
-  const { admin, calls } = fakeAdmin();
-  await persistPacketResult(
-    admin,
-    {
-      id: "run-2",
-      user_id: "user-1",
-      piece_id: "piece-1",
-      input: { packet: { version: 2, supersedes_packet_id: "packet-v1-id" } },
-    },
-    {
-      channels: [
-        {
-          channel: "packet",
-          files: [
-            { name: "post.md", content: "# Revised" },
-            {
-              name: "analysis.json",
-              content: JSON.stringify({ claims: [{ id: "C1" }] }),
-            },
-            { name: "questions.json", content: JSON.stringify({ questions: [] }) },
-          ],
-        },
-      ],
-    },
-  );
+Deno.test(
+  "persistPacketResult writes version n+1 with supersedes and closes the loop",
+  async () => {
+    const { admin, calls } = fakeAdmin();
+    await persistPacketResult(
+      admin,
+      {
+        id: "run-2",
+        user_id: "user-1",
+        piece_id: "piece-1",
+        input: { packet: { version: 2, supersedes_packet_id: "packet-v1-id" } },
+      },
+      {
+        channels: [
+          {
+            channel: "packet",
+            files: [
+              { name: "post.md", content: "# Revised" },
+              {
+                name: "analysis.json",
+                content: JSON.stringify({ claims: [{ id: "C1" }] }),
+              },
+              { name: "questions.json", content: JSON.stringify({ questions: [] }) },
+            ],
+          },
+        ],
+      },
+    );
 
-  const upsert = calls.find((c) => c.table === "packets" && c.op === "upsert");
-  assert(upsert, "packet upsert expected");
-  const row = upsert!.payload as Record<string, unknown>;
-  assertEquals(row.version, 2);
-  assertEquals(row.supersedes_packet_id, "packet-v1-id");
+    const upsert = calls.find((c) => c.table === "packets" && c.op === "upsert");
+    assert(upsert, "packet upsert expected");
+    const row = upsert!.payload as Record<string, unknown>;
+    assertEquals(row.version, 2);
+    assertEquals(row.supersedes_packet_id, "packet-v1-id");
 
-  // The superseded packet's follow-up loop is closed out.
-  const stateUpdate = calls.find(
-    (c) =>
-      c.table === "packets" &&
-      c.op === "update" &&
-      (c.payload as Record<string, unknown>).followup_state === "researched",
-  );
-  assert(stateUpdate, "superseded packet must be marked researched");
-  const questionUpdate = calls.find(
-    (c) =>
-      c.table === "followup_questions" &&
-      c.op === "update" &&
-      (c.payload as Record<string, unknown>).status === "researched",
-  );
-  assert(questionUpdate, "approved followup questions must be marked researched");
-});
+    // The superseded packet's follow-up loop is closed out.
+    const stateUpdate = calls.find(
+      (c) =>
+        c.table === "packets" &&
+        c.op === "update" &&
+        (c.payload as Record<string, unknown>).followup_state === "researched",
+    );
+    assert(stateUpdate, "superseded packet must be marked researched");
+    const questionUpdate = calls.find(
+      (c) =>
+        c.table === "followup_questions" &&
+        c.op === "update" &&
+        (c.payload as Record<string, unknown>).status === "researched",
+    );
+    assert(questionUpdate, "approved followup questions must be marked researched");
+  },
+);
 
-Deno.test("persistPacketResult without followup metadata stays version 1 (unchanged behavior)", async () => {
-  const { admin, calls } = fakeAdmin();
-  await persistPacketResult(
-    admin,
-    { id: "run-1", user_id: "user-1", piece_id: "piece-1" },
-    {
-      channels: [
-        {
-          channel: "packet",
-          files: [
-            { name: "post.md", content: "# Packet" },
-            { name: "analysis.json", content: JSON.stringify({ claims: [{ id: "C1" }] }) },
-            { name: "questions.json", content: JSON.stringify({ questions: [] }) },
-          ],
-        },
-      ],
-    },
-  );
-  const upsert = calls.find((c) => c.table === "packets" && c.op === "upsert");
-  const row = upsert!.payload as Record<string, unknown>;
-  assertEquals(row.version, 1);
-  assertEquals(row.supersedes_packet_id, null);
-  assert(
-    !calls.some(
-      (c) => c.op === "update" && (c.payload as Record<string, unknown>).followup_state,
-    ),
-    "no follow-up state updates for a v1 packet",
-  );
-});
+Deno.test(
+  "persistPacketResult without followup metadata stays version 1 (unchanged behavior)",
+  async () => {
+    const { admin, calls } = fakeAdmin();
+    await persistPacketResult(
+      admin,
+      { id: "run-1", user_id: "user-1", piece_id: "piece-1" },
+      {
+        channels: [
+          {
+            channel: "packet",
+            files: [
+              { name: "post.md", content: "# Packet" },
+              { name: "analysis.json", content: JSON.stringify({ claims: [{ id: "C1" }] }) },
+              { name: "questions.json", content: JSON.stringify({ questions: [] }) },
+            ],
+          },
+        ],
+      },
+    );
+    const upsert = calls.find((c) => c.table === "packets" && c.op === "upsert");
+    const row = upsert!.payload as Record<string, unknown>;
+    assertEquals(row.version, 1);
+    assertEquals(row.supersedes_packet_id, null);
+    assert(
+      !calls.some(
+        (c) => c.op === "update" && (c.payload as Record<string, unknown>).followup_state,
+      ),
+      "no follow-up state updates for a v1 packet",
+    );
+  },
+);

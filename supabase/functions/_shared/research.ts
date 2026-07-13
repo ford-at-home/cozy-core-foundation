@@ -104,7 +104,9 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
   // of a fresh one. Everything the revision needs was stored in the run's
   // input at dispatch (packet-action), so a crash-resweep stays deterministic.
   const followup =
-    run.kind === "followup_research" && run.input?.followup && typeof run.input.followup === "object"
+    run.kind === "followup_research" &&
+    run.input?.followup &&
+    typeof run.input.followup === "object"
       ? (run.input.followup as {
           packet_id: string;
           version: number;

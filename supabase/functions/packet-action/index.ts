@@ -169,7 +169,11 @@ async function refineFollowups(admin: any, rid: string, packet: any): Promise<Re
       idempotencyKey: `lovable:refine:${packet.id}:${textHash}`,
       inputTokens: estimateTokens(prompt),
       outputTokens: estimateTokens(typeof rawText === "string" ? rawText : ""),
-      metadata: { subtype: "followup_refinement", packet_id: packet.id, questions: questions.length },
+      metadata: {
+        subtype: "followup_refinement",
+        packet_id: packet.id,
+        questions: questions.length,
+      },
     });
   } catch (recErr) {
     logEvent(FN, "warn", {
