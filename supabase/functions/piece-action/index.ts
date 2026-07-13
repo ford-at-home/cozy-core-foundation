@@ -124,11 +124,21 @@ async function handle(req: Request, rid: string): Promise<Response> {
   // Ownership check (service-role client bypasses RLS, so enforce explicitly).
   const { data: piece } = await admin
     .from("pieces")
-    .select("id, user_id, slug, stage")
+    .select("id, user_id, slug, stage, workflow")
     .eq("id", pieceId)
     .maybeSingle();
   if (!piece || piece.user_id !== userId) {
     return err(404, "Piece not found", { requestId: rid, code: "piece_not_found" });
+  }
+
+  // resynth/ready/revise are long-form actions; research packets have their
+  // own lifecycle (review → print → return, docs/research-workflow/). The UI
+  // never offers these here — this guards direct API calls.
+  if (piece.workflow === "research_packet") {
+    return err(409, "This action does not apply to research packets.", {
+      requestId: rid,
+      code: "wrong_workflow",
+    });
   }
 
   const idempotencyKey = `${action}:${userId}:${requestId}`;
