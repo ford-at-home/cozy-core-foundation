@@ -29,3 +29,25 @@ not rewrite another agent's entry. Newest entries at the bottom.
   hard-coded UI estimates), cost tracking (session-less runs drop cost
   rows; gateway pricing rows probably unseeded), and demo readiness
   (CI red on `main` from pre-existing Prettier errors).
+
+### 2026-07-13 — C1–C3, C7 — Cursor
+
+- Cursor plan phases executed so far: **C1** (CI unbroken — Prettier fixes,
+  commit `63a1a24`), **C2** (pipeline marker migration + WI-0006, commit
+  `8dc4c20`), **C3** (five defensive backend fixes with Deno tests, commit
+  `4fbd571`, deploy verification pending as WI-0007), **C7**
+  (recovery/progress UX, commits `b96d11a`/`c7c5a72`: plain-language status
+  labels, run-page technical-details disclosure, shared `interpretRunError`
+  so raw provider bodies never render, server-persisted follow-up skip via
+  `prepare-follow-up-questions` piece events, "Return your work" CTA on the
+  print page, retry on packet-review load errors, numeric duration claims
+  replaced with elapsed timers).
+- Lovable's interim WI-0005 report: L1 (auth hardening) and L4 (confirming
+  queries) done; L2 blocked on an email prefix/domain from the owner;
+  L3/L5/L6 unblocked now that C2 and C3 are pushed; L7 waits on the owner's
+  certification runs.
+- Still blocked on the Lovable side before Cursor can proceed: **C4**
+  (schema reconciliation) needs the WI-0006/L3 migration-pipeline answer;
+  **C6** needs L2 test accounts + L5; **C8** needs L7 certification data.
+  Next unblocked Cursor phase: **C5** (deterministic Edge Function handler
+  tests).

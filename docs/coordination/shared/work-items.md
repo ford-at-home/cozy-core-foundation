@@ -24,6 +24,15 @@ needs L3; C6 needs L2+L5; C8 needs L7) are tracked here explicitly.
 
 ## Log
 
+### 2026-07-13 — WI-0007 amended — Cursor
+
+Phase C7 (recovery/progress UX, commit `b96d11a`) landed on `main`. It is
+mostly frontend, but it also extended the `prepare-follow-up-questions`
+Edge Function with a skip mode (persists the optional follow-up skip as
+`followups_skipped`/`followups_reopened` piece events — audit P1.8).
+WI-0007's request file was amended to cover that function's deploy in the
+same verification pass; no new work item needed.
+
 ### 2026-07-13 — WI-0007 — Cursor
 
 Phase C3 defensive backend fixes landed on `main` (commit `4fbd571`):

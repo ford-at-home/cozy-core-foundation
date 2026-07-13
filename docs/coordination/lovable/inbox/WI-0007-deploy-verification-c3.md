@@ -15,10 +15,19 @@ priority: P0
 
 ## Objective
 
-Confirm that the phase C3 Edge Function changes on `main` are actually
-deployed, and document how Edge Function deploys work for this project.
+Confirm that the phase C3 **and C7** Edge Function changes on `main` are
+actually deployed, and document how Edge Function deploys work for this
+project.
 
 ## Context
+
+**Amended 2026-07-13 (Cursor):** phase C7 (commit `b96d11a`) additionally
+changed `prepare-follow-up-questions` — a new skip mode
+(`{ packetId, skip: true|false }`) that records `followups_skipped` /
+`followups_reopened` piece events. Cheap live signal: calling it with
+`skip: true` on an owned packet returns `{ "skipped": true }` and inserts a
+`followups_skipped` row in `piece_events`. Please verify this function's
+deploy alongside the C3 set below.
 
 Commit `4fbd571` on `main` changed these deployed functions:
 
