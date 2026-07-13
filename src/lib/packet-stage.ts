@@ -145,6 +145,7 @@ export type StageRun = {
   kind: string;
   status: string;
   created_at: string;
+  error?: string | null;
 };
 
 export type StagePacket = {
