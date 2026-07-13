@@ -6,7 +6,19 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", ".output", ".vinxi"] },
+  {
+    ignores: [
+      "dist",
+      ".output",
+      ".vinxi",
+      // Generated files (AGENTS.md rule 10: never hand-edit). Lovable tooling
+      // regenerates them without running this repo's prettier, so linting
+      // them fails on formatting we are not allowed to fix.
+      "src/routeTree.gen.ts",
+      "src/integrations/supabase/types.ts",
+      "src/integrations/lovable/**",
+    ],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
