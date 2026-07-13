@@ -1,6 +1,7 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { brand } from "@/config/brand";
 import { PageMark } from "@/components/PageMark";
+import { AI_WILL_DO, AI_WONT_DO, HOW_IT_WORKS } from "@/config/workflow-copy";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -9,36 +10,8 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const HOW_IT_WORKS: { step: string; body: string }[] = [
-  {
-    step: "Research",
-    body: "Bring a question, an idea, sources, or a rough dump of notes. Use AI to gather and organize the material — or let it research the topic for you, with sources cited.",
-  },
-  {
-    step: "Prepare",
-    body: "AI turns the research into a structured working draft, written in your voice and built for reading and annotation.",
-  },
-  {
-    step: "Print",
-    body: "Generate a clean hardcopy with wide margins and small anchors on every block, so any part of the page is easy to point at later.",
-  },
-  {
-    step: "Think by hand",
-    body: "Read the pages wherever you think best. Underline, cross out, star, question, and write direction in the margins.",
-  },
-  {
-    step: "Return your marks",
-    body: "Bring the annotations back with a simple shorthand — dictate them or type them in. “S4P3: tighten.” “Mark three: cut.” The system knows what you mean.",
-  },
-  {
-    step: "Refine",
-    body: "The system reconciles the draft, the research, and your annotations into the next version.",
-  },
-  {
-    step: "Keep the result",
-    body: "A finished artifact that reflects your reading, your judgment, and your voice — yours to publish wherever it's going.",
-  },
-];
+// HOW_IT_WORKS lives in src/config/workflow-copy.ts so /new, dashboard,
+// and the project hub all tell the same six-verb story.
 
 const PAPER_QUALITIES: string[] = [
   "Finite and visible",
@@ -69,6 +42,7 @@ function Index() {
         <Hero />
         <Problem />
         <HowItWorks />
+        <AICompact />
         <FirstProduct />
         <WhyPaper />
         <Authorship />
@@ -146,12 +120,12 @@ function Hero() {
           {brand.company.line}
         </h1>
         <p className="mx-auto max-w-xl text-base leading-relaxed text-muted-foreground">
-          Research, draft, and organize with AI. Then print your work, step away from the screen,
-          and continue by hand.
+          Research a subject with AI. Print a working hardcopy. Think and mark it up by hand.
+          Return your notes. Finish in Word, slides, or a merged draft — in your voice.
         </p>
         <div className="flex flex-col items-center justify-center gap-3 pt-2 sm:flex-row">
           <Link to="/auth" className={`${primaryCta} w-full sm:w-auto`}>
-            Start a working draft
+            Start a project
           </Link>
           <a href="#how-it-works" className={`${secondaryCta} w-full sm:w-auto`}>
             See how it works
@@ -274,11 +248,12 @@ function HowItWorks() {
         <div className="space-y-3">
           <Kicker>How it works</Kicker>
           <h2 className="font-serif text-2xl tracking-tight sm:text-4xl">
-            Prepare. Print. Think. Mark. Return.
+            Explore. Print. Think. Return. Refine. Finish.
           </h2>
           <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Not a one-click process — a collaboration loop. The AI does the carrying; you do the
-            thinking.
+            Not a one-click process — a collaboration loop. The same six verbs whether you're
+            drafting a piece in your voice or studying a subject and writing from it. The AI does
+            the carrying; you do the thinking.
           </p>
         </div>
         <ol className="space-y-0">
