@@ -32,6 +32,12 @@ import { recordInference, cursorInferenceUsage } from "../_shared/usage.ts";
 import { releaseRunCredits, settleRunCredits, sweepStaleReservations } from "../_shared/credits.ts";
 import { reconcilePurchases } from "../_shared/stripe-reconcile.ts";
 import { persistPacketResult } from "../_shared/packet.ts";
+import {
+  persistFinalArtifactResult,
+  persistFollowUpResult,
+} from "../_shared/followup-final.ts";
+import { advanceStage, logPieceEvent } from "../_shared/workflow.ts";
+import { workflowStageForCompletedKind, workflowStageForFailedKind } from "../_shared/complete.ts";
 
 const FN = "reconcile-runs";
 
@@ -217,6 +223,10 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
       .eq("id", run.id);
     if (update.status === "failed") {
       await releaseRunCredits(admin, run, "agent reported failure", "reconciler");
+      const failStage = workflowStageForFailedKind(run.kind);
+      if (failStage && run.piece_id) {
+        await advanceStage(admin, { pieceId: run.piece_id, to: failStage });
+      }
     }
   }
 
@@ -288,6 +298,10 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
       // (idempotent); a throw keeps the run in awaiting_fetch for re-sweep.
       if (run.kind === "packet") {
         await persistPacketResult(admin, run, result);
+      } else if (run.kind === "followup_research") {
+        await persistFollowUpResult(admin, run, result);
+      } else if (run.kind === "final_docx" || run.kind === "final_pptx") {
+        await persistFinalArtifactResult(admin, run, piece?.slug ?? "piece");
       }
       await admin
         .from("agent_runs")
@@ -305,6 +319,16 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
             updated_at: new Date().toISOString(),
           })
           .eq("id", run.piece_id);
+        const nextStage = workflowStageForCompletedKind(run.kind);
+        if (nextStage) {
+          await advanceStage(admin, { pieceId: run.piece_id, to: nextStage });
+          await logPieceEvent(admin, {
+            pieceId: run.piece_id,
+            userId: run.user_id,
+            event: `${run.kind}_completed`,
+            metadata: { runId: run.id },
+          });
+        }
       }
     }
   }
