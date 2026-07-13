@@ -20,3 +20,12 @@ verify_jwt = false
 
 [functions.create-checkout-session]
 verify_jwt = true
+
+[functions.packet-return]
+verify_jwt = true
+
+[functions.packet-action]
+verify_jwt = true
+
+[functions.final-artifacts]
+verify_jwt = true
