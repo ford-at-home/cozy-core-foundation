@@ -78,8 +78,16 @@ function escapeHtml(value: string): string {
 function pageFurnitureCss(title: string | null, docRef: string | null): string {
   // The header shares the top strip with the document ref; a very long title
   // would collide with it (nowrap keeps the strip to one line), so trim to a
-  // budget that fits the strip at 8.5pt.
-  const headerTitle = title && title.length > 44 ? `${title.slice(0, 43).trimEnd()}…` : title;
+  // budget that fits typical titles at 8.5pt. (Character-count budgets are
+  // approximate — a pathological all-wide-glyph title can still reach the
+  // ref, which is acceptable: the strip stays legible, nothing clips.)
+  // Split on code points, not UTF-16 units, so an astral character at the
+  // cut never leaves a lone surrogate before the ellipsis. Note the header
+  // deliberately centers on the full top strip (no text-column padding like
+  // the folio has): padding would push long titles into the @top-right ref.
+  const chars = title ? [...title] : [];
+  const headerTitle =
+    title && chars.length > 44 ? `${chars.slice(0, 43).join("").trimEnd()}…` : title;
   return [
     "@page {",
     "  @top-center {",

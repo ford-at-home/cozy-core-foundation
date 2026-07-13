@@ -109,7 +109,7 @@ Anything that requires more than one or two words of writing belongs in voice, n
 | **~**  | Rework / rephrase          | Yes (how)       |
 | **★**  | Expand here                | Yes (with what) |
 | **→**  | Move                       | Yes (where to)  |
-| **?**  | Weak / challenge / suspect | Optional (why)  |
+| **?**  | Weak / challenge / unsure  | Optional (why)  |
 
 Write symbols in the margin pointing at the affected text, or directly on it (e.g. strike-through for ✗).
 

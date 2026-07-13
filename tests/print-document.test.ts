@@ -96,13 +96,18 @@ describe("buildPrintDocument", () => {
     expect(doc).not.toContain("@top-right");
   });
 
-  it("trims very long titles in the running header so the top strip cannot collide", () => {
+  it("trims very long titles in the running header to keep clear of the doc ref", () => {
     const longTitle = "# " + "An Extremely Long Title About Orphaned Tools And Their Costs";
     const built = buildPrintDocument(`${longTitle}\n\nBody.`);
     expect(built).toContain("…");
     expect(built).not.toContain(
       'content: "An Extremely Long Title About Orphaned Tools And Their Costs"',
     );
+    // Truncation splits on code points: an astral char at the cut must not
+    // leave a lone surrogate in the header.
+    const astral = "# " + "𝔄".repeat(50);
+    const builtAstral = buildPrintDocument(`${astral}\n\nBody.`);
+    expect(builtAstral).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
   });
 
   it("uses an empty running header when the document has no heading", () => {
