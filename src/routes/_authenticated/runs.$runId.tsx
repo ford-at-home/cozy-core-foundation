@@ -374,6 +374,7 @@ function RunDetailPage() {
 // Which actions make sense depends on what this run produced.
 function ActionsPanel({ run }: { run: AgentRun }) {
   const router = useRouter();
+  const { fromRevision } = Route.useSearch();
   const act = useServerFn(runPieceAction);
   const [feedback, setFeedback] = useState("");
   const [transcript, setTranscript] = useState("");
@@ -384,6 +385,44 @@ function ActionsPanel({ run }: { run: AgentRun }) {
 
   const isProposal = run.kind === "proposal" || run.kind === "resynth";
   const isDraft = run.kind === "draft";
+
+  // Dictation: transcribed text is appended to the annotation transcript
+  // (never overwritten) so the user can dictate in passes and still hand-edit.
+  const {
+    recording,
+    transcribing,
+    error: dictationError,
+    lastBlob,
+    start: startDictation,
+    stop: stopDictation,
+    retry: retryDictation,
+  } = useDictation((text) => {
+    setTranscript((prev) => (prev.trim() ? `${prev.replace(/\s+$/, "")}\n${text}` : text));
+  });
+
+  // Elapsed timer while recording, purely presentational.
+  const [recordingSecs, setRecordingSecs] = useState(0);
+  useEffect(() => {
+    if (!recording) {
+      setRecordingSecs(0);
+      return;
+    }
+    setRecordingSecs(0);
+    const started = Date.now();
+    const t = window.setInterval(() => {
+      setRecordingSecs(Math.floor((Date.now() - started) / 1000));
+    }, 500);
+    return () => window.clearInterval(t);
+  }, [recording]);
+
+  // "Not quite" CTA on a revision run navigates back here with
+  // ?fromRevision=<runId>. Scroll to the dictation panel and show a hint.
+  const dictationPanelRef = useRef<HTMLDivElement | null>(null);
+  const fromRevisionHint = isDraft && Boolean(fromRevision);
+  useEffect(() => {
+    if (!isDraft || !fromRevision) return;
+    dictationPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [isDraft, fromRevision]);
 
   async function dispatch(action: PieceAction) {
     if (!run.piece_id || pending) return;
