@@ -631,13 +631,19 @@ function ActionsPanel({ run }: { run: AgentRun }) {
 }
 
 function RevisionApprovalPanel({ pieceId, runId }: { pieceId: string; runId: string }) {
+  const router = useRouter();
   const [prUrl, setPrUrl] = useState<string | null>(null);
   const [mergedAt, setMergedAt] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const approve = useServerFn(approveRevisionPr);
+  const checkStatus = useServerFn(checkRevisionPrStatus);
 
+  // Initial read + realtime subscription: the merge stamp lands here either
+  // via the Approve button or via the passive status check that detects an
+  // external merge on github.com.
   useEffect(() => {
     let cancelled = false;
     supabase
@@ -647,15 +653,80 @@ function RevisionApprovalPanel({ pieceId, runId }: { pieceId: string; runId: str
       .maybeSingle()
       .then(({ data }) => {
         if (cancelled || !data) return;
-        setPrUrl((data as { final_pr_url: string | null }).final_pr_url ?? null);
-        setMergedAt(
-          (data as { final_pr_merged_at: string | null }).final_pr_merged_at ?? null,
-        );
+        const row = data as {
+          final_pr_url: string | null;
+          final_pr_merged_at: string | null;
+        };
+        setPrUrl((prev) => prev ?? row.final_pr_url);
+        setMergedAt((prev) => prev ?? row.final_pr_merged_at);
       });
+
+    const channel = supabase
+      .channel(`piece-${pieceId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "pieces", filter: `id=eq.${pieceId}` },
+        (payload) => {
+          if (cancelled) return;
+          const row = payload.new as {
+            final_pr_url: string | null;
+            final_pr_merged_at: string | null;
+          };
+          if (row.final_pr_url) setPrUrl(row.final_pr_url);
+          if (row.final_pr_merged_at) setMergedAt(row.final_pr_merged_at);
+        },
+      )
+      .subscribe();
+
     return () => {
       cancelled = true;
+      supabase.removeChannel(channel);
     };
   }, [pieceId]);
+
+  // Passive status check hits GitHub for a merge stamp; runs on mount, on
+  // tab refocus, and behind an explicit "Refresh status" link. Never fires
+  // once we already have a merge timestamp.
+  async function pollStatus(explicit: boolean) {
+    if (mergedAt || pending) return;
+    if (explicit) {
+      setChecking(true);
+      setError(null);
+      setNote(null);
+    }
+    try {
+      const res = await checkStatus({ data: { runId } });
+      if (res.prUrl) setPrUrl(res.prUrl);
+      if (res.alreadyMerged && res.mergedAt) {
+        setMergedAt(res.mergedAt);
+        setNote("The pull request was merged on GitHub.");
+      } else if (explicit) {
+        setNote("Not merged yet.");
+      }
+    } catch (err) {
+      if (explicit) setError(err instanceof Error ? err.message : "Status check failed");
+    } finally {
+      if (explicit) setChecking(false);
+    }
+  }
+
+  useEffect(() => {
+    if (mergedAt) return;
+    let cancelled = false;
+    const t = window.setTimeout(() => {
+      if (!cancelled) void pollStatus(false);
+    }, 400);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void pollStatus(false);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runId, mergedAt]);
 
   async function onApprove() {
     if (pending) return;
@@ -679,23 +750,52 @@ function RevisionApprovalPanel({ pieceId, runId }: { pieceId: string; runId: str
     }
   }
 
+  // Find the piece's most recent completed draft run — its page hosts the
+  // dictation panel that drives `revise`. Falls back to this revision if
+  // there is none for some reason.
+  async function onNotQuite() {
+    const { data } = await supabase
+      .from("agent_runs")
+      .select("id")
+      .eq("piece_id", pieceId)
+      .eq("kind", "draft")
+      .eq("status", "completed")
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const targetRunId = (data as { id?: string } | null)?.id ?? runId;
+    router.navigate({
+      to: "/runs/$runId",
+      params: { runId: targetRunId },
+      search: { fromRevision: runId },
+    });
+  }
+
   if (mergedAt) {
     return (
-      <div className="space-y-2 text-sm">
+      <div className="space-y-3 text-sm">
         <p className="text-muted-foreground">
           Approved and merged {new Date(mergedAt).toLocaleString()}. The final version is on the
           main branch — copy the piece from the tabs above wherever it's going.
         </p>
-        {prUrl && (
-          <a
-            href={prUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex text-xs text-muted-foreground underline hover:text-foreground"
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            to="/new"
+            className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60"
           >
-            View merged PR on GitHub ↗
-          </a>
-        )}
+            Start a new piece →
+          </Link>
+          {prUrl && (
+            <a
+              href={prUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-muted-foreground underline hover:text-foreground"
+            >
+              View merged PR on GitHub ↗
+            </a>
+          )}
+        </div>
       </div>
     );
   }
@@ -703,8 +803,8 @@ function RevisionApprovalPanel({ pieceId, runId }: { pieceId: string; runId: str
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Final version produced. Approving squash-merges the pull request into <code>main</code>{" "}
-        and marks this piece as shipped.
+        Final version produced. Approve to squash-merge the pull request into <code>main</code>,
+        or send it back and dictate another pass over the marked-up printout.
       </p>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <button
@@ -715,16 +815,41 @@ function RevisionApprovalPanel({ pieceId, runId }: { pieceId: string; runId: str
         >
           {pending ? "Merging…" : "Approve & merge"}
         </button>
+        <button
+          type="button"
+          onClick={onNotQuite}
+          disabled={pending}
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border bg-background px-5 text-sm font-medium text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
+        >
+          Not quite — mark up & re-dictate
+        </button>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <Link
+          to="/print/$runId"
+          params={{ runId }}
+          className="underline hover:text-foreground"
+        >
+          Print this revision
+        </Link>
         {prUrl && (
           <a
             href={prUrl}
             target="_blank"
             rel="noreferrer"
-            className="text-xs text-muted-foreground underline hover:text-foreground"
+            className="underline hover:text-foreground"
           >
             View PR on GitHub ↗
           </a>
         )}
+        <button
+          type="button"
+          onClick={() => void pollStatus(true)}
+          disabled={checking}
+          className="underline hover:text-foreground disabled:opacity-50"
+        >
+          {checking ? "Checking…" : "Refresh status"}
+        </button>
       </div>
       {note && <p className="text-xs text-muted-foreground">{note}</p>}
       {error && (
@@ -734,6 +859,12 @@ function RevisionApprovalPanel({ pieceId, runId }: { pieceId: string; runId: str
       )}
     </div>
   );
+}
+
+function formatSecs(n: number): string {
+  const m = Math.floor(n / 60);
+  const s = n % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 /** A research run that will chain into a packet run (docs/research-workflow/). */
