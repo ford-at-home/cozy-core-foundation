@@ -100,7 +100,9 @@ describe("buildPrintDocument", () => {
     const longTitle = "# " + "An Extremely Long Title About Orphaned Tools And Their Costs";
     const built = buildPrintDocument(`${longTitle}\n\nBody.`);
     expect(built).toContain("…");
-    expect(built).not.toContain('content: "An Extremely Long Title About Orphaned Tools And Their Costs"');
+    expect(built).not.toContain(
+      'content: "An Extremely Long Title About Orphaned Tools And Their Costs"',
+    );
   });
 
   it("uses an empty running header when the document has no heading", () => {
