@@ -2,6 +2,12 @@
 // GitHub, then stamp `pieces.final_pr_merged_at` so the UI can show the
 // piece as shipped. Idempotent: a PR that's already merged returns ok.
 //
+// Two modes on the same endpoint:
+//   • default (mode omitted)     — merge the PR (PUT /merge).
+//   • { mode: "status" }         — read-only: check GitHub for a merge and
+//                                  stamp `final_pr_merged_at` if the PR is
+//                                  already merged. Never issues the merge.
+//
 // Auth: JWT-authenticated caller must own the piece. Ownership is checked
 // on the service-role client (RLS bypassed here by design).
 // GitHub auth: fine-grained PAT stored as GITHUB_TOKEN (Contents + Pull
@@ -64,6 +70,7 @@ Deno.serve(
     const { userId, admin } = await authenticate(req);
     const body = await req.json().catch(() => ({}));
     const runId = typeof body?.runId === "string" ? body.runId : "";
+    const statusOnly = body?.mode === "status";
     if (!runId) return e(FN, 400, "runId required", { requestId: rid, code: "invalid_input" });
 
     const token = Deno.env.get("GITHUB_TOKEN")?.trim();
@@ -111,15 +118,23 @@ Deno.serve(
         prNumber = found.number;
         prUrl = found.html_url || prUrl;
         if (found.merged) {
+          const mergedAt = new Date().toISOString();
           await admin
             .from("pieces")
             .update({
               final_pr_url: prUrl,
-              final_pr_merged_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
+              final_pr_merged_at: mergedAt,
+              stage: "finalized",
+              updated_at: mergedAt,
             })
             .eq("id", piece.id);
-          return j({ ok: true, alreadyMerged: true, prUrl }, 200, rid);
+          await logPieceEvent(admin, {
+            pieceId: piece.id,
+            userId,
+            event: "revision_pr_merged",
+            metadata: { runId, prNumber, prUrl, detectedVia: "status_check" },
+          });
+          return j({ ok: true, alreadyMerged: true, prUrl, mergedAt }, 200, rid);
         }
       }
     }
@@ -128,6 +143,44 @@ Deno.serve(
         requestId: rid,
         code: "pr_not_found",
       });
+
+    // Status-only mode: check the PR directly (covers the case where we
+    // already knew the PR number and skipped the branch lookup above).
+    if (statusOnly) {
+      const { owner, repo } = repoOwnerName();
+      const prRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`, {
+        headers: ghHeaders(token),
+      });
+      if (!prRes.ok) {
+        return j({ ok: true, alreadyMerged: false, prUrl }, 200, rid);
+      }
+      const prJson = (await prRes.json().catch(() => ({}))) as {
+        merged?: boolean;
+        merged_at?: string | null;
+        html_url?: string;
+      };
+      const nextUrl = prJson.html_url || prUrl;
+      if (prJson.merged) {
+        const mergedAt = prJson.merged_at ?? new Date().toISOString();
+        await admin
+          .from("pieces")
+          .update({
+            final_pr_url: nextUrl,
+            final_pr_merged_at: mergedAt,
+            stage: "finalized",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", piece.id);
+        await logPieceEvent(admin, {
+          pieceId: piece.id,
+          userId,
+          event: "revision_pr_merged",
+          metadata: { runId, prNumber, prUrl: nextUrl, detectedVia: "status_check" },
+        });
+        return j({ ok: true, alreadyMerged: true, prUrl: nextUrl, prNumber, mergedAt }, 200, rid);
+      }
+      return j({ ok: true, alreadyMerged: false, prUrl: nextUrl, prNumber }, 200, rid);
+    }
 
     const { owner, repo } = repoOwnerName();
     const mergeRes = await fetch(

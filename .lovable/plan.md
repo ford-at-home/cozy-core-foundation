@@ -1,82 +1,82 @@
-## Scope
 
-Build the backend foundations for research-workflow Phases 2–8 (return + recognition, follow-up research, final Word/PPTX, courses + professor role). Phase 1 (packet generation) stays as-is. No substantive UI changes; existing Edge Functions untouched except for tiny compatibility hooks. All work lands as additive migrations and new Edge Functions.
+## Reframed
 
-Risk is high (large surface). Mitigations: strict phase ordering; every phase ships with its own tests before the next starts; every new table gets RLS + GRANTs in the same migration; every new Edge Function is deploy-idle (no cron) until Phase 8; no client-writable workflow-state columns.
+The dictation-driven annotation return **is** the input to `revise`. Today that input is a plain textarea on the draft-run page. The plan is to make it a real capture flow, once, before the revision run kicks off. The revision panel's job stays narrow: approve, detect external merges, and if the revision is off — go back and dictate more.
 
-## Phase A — Audit & capability matrix (no code)
+## The intended loop (make it visible in copy and UI)
 
-Produce `docs/research-workflow/BACKEND-CAPABILITY-MATRIX.md` listing every workflow capability × {complete, partial, schema-only, missing, contradictory}. Derived from current migrations, `docs/ARCHITECTURE.md`, `docs/BILLING.md`, and existing functions in `supabase/functions/`. This is the source of truth for what the later phases actually build vs. reuse.
+1. Draft run completes → **Print draft** (already works).
+2. Mark up on paper.
+3. **Dictate the markup** into the draft-run's revise panel → Revise (1 credit) → revision PR.
+4. Revision run completes → Approve & merge, or return to step 3 with another dictation pass.
+5. Merged → piece is finalized.
 
-## Phase B — Workflow state model
+No new run kinds, no schema changes. `revise` accepts the transcript in its existing `feedback` field.
 
-Add authoritative `workflow_stage` to `pieces` (enum extended over the packet flow's current `workflow` column, or a new `workflow_stage` column; decision recorded in the matrix). Ship as a Postgres enum + validation trigger enforcing allowed transitions server-side. Client `UPDATE` on the column stays revoked; only SECURITY DEFINER helpers or Edge Functions advance it. Reuses the existing `agent_runs` state machine unchanged.
+## Plan
 
-Transitions covered: draft → initial_research_* → packet_* → awaiting_student_return → student_return_received → recognition_running → responses_need_review → responses_verified → follow_up_* → final_document_* → presentation_* → complete / failed.
+### 1. Draft-run: dictation as the primary annotation input
 
-## Phase C — Courses, assignments, professor role
+Edit `ActionsPanel` in `src/routes/_authenticated/runs.$runId.tsx`, the `isDraft` branch (lines 455–490). Reuse `useDictation` from `src/hooks/use-dictation.ts` exactly as the profile page does — it already handles mic permissions, WAV encoding, `/api/transcribe`, retry, and error copy.
 
-Migration adds:
-- `app_role` enum extended with `professor` (keeps existing `has_role` pattern; no role columns on profiles).
-- `courses`, `assignments`, `enrollments` tables with RLS: students see rows where they're enrolled; professors see rows they own; admins full.
-- Nullable `assignment_id` on `pieces` for optional coursework linkage.
+- Add a **Dictate** button above the textarea:
+  - Idle: "🎙 Dictate annotations"
+  - Recording: "■ Stop (0:12)" with elapsed timer.
+  - Transcribing: "Transcribing…" (disabled).
+  - On success, **append** the returned text to `transcript` (with a leading newline if the box isn't empty), never overwrite.
+  - Show `useDictation`'s `error` + Retry inline; do not eat errors.
+- Keep the textarea editable — the user often cleans up "S2P1" anchor callouts by hand after dictating.
+- Update the helper copy:
+  *"Print this draft, mark it up on paper, then dictate what you wrote — anchors like 'S2P1' and marks like 'mark three: cut'. Revise reconciles them into the final version."*
+- Optional (nice): store `lastBlob` reference so the same audio can be re-transcribed via Retry without re-recording — `useDictation` already exposes this, just wire the button.
 
-## Phase D — Return & recognition (Phase 2 in the workflow docs)
+Server-side: **no changes.** `piece-action`'s `revise` branch already reads `feedback`, builds `buildRevisionPrompt`, and dispatches. The transcript arrives at the agent identically whether typed or dictated.
 
-Migrations for `packet_returns`, `page_images`, `recognized_blocks`, `dictation_segments`, `verification_corrections`, `handwriting_profiles`. Private storage bucket `packet-returns` (user-scoped path `user_id/return_id/page_n.jpg`), plus `dictation-audio` bucket. Storage RLS keyed on path prefix = `auth.uid()`.
+### 2. Revision-run panel: approve, or send it back to be re-dictated
 
-New Edge Functions (all JWT + ownership-checked, idempotent by `request_id`):
-- `create-student-return-upload` — creates `packet_returns` row, returns signed upload URLs.
-- `analyze-returned-page` — orchestrates image-quality + handwriting extraction via Lovable AI Gateway (Gemini multimodal); writes `recognized_blocks`. Not billable.
-- `submit-dictation` — persists dictation segment, calls existing `/api/transcribe`; not billable.
-- `verify-student-responses` — writes `verification_corrections`; enforces `verified` state distinct from raw recognition.
+Rewrite `RevisionApprovalPanel` (lines 516–620) so it has three states:
 
-## Phase E — Follow-up research (Phase 5)
+**a. Not yet merged** (default)
+```
+Final version produced.
+[ Approve & merge ]        [ Not quite — mark up & re-dictate ]
 
-Migration adds `followup_questions` (packet_id, position 1–3 with UNIQUE constraint, student_text, suggested_text, approved_text, status). No overwrite of original questions.
+View PR on GitHub ↗ · Refresh status
+```
+- **Approve & merge** — unchanged; calls `approveRevisionPr`.
+- **Not quite — mark up & re-dictate** — links to `/print/$runId` (this revision) and then navigates back to the *draft* run's revise panel with a small banner: *"Dictate your annotations on this revision to produce the next version."* Simplest wiring: the button goes to the draft run (found by looking up the piece's most recent `kind='draft'` completed run) with `?fromRevision=<runId>`; the draft page reads that param and scrolls to the dictation panel.
+  - Alternative if you'd rather keep the input attached to the revision: let `piece-action`'s `revise` accept a prior-kind of `revision` (spot-check confirms it already does — no code change needed, it only rejects `research_packet` and requires a completed prior run). Then the revise panel could live directly on the revision run page too. Pick one; I'd default to keeping revise on the draft page so there's one place users learn the flow.
 
-New Edge Functions:
-- `prepare-follow-up-questions` — validates ≤3, returns proposed refinements without silent replacement.
-- `run-follow-up-research` — **billable, 2 credits**. Reserves via existing `reserve_credits`, dispatches an `agent_runs` row with `kind='followup_research'` (extend CHECK constraint), and on fetch-back writes a new `packets` row with `version = n+1` and `supersedes_packet_id` set. Reuses `_shared/packet.ts` persistence + `_shared/state.ts`.
+**b. Merged** (unchanged content, plus one CTA)
+```
+Approved and merged {ts}. The final version is on the main branch — copy the piece from the tabs above wherever it's going.
+View merged PR on GitHub ↗
+[ Start a new piece → /new ]
+```
 
-## Phase F — Final artifacts (Phase 6)
+### 3. Detect external GitHub approvals
 
-Migration adds `final_artifacts` (piece_id, kind: docx | pptx | visual, storage_path, provenance jsonb, status), `student_contributions`, private bucket `final-artifacts`.
+Two additions, independent of the merge button:
 
-New Edge Functions (both billable — **user must confirm exact credit amounts before Phase F ships**; placeholder is 2 credits each in the plan, backed out if not confirmed):
-- `create-final-document-job` — reserves credits, creates `agent_runs` with `kind='final_docx'`, contract only (actual DOCX rendering handled by the existing Cursor provider path in a later task).
-- `create-presentation-job` — same shape, `kind='final_pptx'`.
+**a. Realtime + focus refresh.** In `RevisionApprovalPanel`, subscribe to `pieces` UPDATE for this `pieceId` (mirrors the existing `agent_runs` channel pattern in the same file) and re-read `final_pr_merged_at` on `document.visibilitychange`. Flips the UI as soon as anything stamps the column.
 
-Both are job-creation contracts; no in-migration document layout code.
+**b. Passive status check.** Extend `supabase/functions/approve-revision/index.ts` to accept `{ runId, mode: "status" }`: do the same PR lookup + "if merged, stamp `final_pr_merged_at` + advance stage + log event" branch it already has, but skip the `PUT /merge` call. Expose as `checkRevisionPrStatus` in `src/lib/pieces.functions.ts`. Panel calls it on mount, on focus, and behind a small "Refresh status" link. Idempotent, free, no credit spend.
 
-## Phase G — Activity history
+This covers the "user merged on GitHub" case without needing a webhook. A GitHub App / webhook stays out of scope.
 
-`agent_run_events` already exists. Add `piece_events` (piece_id, actor, event, metadata) for packet-level events not tied to a run: packet_downloaded, pages_uploaded, verification_completed, followups_approved, final_generated. Written by Edge Functions only; client read-own via RLS.
+## Technical notes
 
-## Phase H — Tests + types + docs
+- **Files changed**
+  - `src/routes/_authenticated/runs.$runId.tsx` — add dictation to `ActionsPanel` (isDraft), rewrite `RevisionApprovalPanel` with realtime + focus refresh + "not quite" CTA + post-merge new-piece CTA.
+  - `src/lib/pieces.functions.ts` — add `checkRevisionPrStatus` server fn.
+  - `supabase/functions/approve-revision/index.ts` — accept `mode: "status"` to short-circuit before the merge PUT.
+- **No schema changes**, **no new secrets** (`GITHUB_TOKEN` and `LOVABLE_API_KEY` already present), **no new run kinds**, **no new billable actions** — the second dictation pass is just another `revise` (1 credit).
+- **Reuse, don't rebuild.** `useDictation` + `/api/transcribe` are the exact same pieces the profile page and packet-return dictation use. No new server route.
+- **Dictation credits** are workspace AI credits, separate from generation credits — `useDictation` already surfaces that copy on 402.
+- **Existing packet-workflow dictation** (return upload, page OCR, `submit-dictation`) is untouched — that's the other workflow and is not what this piece is on.
 
-For each phase D–G:
-- Deno tests in `supabase/functions/_tests/` for pure `_shared` logic (state transitions, followup validation ≤3, reservation/settle/release paths).
-- SQL test file `supabase/tests/workflow-rls.test.sql` covering owner/other/professor/anon matrix.
-- Regenerate `src/integrations/supabase/types.ts` after each migration (manual step; called out in RUNBOOK).
-- Update `docs/RUNBOOK.md`, `docs/BILLING.md` (new billable ops), and add `docs/research-workflow/BACKEND-CONTRACTS.md` — the handoff document listing every new table, function name, request/response schema, workflow state, storage path, error code.
+## Out of scope
 
-Secret audit at the end confirms `LOVABLE_API_KEY`, `PARALLEL_API_KEY`, `CURSOR_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY` cover the new workflow; nothing new is requested unless a genuine gap appears (unlikely — multimodal recognition goes through Lovable AI Gateway).
-
-## Not in this task
-
-- DOCX / PPTX rendering itself (contract only).
-- UI wiring for any of the new endpoints.
-- Modifying existing Edge Functions' behavior (only additive compatibility: extend `agent_runs.kind` CHECK constraint).
-- New billing model / pricing changes beyond reserving on the three billable ops above.
-- Public storage of student handwriting.
-
-## Deliverable per phase
-
-Each phase ends with: migration file(s), edge function(s), tests passing (`npm run test:functions`, `bash scripts/check-migrations.sh`, `bash scripts/check-secrets.sh`), `docs/research-workflow/BACKEND-CAPABILITY-MATRIX.md` updated, and an explicit "manual actions still required" list (regenerate types, deploy functions X/Y/Z, no dashboard steps).
-
-## Confirmations needed before I start building
-
-1. Credit prices for `run-follow-up-research`, `create-final-document-job`, `create-presentation-job` (I'll use 2 / 2 / 2 unless you say otherwise).
-2. OK to add `professor` to `app_role` enum and the courses/assignments/enrollments tables now (has real blast radius: every new table's RLS references it).
-3. OK to introduce `workflow_stage` on `pieces` in Phase B, superseding the current `workflow` column semantically (kept as a source input, not as workflow state).
+- GitHub webhook for instant external-merge detection (polling + focus covers it).
+- Auto-closing the prior open revision PR when a new revise fires.
+- Attaching the actual audio recording to `agent_runs.input` for later replay (transcript is what the agent needs).
