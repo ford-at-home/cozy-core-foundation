@@ -1,0 +1,68 @@
+{
+  "questions": [
+    {
+      "position": 1,
+      "function": "definition_framing",
+      "claim_ref": "C1",
+      "prompt": "The research treats \"West End\" as an umbrella covering the Fan, Museum District, Carytown, Scott's Addition, Near West End/Westhampton, and the University of Richmond campus border. If you dropped Carytown and Scott's Addition (creative-economy corridors) from that definition and kept only single-family Westhampton-style enclaves, which part of the packet's identity claim — historic-preservation pride, creative-economy vitality, university presence, or intentional separation from the Black urban core — would weaken most, and why?",
+      "guidance": "Name one lived example (a street, school, institution, or social circle you know) that would fall in or out under your revised map.",
+      "response_space": "third_page"
+    },
+    {
+      "position": 2,
+      "function": "prior_belief",
+      "claim_ref": "C2",
+      "prompt": "Before reading the Valentine Museum and Mapping Inequality material on HOLC grades and the I-95 cut through Jackson Ward (more than 7,000 displaced), what did you personally believe mainly explained Richmond's East–West gap — individual choices, \"culture,\" bad schools, racist policy history, or something else? Which person, school, news habit, workplace, congregation, or hometown most shaped that prior belief?",
+      "guidance": "Do not summarize the packet; describe your prior story and its source.",
+      "response_space": "lines_5"
+    },
+    {
+      "position": 3,
+      "function": "evidence_integrity",
+      "claim_ref": "E10",
+      "prompt": "Claim C3 leans on a reported life-expectancy gap of more than 20 years between Richmond ZIP codes, arriving here largely through VPM coverage that points to City Health Dashboard and Virginia Department of Health maps. Which two features of that evidence would you verify before using the gap to persuade a skeptical West End civic association — for example, ZIP versus tract geography, years of data, cause-of-death mix, migration of sick residents, or dashboard methodology — and how could each feature exaggerate or shrink the gap?",
+      "guidance": "Pick two concrete verification checks; explain the distortion path for each.",
+      "response_space": "half_page"
+    },
+    {
+      "position": 4,
+      "function": "missing_perspective",
+      "claim_ref": "U5",
+      "prompt": "The packet quotes Mayor Avula's December 2025 refusal to back the then-current RRHA Gilpin Court plan and cites Purpose Built Communities as an alternative model, but it includes little testimony from Gilpin Court residents themselves about what \"preserving community\" requires. What might current residents understand differently about displacement timelines, replacement rents, or right-to-return than city hall or a national redevelopment model — and which conclusion in C6 could change if their criteria were centered?",
+      "guidance": "Stay specific to Gilpin Court / RRHA redevelopment, not generic \"listen to communities.\"",
+      "response_space": "third_page"
+    },
+    {
+      "position": 5,
+      "function": "stakes",
+      "claim_ref": "K6",
+      "prompt": "RPS is described as roughly 60 percent Black and 10 percent white while many West End families use private, parochial, or Henrico schools across the city line (C3, C4). For RPS students and families, which consequence of that sorting deserves more urgent attention than the others discussed: per-pupil funding gaps, peer networks and college pipelines, political isolation from West End voters, or daily safety/health ZIP gaps — and why would you rank that consequence above the rest?",
+      "guidance": "Choose one and argue against at least one runner-up.",
+      "response_space": "third_page"
+    },
+    {
+      "position": 6,
+      "function": "action",
+      "claim_ref": "C5",
+      "prompt": "Propose one concrete action the University of Richmond Bonner Center, VCU Health, or a named West End civic association could complete within twelve months that pairs recurring shared work with an East End anchor already named in the research (Peter Paul Development Center, Boaz & Ruth, or Maggie Walker Community Land Trust). Who benefits, who bears the cost or inconvenience, and what unintended consequence (performative volunteering, partner burnout, or displacement pressure) would you monitor?",
+      "guidance": "Name the West End actor, the East End partner, the recurring project, and one metric you would watch.",
+      "response_space": "half_page"
+    },
+    {
+      "position": 7,
+      "function": "counterargument",
+      "claim_ref": "U2",
+      "prompt": "A critic could argue that Mayor Avula's housing agenda (Code Refresh, mixed-income defaults, trust-fund dollars) will still function as a displacement engine in East End tracts even after the 2025 Gilpin Court rejection — because private capital and higher-income in-movers respond to upzoning faster than anti-displacement locks can be enforced. Which evidence already in the packet most strengthens that objection, and which evidence most weakens it?",
+      "guidance": "Cite packet elements (e.g., Urban Institute mixed-income review, Gilpin rejection, Purpose Built model, inclusionary-zoning debate) rather than outside talking points alone.",
+      "response_space": "third_page"
+    },
+    {
+      "position": 8,
+      "function": "followup",
+      "claim_ref": "U1",
+      "prompt": "The packet establishes that well-structured intergroup contact reduces prejudice in large meta-analyses (Pettigrew & Tropp) and that Richmond already has contact vehicles (Bonner placements, nonprofit anchors), but it leaves unresolved whether that contact actually increases West End support for costly shared-risk policies such as inclusionary zoning or school-funding equity. Write up to three follow-up research questions you want answered with authoritative evidence.",
+      "guidance": "What source, dataset, expert, institution, or type of evidence would make the answer credible?",
+      "response_space": "lines_5"
+    }
+  ]
+}

@@ -1,0 +1,544 @@
+{
+  "inquiry": {
+    "question": "What is the cultural identity of Richmond, Virginia's West End, and what policy avenues can redirect West End civic energy toward care for the city's inner-city neighborhoods?",
+    "scope": "Richmond city and near-suburban West End corridor (Fan, Museum District, Carytown, Scott's Addition, Near West End/Westhampton, University of Richmond) contrasted with East End and South Side historically Black neighborhoods and public-housing communities; policy levers for narrative change, contact, anchor institutions, shared-risk pools, and democratic reform.",
+    "definitions": [
+      {
+        "term": "West End (Richmond)",
+        "definition": "Local umbrella for the city's affluent western corridor — Fan, Museum District, Carytown, Scott's Addition, Near West End, and Westhampton/Chesterfield-bordering estates — not a single official neighborhood boundary.",
+        "disputed": true
+      },
+      {
+        "term": "Inner city / East End",
+        "definition": "Historically Black neighborhoods and public-housing concentrations (Jackson Ward, Gilpin Court, Highland Park, Whitcomb, Creighton, Hillside, Mosby Courts and related tracts) carrying cumulative effects of redlining, urban renewal, and highway displacement.",
+        "disputed": false
+      },
+      {
+        "term": "Changing hearts and minds",
+        "definition": "Redirecting West End civic, philanthropic, and political energy toward treating East End distress as a shared city problem — requiring both moral/narrative persuasion and structural policy that puts households into shared risk pools.",
+        "disputed": true
+      }
+    ],
+    "geography": "Richmond, Virginia (city), with county escape valves in Henrico, Chesterfield, and Goochland",
+    "period": "Historical roots 1930s–1960s (HOLC, urban renewal, I-95 through Jackson Ward); contemporary focus 2020–2026 (monument removals, Avula housing plan, Gilpin Court rejection)",
+    "populations": {
+      "included": [
+        "West End residents (majority-white, higher-income homeowners and renters)",
+        "East End and South Side historically Black neighborhoods",
+        "Residents of Richmond's six original public-housing communities",
+        "Richmond Public Schools students",
+        "University of Richmond, VCU, Virginia Union, Bon Secours, and VCU Health as anchor institutions",
+        "City leadership under Mayor Danny Avula and City Council"
+      ],
+      "excluded": [
+        "Systematic primary interviews with West End or East End residents (not in the research base)",
+        "Full county-level fiscal incidence study of Henrico/Chesterfield tax capture",
+        "Detailed evaluation of every RPS school zone boundary"
+      ]
+    }
+  },
+  "claims": [
+    {
+      "id": "C1",
+      "text": "Richmond's West End has a real but non-monolithic cultural identity built from historic preservation (including Monument Avenue), creative-economy corridors, university presence, and geographic separation from the Black urban core.",
+      "strength": "moderate",
+      "type": "descriptive",
+      "evidence": ["E1", "E2", "E3", "E14"],
+      "qualifications": [
+        "West End is a folk geographic term with overlapping sub-areas, not one census place.",
+        "Income figures for Fan and Westhampton are approximate ranges from secondary place profiles, not a single ACS extract presented in full."
+      ],
+      "affected": ["West End residents", "University of Richmond community", "citywide civic narrative"],
+      "uncertainty": "How strongly West End residents themselves endorse the 'separation' framing versus other identity markers (walkability, museums, schools) is not surveyed in this research."
+    },
+    {
+      "id": "C2",
+      "text": "Today's East End / inner-city disparities are the cumulative product of HOLC redlining, mid-century urban renewal, and Interstate 95's path through Jackson Ward, which displaced more than 7,000 residents.",
+      "strength": "strong",
+      "type": "causal",
+      "evidence": ["E4", "E5", "E6", "E7"],
+      "qualifications": [
+        "Historical causation is well documented for displacement and investment channeling; the precise share of today's wealth gap attributable solely to HOLC maps versus later policies is not quantified here."
+      ],
+      "affected": ["Jackson Ward and East End residents", "Black homeowners and business owners historically", "RRHA public-housing residents"],
+      "uncertainty": null
+    },
+    {
+      "id": "C3",
+      "text": "Contemporary Richmond shows large West–East gaps in income, wealth, school enrollment patterns, and life expectancy (more than 20 years between ZIP codes), with RPS demographics diverging sharply from West End private/suburban school pathways.",
+      "strength": "moderate",
+      "type": "descriptive",
+      "evidence": ["E8", "E9", "E10", "E11", "E12"],
+      "qualifications": [
+        "Citywide race/income figures cite ACS and secondary compilers; tract-level contrasts are illustrative rather than a full mapped atlas in the packet.",
+        "The one-eighth Black–white wealth ratio is tied to HOME of VA / redlining materials and mirrors HOLC geography; method details are in the cited booklet."
+      ],
+      "affected": ["East End households", "RPS students", "West End families using private or county schools"],
+      "uncertainty": "The research cites City Health Dashboard / VDH for the life-expectancy gap via news coverage; the packet does not reproduce the underlying ZIP-level table."
+    },
+    {
+      "id": "C4",
+      "text": "The gap persists through three structural drivers: school-related geographic sorting across city–county lines, suburban tax-base capture of city-generated economic activity, and a West End civic narrative centered on property values, schools, and safety that excludes inner-city residents as co-stakeholders.",
+      "strength": "moderate",
+      "type": "causal",
+      "evidence": ["E11", "E13", "E14"],
+      "qualifications": [
+        "School exit options and county borders are observable; the tax-capture mechanism is asserted as a fiscal structure without a full revenue-flow audit in this research.",
+        "Civic-narrative claims are interpretive synthesis rather than survey measurement of West End attitudes."
+      ],
+      "affected": ["RPS students and families", "East End renters", "suburban county taxpayers and city workers"],
+      "uncertainty": "Magnitude of tax revenue that 'should' flow to RPS or the affordable-housing trust fund is not estimated."
+    },
+    {
+      "id": "C5",
+      "text": "Durable change in segregated cities requires pairing place-based narrative reframing with sustained equal-status contact, anchor-institution leverage, policies that force shared risk pools (zoning, school funding, anti-displacement redevelopment), and democratic reforms that put West and East End power on the same ballot and coalition.",
+      "strength": "moderate",
+      "type": "normative",
+      "evidence": ["E15", "E16", "E17", "E18", "E19", "E20", "E21"],
+      "qualifications": [
+        "Contact-hypothesis evidence is strong for prejudice reduction under specified conditions; transfer to Richmond-scale 'care for the inner city' is an inference.",
+        "Narrative-alone effects are mixed; Richmond's monument removals did not by themselves rewrite opportunity geography."
+      ],
+      "affected": ["West End civic associations", "East End neighborhood groups", "anchor institutions", "Mayor and Council", "General Assembly (state preemption)"],
+      "uncertainty": "Whether Mayor Avula can sustain a multi-year coalition past backlash remains an open political question."
+    },
+    {
+      "id": "C6",
+      "text": "Mayor Avula's January 2026 'More Homes for More People' plan (funds, trust-fund recapitalization, Code Refresh) is a live vehicle for shared-geography housing policy, while his December 2025 refusal to support the then-current Gilpin Court RRHA redevelopment plan shows that mixed-income redevelopment without credible anti-displacement guarantees faces both resident and mayoral resistance.",
+      "strength": "strong",
+      "type": "descriptive",
+      "evidence": ["E22", "E23", "E24", "E25"],
+      "qualifications": [
+        "Administration claims about 'more than 30,000 new homes by right' are policy projections, not built units.",
+        "Gilpin Court outcome illustrates tension; it does not by itself prove which alternative model (e.g., Purpose Built Communities) would succeed in Richmond."
+      ],
+      "affected": ["Gilpin Court residents", "RRHA", "West End and citywide taxpayers", "affordable-housing advocates"],
+      "uncertainty": "Next-iteration redevelopment design and resident consent process are not yet settled in the research."
+    },
+    {
+      "id": "C7",
+      "text": "Existing Richmond institutions (HOME of VA, Peter Paul Development Center, Boaz & Ruth, UR Bonner Center, VCU Health, Maggie Walker Community Land Trust, city boards) already provide channels to recruit West End residents into sustained East End partnerships rather than one-off volunteering.",
+      "strength": "moderate",
+      "type": "descriptive",
+      "evidence": ["E26", "E27", "E28", "E29"],
+      "qualifications": [
+        "Presence of programs is documented; citywide attitude change attributable to these programs is not measured here."
+      ],
+      "affected": ["East End program participants", "UR students", "West End civic and faith institutions"],
+      "uncertainty": "Scale of West End participation relative to need is not quantified."
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "kind": "secondary",
+      "description": "Place profile describing West End geography, Westham origins, and income/home-price character of Near West End/Westhampton.",
+      "source": "Virginia Places, Profile of a Place: West End, Richmond",
+      "url": "http://www.virginiaplaces.org/vacities/24richwestend.html"
+    },
+    {
+      "id": "E2",
+      "kind": "secondary",
+      "description": "Encyclopedia-style overview of West End sub-areas (Fan, Carytown, Scott's Addition).",
+      "source": "Wikipedia, West End (Richmond, Virginia)",
+      "url": "https://en.wikipedia.org/wiki/West_End_(Richmond,_Virginia)"
+    },
+    {
+      "id": "E3",
+      "kind": "institutional_report",
+      "description": "University of Richmond Bonner Center describes sustained civic-engagement placements in East End and South Side partnerships.",
+      "source": "University of Richmond Bonner Center for Civic Engagement",
+      "url": "https://engage.richmond.edu/"
+    },
+    {
+      "id": "E4",
+      "kind": "historical",
+      "description": "Valentine Museum exhibition documenting redlining, urban renewal, and highway construction shaping Richmond's racial geography, including Jackson Ward displacement.",
+      "source": "The Valentine, Race, Space and Power in Richmond, Virginia",
+      "url": "https://thevalentine.org/explore/exhibitions/online-exhibitions/racial-equity-health-series/race-space-and-power-in-richmond-virginia/"
+    },
+    {
+      "id": "E5",
+      "kind": "historical",
+      "description": "Mapping Inequality HOLC redlining portal showing A/B grades for white West End areas and D grades for Black neighborhoods.",
+      "source": "University of Richmond DSL, Mapping Inequality",
+      "url": "https://dsl.richmond.edu/panorama/redlining/introduction"
+    },
+    {
+      "id": "E6",
+      "kind": "institutional_report",
+      "description": "HOME of VA booklet on redlining in Richmond linking HOLC grades to lasting segregation and wealth patterns.",
+      "source": "HOME of VA, Redlining in Richmond PDF",
+      "url": "https://homeofva.org/wp-content/uploads/2020/06/RIR_Booklet_HUD_10_26_18_Web.pdf"
+    },
+    {
+      "id": "E7",
+      "kind": "historical",
+      "description": "Redlining Virginia project materials on Virginia HOLC maps and disinvestment patterns.",
+      "source": "Redlining Virginia",
+      "url": "https://redliningvirginia.org/"
+    },
+    {
+      "id": "E8",
+      "kind": "dataset",
+      "description": "Citywide race composition (~41% white, ~41% Black, ~16% Hispanic/Latino) and income/poverty figures compiled from Census/ACS.",
+      "source": "U.S. Census / ACS via World Population Review Richmond profile cited in research",
+      "url": "https://worldpopulationreview.com/us-cities/virginia/richmond"
+    },
+    {
+      "id": "E9",
+      "kind": "dataset",
+      "description": "Census tract income contrast example (tract 411 and related West End tracts vs East End tracts such as 204).",
+      "source": "Data Commons / Census Reporter tract profiles",
+      "url": "https://datacommons.org/place/geoId/51760041100"
+    },
+    {
+      "id": "E10",
+      "kind": "secondary",
+      "description": "News reporting that life expectancy varies by more than 20 years across Richmond ZIP codes, citing City Health Dashboard and Virginia Department of Health mapping.",
+      "source": "VPM News, Richmond grapples with legacy of Confederate statues (also covering health geography)",
+      "url": "https://www.vpm.org/news/2025-07-11/virginia-impacts-confederate-monuments-trump-stoney-martin-valentine"
+    },
+    {
+      "id": "E11",
+      "kind": "institutional_report",
+      "description": "Richmond Public Schools demographics (~60% Black, ~10% white, ~25% Hispanic) and institutional context.",
+      "source": "Richmond Public Schools, About RPS",
+      "url": "https://www.rvaschools.net/about/rps"
+    },
+    {
+      "id": "E12",
+      "kind": "institutional_report",
+      "description": "HOME of VA redlining materials asserting large Black–white household wealth disparity aligned with HOLC geography.",
+      "source": "HOME of VA, Redlining in Richmond PDF",
+      "url": "https://homeofva.org/wp-content/uploads/2020/06/RIR_Booklet_HUD_10_26_18_Web.pdf"
+    },
+    {
+      "id": "E13",
+      "kind": "model_synthesis",
+      "description": "Research synthesis arguing suburban counties capture tax base from city-linked economic activity and that West End civic vocabulary excludes inner-city stakeholders.",
+      "source": "parallel-deep-research synthesis (July 2026)",
+      "url": null
+    },
+    {
+      "id": "E14",
+      "kind": "historical",
+      "description": "Documentation of Monument Avenue's Confederate memorial corridor, 2020 statue removals, and 2021 Arthur Ashe monument as contested symbolic geography of the West End.",
+      "source": "Fairfield Foundation, The Rise and Fall of Monument Avenue's Confederate Statues",
+      "url": "https://fairfieldfoundation.org/witness-to-change-the-rise-and-fall-of-monument-avenues-confederate-statues"
+    },
+    {
+      "id": "E15",
+      "kind": "experiment",
+      "description": "Pettigrew and Tropp 2006 meta-analysis of intergroup contact (515 studies, n > 250,000) supporting prejudice reduction under structured equal-status contact conditions (Allport contact hypothesis).",
+      "source": "Pettigrew & Tropp (2006) meta-analysis, as summarized in the research",
+      "url": null
+    },
+    {
+      "id": "E16",
+      "kind": "institutional_report",
+      "description": "Urban Institute review finding modest adult outcome gains for low-income residents in mixed-income communities and no consistent negative effects on higher-income residents when well managed.",
+      "source": "Urban Institute, Effects from Living in Mixed-Income Communities for Low-Income Families",
+      "url": "https://www.urban.org/sites/default/files/publication/27116/412292-Effects-from-Living-in-Mixed-Income-Communities-for-Low-Income-Families.PDF"
+    },
+    {
+      "id": "E17",
+      "kind": "secondary",
+      "description": "Century Foundation and Equality of Opportunity Project findings (as cited) that low-income students in integrated schools show better long-term college and income outcomes.",
+      "source": "Century Foundation / Equality of Opportunity Project (cited in research synthesis)",
+      "url": null
+    },
+    {
+      "id": "E18",
+      "kind": "model_synthesis",
+      "description": "Anchor-institution framework (Harkavy, Hodges, et al.) applied to UR, VCU, Bon Secours as conduits for hiring, procurement, and place-based investment.",
+      "source": "University of Pennsylvania anchor-institution literature as synthesized in research",
+      "url": null
+    },
+    {
+      "id": "E19",
+      "kind": "institutional_report",
+      "description": "City of Richmond Mayor's affordable housing plan describing funding commitments and Code Refresh zoning reform.",
+      "source": "City of Richmond, More Homes for More People",
+      "url": "https://rva.gov/mayors-office/more-homes-more-people"
+    },
+    {
+      "id": "E20",
+      "kind": "institutional_report",
+      "description": "Purpose Built Communities model pairing mixed-income housing with education and health wraparounds while aiming to keep residents in place.",
+      "source": "Purpose Built Communities, Our Model",
+      "url": "https://purposebuiltcommunities.org/what-we-do/our-model/"
+    },
+    {
+      "id": "E21",
+      "kind": "unsupported_assertion",
+      "description": "Claim that Richmond is more constrained in revenue-raising authority than any other Virginia city of comparable size, and that moving elections to even-year cycles would raise joint West–East turnout.",
+      "source": "Asserted in research section 4.5 without a comparative legal citation in the packet sources",
+      "url": null
+    },
+    {
+      "id": "E22",
+      "kind": "institutional_report",
+      "description": "Mayor Avula housing plan release coverage and city page detailing FY27 city/federal affordable-housing commitments and trust-fund recapitalization.",
+      "source": "WRIC / City of Richmond Mayor's Office",
+      "url": "https://www.wric.com/news/local-news/richmond/mayor-avula-to-release-affordable-housing-plan-for-richmond-in-january"
+    },
+    {
+      "id": "E23",
+      "kind": "secondary",
+      "description": "December 2025 reporting that Mayor Avula would not support the then-current RRHA Gilpin Court redevelopment plan over displacement and replacement-housing pace concerns.",
+      "source": "CBS 6 / WRIC social and news posts cited in research",
+      "url": "https://www.facebook.com/CBS6News/posts/richmond-mayor-danny-avula-said-he-cannot-support-the-current-plan-to-redevelop-/1337485221297352"
+    },
+    {
+      "id": "E24",
+      "kind": "institutional_report",
+      "description": "RRHA communities pages describing Gilpin, Hillside, Creighton, Whitcomb, Mosby, and Highland Park/Fairfield public-housing sites.",
+      "source": "Richmond Redevelopment & Housing Authority, Communities",
+      "url": "https://www.rrha.com/housing/communities"
+    },
+    {
+      "id": "E25",
+      "kind": "historical",
+      "description": "Library of Virginia Uncommonwealth brief history of public housing in Richmond (1942–1961 construction era).",
+      "source": "Library of Virginia, A Brief History of Public Housing in the City of Richmond",
+      "url": "https://uncommonwealth.lva.virginia.gov/blog/2025/11/17/a-brief-history-of-public-housing-in-the-city-of-richmond"
+    },
+    {
+      "id": "E26",
+      "kind": "institutional_report",
+      "description": "HOME of VA fair-housing audits, enforcement, and education role.",
+      "source": "Housing Opportunities Made Equal of Virginia",
+      "url": "http://homeofva.org/"
+    },
+    {
+      "id": "E27",
+      "kind": "institutional_report",
+      "description": "Peter Paul Development Center East End youth, senior, and food programs since 1979.",
+      "source": "Peter Paul Development Center / Episcopal Diocese outreach pages",
+      "url": "https://peterpaul.org/"
+    },
+    {
+      "id": "E28",
+      "kind": "secondary",
+      "description": "Boaz & Ruth described as blending workforce training, affordable housing, and small-business incubation in the inner city.",
+      "source": "Boaz & Ruth social/organizational listings",
+      "url": "https://www.facebook.com/boazandruthrva"
+    },
+    {
+      "id": "E29",
+      "kind": "institutional_report",
+      "description": "UR Bonner Center sustained community partnership placements.",
+      "source": "University of Richmond Bonner Center for Civic Engagement",
+      "url": "https://engage.richmond.edu/"
+    }
+  ],
+  "methods": [
+    {
+      "id": "M1",
+      "aspect": "source_selection",
+      "description": "Ultra-fast deep-research synthesis combining historical exhibitions, HOLC map portals, city housing documents, news coverage, and selected social-science reviews (contact hypothesis, mixed-income housing).",
+      "limitation": "No original fieldwork, surveys, or interviews; secondary compilers (e.g., World Population Review) stand in for some Census tables."
+    },
+    {
+      "id": "M2",
+      "aspect": "geography",
+      "description": "Treats 'West End' as a local umbrella spanning multiple neighborhoods and uses East End public-housing sites as the primary contrast.",
+      "limitation": "Boundaries are folk-geographic and overlap with Museum District/Fan identities that some residents may not call 'West End'."
+    },
+    {
+      "id": "M3",
+      "aspect": "causal_assumption",
+      "description": "Infers that narrative reframing plus contact plus shared-risk policy will jointly change West End 'hearts and minds' and material outcomes.",
+      "limitation": "Contact meta-analysis measures prejudice reduction, not philanthropic giving, voting for inclusionary zoning, or trust-fund support; Richmond-specific attitude change is untested."
+    },
+    {
+      "id": "M4",
+      "aspect": "comparison",
+      "description": "Compares city RPS demographics and outcomes with Henrico/Chesterfield as exit options for West End families.",
+      "limitation": "Does not present matched school-finance tables or a full per-pupil funding comparison in the research body."
+    },
+    {
+      "id": "M5",
+      "aspect": "measurement",
+      "description": "Uses life-expectancy ZIP gaps, income tract contrasts, and a Black–white wealth ratio as disparity indicators.",
+      "limitation": "Underlying microdata tables are not reproduced; some indicators arrive via journalism citing dashboards."
+    }
+  ],
+  "stakeholders": [
+    {
+      "id": "K1",
+      "who": "East End and public-housing residents (including Gilpin Court)",
+      "role": "affected",
+      "note": "Bear displacement risk and cumulative disinvestment; central to redevelopment consent."
+    },
+    {
+      "id": "K2",
+      "who": "West End homeowners and civic associations",
+      "role": "cost_bearer",
+      "note": "Hold disproportionate political and philanthropic power; targets of hearts-and-minds strategy; may resist inclusionary zoning or tax pooling."
+    },
+    {
+      "id": "K3",
+      "who": "Mayor Danny Avula and Richmond City Council",
+      "role": "decision_maker",
+      "note": "Advance housing plan and Code Refresh; already rejected one Gilpin Court plan."
+    },
+    {
+      "id": "K4",
+      "who": "Richmond Redevelopment & Housing Authority (RRHA)",
+      "role": "institution",
+      "note": "Owns/operates public-housing redevelopment pipeline."
+    },
+    {
+      "id": "K5",
+      "who": "University of Richmond, VCU, Virginia Union, Bon Secours, VCU Health",
+      "role": "institution",
+      "note": "Proposed Civic Equity Compact partners with hiring, procurement, and community-benefit leverage."
+    },
+    {
+      "id": "K6",
+      "who": "Richmond Public Schools students and families",
+      "role": "beneficiary",
+      "note": "Would benefit from funding equity and cross-city school contact designs; currently demographically divergent from West End private/suburban pathways."
+    },
+    {
+      "id": "K7",
+      "who": "Virginia General Assembly / suburban counties",
+      "role": "regulator",
+      "note": "State preemption and county school/tax structures constrain city autonomy."
+    },
+    {
+      "id": "K8",
+      "who": "Community organizers and critics of mixed-income redevelopment (and Manhattan Institute-style critics)",
+      "role": "critic",
+      "note": "Warn that mixed-income projects without anti-displacement locks can displace the residents they claim to serve."
+    }
+  ],
+  "uncertainties": [
+    {
+      "id": "U1",
+      "kind": "weak_causal_inference",
+      "description": "Whether structured contact that reduces prejudice in meta-analyses will translate into West End support for East End investment, zoning reform, or school-funding equity in Richmond.",
+      "claims": ["C5"]
+    },
+    {
+      "id": "U2",
+      "kind": "conflicting_studies",
+      "description": "Mixed-income housing shows modest benefits in Urban Institute reviews, yet organizers and some think tanks warn it can accelerate displacement without locks — Gilpin Court 2025 is a live local conflict instance.",
+      "claims": ["C6", "C5"]
+    },
+    {
+      "id": "U3",
+      "kind": "implementation_assumption",
+      "description": "Narrative reframing (monuments, curricula, interpretive markers) is treated as a precondition for durable policy, but Richmond's post-2020 memorial changes did not by themselves alter opportunity geography.",
+      "claims": ["C5", "C1"]
+    },
+    {
+      "id": "U4",
+      "kind": "missing_data",
+      "description": "No survey of West End attitudes, philanthropic giving patterns, or voting on housing measures; tax-capture dollar flows to counties vs. city are not audited in this research.",
+      "claims": ["C4"]
+    },
+    {
+      "id": "U5",
+      "kind": "missing_testimony",
+      "description": "East End resident testimony on preferred redevelopment models and West End civic-league voices are largely absent; institutions speak more than neighborhood residents.",
+      "claims": ["C6", "C7"]
+    },
+    {
+      "id": "U6",
+      "kind": "outdated_sources",
+      "description": "Some disparity and income figures rely on secondary compilers or multi-year ACS windows; life-expectancy gap arrives via secondary news citation rather than a reproduced VDH table.",
+      "claims": ["C3"]
+    }
+  ],
+  "local_validation": [
+    {
+      "id": "L1",
+      "activity": "field_visit",
+      "description": "Walk Monument Avenue and a named East End corridor (e.g., Jackson Ward / Peter Paul vicinity) on the same day; note what civic story each landscape tells without a guide.",
+      "claims": ["C1", "C2"]
+    },
+    {
+      "id": "L2",
+      "activity": "public_record",
+      "description": "Pull the current RRHA Gilpin Court redevelopment materials and December 2025 mayoral statements; compare displacement timelines and replacement-unit counts.",
+      "claims": ["C6"]
+    },
+    {
+      "id": "L3",
+      "activity": "nonprofit",
+      "description": "Visit or call Peter Paul Development Center, HOME of VA, or Maggie Walker Community Land Trust and ask how West End volunteers currently show up (recurring vs. one-off).",
+      "claims": ["C7", "C5"]
+    },
+    {
+      "id": "L4",
+      "activity": "local_dataset",
+      "description": "Map ACS median household income and City Health Dashboard life expectancy for two West End and two East End ZIP/tract pairs to verify the packet's disparity claims.",
+      "claims": ["C3"]
+    },
+    {
+      "id": "L5",
+      "activity": "community_group",
+      "description": "Attend a West End civic association meeting when Code Refresh / zoning is on the agenda and record whether East End housing is discussed in the same session.",
+      "claims": ["C4", "C6"]
+    }
+  ],
+  "followup_opportunities": [
+    {
+      "id": "F1",
+      "question": "What do representative surveys show about West End Richmond residents' willingness to support inclusionary zoning, Affordable Housing Trust Fund increases, or cross-city school seats?",
+      "why": "Hearts-and-minds claims currently lack attitude measurement.",
+      "evidence_needed": "Probability sample or high-quality opt-in survey with neighborhood strata; possibly civic-league member surveys.",
+      "likely_sources": ["VCU Wilder School / survey centers", "City of Richmond resident surveys", "HOME of VA", "local universities"],
+      "answerable": true,
+      "connects_to": "Tests whether narrative and contact strategies have a measurable audience or face hard preference constraints (C4, C5)."
+    },
+    {
+      "id": "F2",
+      "question": "How many dollars of income and sales-tax activity generated by city-linked work accrue to Henrico and Chesterfield versus Richmond's general fund and RPS?",
+      "why": "The tax-base capture driver is asserted without a fiscal incidence estimate.",
+      "evidence_needed": "Virginia Department of Taxation locality data, city/county budgets, and possibly a fiscal incidence study.",
+      "likely_sources": ["Virginia Auditor of Public Accounts", "City of Richmond budget office", "county CAFRs"],
+      "answerable": true,
+      "connects_to": "Grounds or weakens C4's structural account of who benefits from the city line."
+    },
+    {
+      "id": "F3",
+      "question": "What anti-displacement metrics (right to return, temporary relocation timelines, replacement unit counts, rent levels) would make a Gilpin Court redevelopment plan acceptable to a majority of current residents and to the mayor?",
+      "why": "2025 rejection shows conflict without specifying a successful design.",
+      "evidence_needed": "Resident surveys/meeting records, RRHA plan documents, comparative Purpose Built or HUD Choice Neighborhoods evaluations.",
+      "likely_sources": ["RRHA", "Gilpin Court resident council", "Mayor's Office", "HUD Choice Neighborhoods evaluations"],
+      "answerable": true,
+      "connects_to": "Closes the live uncertainty around C6 and U2."
+    },
+    {
+      "id": "F4",
+      "question": "Have UR Bonner, VCU Health community benefit, and similar programs changed West End or student attitudes toward East End investment, or only service hours?",
+      "why": "Anchor and contact vehicles are documented as activity, not attitude outcomes.",
+      "evidence_needed": "Program evaluations with pre/post attitude or civic-behavior measures; community partner assessments.",
+      "likely_sources": ["UR Bonner Center evaluations", "VCU Health community benefit reports", "partner nonprofits"],
+      "answerable": true,
+      "connects_to": "Tests C5/C7 transfer from contact theory to Richmond practice."
+    },
+    {
+      "id": "F5",
+      "question": "What is the legal scope of Virginia preemption on Richmond inclusionary zoning and local revenue authority relative to peer cities?",
+      "why": "E21 asserts exceptional constraint without a comparative legal memo in the research.",
+      "evidence_needed": "Statutory analysis and comparative municipal authority chart.",
+      "likely_sources": ["Virginia Code", "Virginia Municipal League", "law-school clinics", "City Attorney opinions"],
+      "answerable": true,
+      "connects_to": "Clarifies which democratic/zoning reforms are local vs. General Assembly fights (C5)."
+    },
+    {
+      "id": "F6",
+      "question": "Reproduce the City Health Dashboard / VDH life-expectancy table by Richmond ZIP and align it with HOLC grades and current ACS income.",
+      "why": "The >20-year gap is central but arrives through secondary citation.",
+      "evidence_needed": "Official dashboard export or VDH vital statistics by ZIP/tract.",
+      "likely_sources": ["City Health Dashboard", "Virginia Department of Health", "Census ACS"],
+      "answerable": true,
+      "connects_to": "Hardens C3 measurement and supports local validation L4."
+    }
+  ]
+}
