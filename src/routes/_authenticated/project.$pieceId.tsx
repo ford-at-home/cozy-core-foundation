@@ -150,7 +150,22 @@ function ProjectHubPage() {
       {data?.piece && data.piece.workflow === "research_packet" && view && (
         <>
           <StageStepper view={view} />
-          <StageCard view={view} pieceId={pieceId} />
+          <StageCard
+            view={view}
+            pieceId={pieceId}
+            followupRun={
+              data.runs.find(
+                (r) =>
+                  r.kind === "followup_research" &&
+                  !["completed", "failed", "cancelled"].includes(r.status),
+              ) ?? null
+            }
+            revisedPacket={
+              (view.packet?.version ?? 1) > 1
+                ? (data.packets.find((p) => p.id === view.packet?.id) ?? null)
+                : null
+            }
+          />
           <WhoDoesWhat />
         </>
       )}
@@ -192,7 +207,19 @@ const primaryBtn =
 const secondaryBtn =
   "inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-4 text-sm font-medium hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/60 sm:w-auto";
 
-function StageCard({ view, pieceId }: { view: PacketWorkflowView; pieceId: string }) {
+function StageCard({
+  view,
+  pieceId,
+  followupRun,
+  revisedPacket,
+}: {
+  view: PacketWorkflowView;
+  pieceId: string;
+  /** Non-terminal followup_research run, if one is in flight. */
+  followupRun: { id: string } | null;
+  /** The latest packet when it's a follow-up product (version > 1). */
+  revisedPacket: { id: string; run_id: string; status: string } | null;
+}) {
   void pieceId;
   const packetRunId = view.packet?.run_id ?? null;
 
@@ -331,12 +358,43 @@ function StageCard({ view, pieceId }: { view: PacketWorkflowView; pieceId: strin
   }
 
   if (view.current === "follow_up") {
+    if (view.followupResearchActive) {
+      return (
+        <StageShell title="Follow up" status="Researching your questions…" optional>
+          <p>
+            The second research pass is running against your approved questions. It usually takes a
+            few minutes and arrives as a revised packet — your original packet stays untouched.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {followupRun && (
+              <Link to="/runs/$runId" params={{ runId: followupRun.id }} className={secondaryBtn}>
+                Watch progress
+              </Link>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            You can close this page — the work continues, and this project picks up where it left
+            off.
+          </p>
+        </StageShell>
+      );
+    }
     return (
       <StageShell title="Follow up" status="Your questions, researched" optional>
         <p>
           Submit up to three follow-up research questions — from your handwriting, dictation, or
-          typed here — and a focused second research pass answers them. This step is optional.
+          typed directly — and a focused second research pass answers them with authoritative
+          sources. This step is optional and costs 2 credits only when you run it.
         </p>
+        {view.packet && (
+          <Link
+            to="/followup/$packetId"
+            params={{ packetId: view.packet.id }}
+            className={primaryBtn}
+          >
+            Ask follow-up questions
+          </Link>
+        )}
       </StageShell>
     );
   }
@@ -346,6 +404,30 @@ function StageCard({ view, pieceId }: { view: PacketWorkflowView; pieceId: strin
       title="Finish"
       status={view.docx?.status === "ready" ? "Ready to download" : "Almost there"}
     >
+      {revisedPacket && (
+        <div className="space-y-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
+          <p className="text-foreground">
+            Your follow-up research is in — a revised packet answers your questions with new
+            evidence. Your original packet is preserved unchanged.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link
+              to="/packet/$runId"
+              params={{ runId: revisedPacket.run_id }}
+              className={secondaryBtn}
+            >
+              Review the revised questions
+            </Link>
+            <Link
+              to="/print/$runId"
+              params={{ runId: revisedPacket.run_id }}
+              className={secondaryBtn}
+            >
+              Print the revised packet
+            </Link>
+          </div>
+        </div>
+      )}
       <p>
         Create a final, editable document built from the research and your verified contributions.
       </p>

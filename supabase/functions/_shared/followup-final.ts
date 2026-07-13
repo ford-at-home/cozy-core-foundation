@@ -220,25 +220,131 @@ PACKET>>>
 // Context assembly — used by both dispatch and persistence
 // ---------------------------------------------------------------------------
 
+export interface AssemblyQuestion {
+  id: string;
+  prompt: string;
+}
+export interface AssemblyBlock {
+  id: string;
+  text: string;
+  linked_question_id: string | null;
+}
+export interface AssemblySegment {
+  id: string;
+  transcript: string;
+  resolved_target: unknown;
+}
+export interface AssemblyCorrection {
+  block_id: string | null;
+  segment_id: string | null;
+  corrected_text: string;
+  corrected_meaning: unknown;
+  verified_at: string;
+}
+
+/**
+ * A correction may carry the student's final say on which question the item
+ * answers (`corrected_meaning.questionId`, written by the review screen):
+ * present-and-string reassigns, present-and-null unlinks, absent keeps the
+ * recognition's linkage.
+ */
+function correctedQuestionId(c: AssemblyCorrection | undefined, fallback: string | null) {
+  const m = c?.corrected_meaning;
+  if (m && typeof m === "object" && "questionId" in (m as Record<string, unknown>)) {
+    const v = (m as Record<string, unknown>).questionId;
+    return typeof v === "string" && v ? v : null;
+  }
+  return fallback;
+}
+
+/**
+ * The verified student response set fed into every downstream prompt
+ * (follow-up research, final DOCX, final PPTX). Rules — mirrored from
+ * src/lib/verification.ts on the client:
+ *   - corrections are append-only; the latest one per block/segment wins,
+ *   - empty corrected_text is a rejection: the item is dropped,
+ *   - corrected_meaning.questionId can reassign or unlink the target question,
+ *   - dictation segments count exactly like handwriting blocks,
+ *   - only items resolvable to a known question survive (prompts are the
+ *     join key downstream); multiple answers to one question are joined.
+ */
+export function assembleVerifiedResponses(src: {
+  questions: AssemblyQuestion[];
+  blocks: AssemblyBlock[];
+  segments: AssemblySegment[];
+  corrections: AssemblyCorrection[];
+}): Array<{ prompt: string; response: string }> {
+  const promptById = new Map(src.questions.map((q) => [q.id, q.prompt]));
+
+  const byBlock = new Map<string, AssemblyCorrection>();
+  const bySegment = new Map<string, AssemblyCorrection>();
+  const ordered = [...src.corrections].sort((a, b) => a.verified_at.localeCompare(b.verified_at));
+  for (const c of ordered) {
+    if (c.block_id) byBlock.set(c.block_id, c);
+    if (c.segment_id) bySegment.set(c.segment_id, c);
+  }
+
+  const answersByQ = new Map<string, string[]>();
+  const add = (qid: string | null, text: string) => {
+    if (!qid || !promptById.has(qid)) return;
+    const t = text.trim();
+    if (!t) return;
+    const arr = answersByQ.get(qid) ?? [];
+    arr.push(t);
+    answersByQ.set(qid, arr);
+  };
+
+  for (const b of src.blocks) {
+    const c = byBlock.get(b.id);
+    if (c && c.corrected_text.trim() === "") continue; // rejected at review
+    add(correctedQuestionId(c, b.linked_question_id), c ? c.corrected_text : b.text);
+  }
+  for (const s of src.segments) {
+    const c = bySegment.get(s.id);
+    if (c && c.corrected_text.trim() === "") continue;
+    const target = s.resolved_target as Record<string, unknown> | null;
+    const fallback =
+      typeof target?.questionId === "string" && target.questionId ? target.questionId : null;
+    add(correctedQuestionId(c, fallback), c ? c.corrected_text : s.transcript);
+  }
+
+  const out: Array<{ prompt: string; response: string }> = [];
+  for (const q of src.questions) {
+    const answers = answersByQ.get(q.id);
+    if (answers && answers.length > 0) out.push({ prompt: q.prompt, response: answers.join("\n") });
+  }
+  return out;
+}
+
+/**
+ * Load everything the follow-up/final prompts need. `packetId` selects the
+ * packet whose follow-up questions apply (defaults to the latest version).
+ * Verified responses span ALL packet versions of the piece — returns and
+ * dictation attach to the version the student worked on paper, which is not
+ * necessarily the latest one once follow-up research has produced a v2.
+ */
 export async function loadPriorPacketContext(
   admin: any,
   pieceId: string,
+  packetId?: string,
 ): Promise<{
   packet: { id: string; version: number; analysis: unknown | null } | null;
   approvedQuestions: Array<{ position: number; text: string }>;
   verifiedResponses: Array<{ prompt: string; response: string }>;
   studentContributions: Array<{ kind: string; text: string }>;
 }> {
-  const { data: packet } = await admin
+  const { data: allPackets } = await admin
     .from("packets")
     .select("id, version, analysis")
     .eq("piece_id", pieceId)
-    .order("version", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order("version", { ascending: false });
+  const packets: Array<{ id: string; version: number; analysis: unknown | null }> =
+    allPackets ?? [];
+  const packet = (packetId ? packets.find((p) => p.id === packetId) : packets[0]) ?? null;
   if (!packet) {
     return { packet: null, approvedQuestions: [], verifiedResponses: [], studentContributions: [] };
   }
+  const packetIds = packets.map((p) => p.id);
 
   const { data: fq } = await admin
     .from("followup_questions")
@@ -253,52 +359,65 @@ export async function loadPriorPacketContext(
     }))
     .filter((r: any) => r.text.length > 0);
 
-  // Verified responses: JOIN corrections to their source block/segment, then
-  // to the packet question via linked_question_id (block path). Server-side
-  // filter narrows to this packet's questions.
   const { data: pqs } = await admin
     .from("packet_questions")
     .select("id, prompt")
-    .eq("packet_id", packet.id);
-  const promptById = new Map<string, string>();
-  for (const q of pqs ?? []) promptById.set(q.id as string, q.prompt as string);
+    .in("packet_id", packetIds);
 
-  const { data: blocks } = await admin
-    .from("recognized_blocks")
-    .select("id, linked_question_id, text")
-    .in("linked_question_id", Array.from(promptById.keys()));
-  const blockToQ = new Map<string, string>();
-  const blockText = new Map<string, string>();
-  for (const b of blocks ?? []) {
-    if (b.linked_question_id) blockToQ.set(b.id as string, b.linked_question_id as string);
-    blockText.set(b.id as string, (b.text ?? "") as string);
+  const { data: returns } = await admin
+    .from("packet_returns")
+    .select("id")
+    .in("packet_id", packetIds);
+  const returnIds = (returns ?? []).map((r: any) => r.id as string);
+
+  let blocks: AssemblyBlock[] = [];
+  if (returnIds.length > 0) {
+    const { data: pages } = await admin.from("page_images").select("id").in("return_id", returnIds);
+    const pageIds = (pages ?? []).map((p: any) => p.id as string);
+    if (pageIds.length > 0) {
+      const { data: blockRows } = await admin
+        .from("recognized_blocks")
+        .select("id, text, linked_question_id")
+        .in("page_image_id", pageIds);
+      blocks = (blockRows ?? []) as AssemblyBlock[];
+    }
   }
 
-  const { data: corrections } = await admin
-    .from("verification_corrections")
-    .select("block_id, corrected_text, verified_at")
-    .in("block_id", Array.from(blockToQ.keys()))
-    .order("verified_at", { ascending: true });
-  const responseByQ = new Map<string, string>();
-  // Corrections win over raw recognition; fall back to raw text when no
-  // correction exists for a block linked to a question.
-  for (const c of corrections ?? []) {
-    const qid = blockToQ.get(c.block_id as string);
-    if (qid) responseByQ.set(qid, (c.corrected_text ?? "").trim());
+  const { data: segmentRows } = await admin
+    .from("dictation_segments")
+    .select("id, transcript, resolved_target")
+    .in("packet_id", packetIds);
+  const segments = (segmentRows ?? []) as AssemblySegment[];
+
+  let corrections: AssemblyCorrection[] = [];
+  const blockIds = blocks.map((b) => b.id);
+  const segmentIds = segments.map((s) => s.id);
+  if (blockIds.length > 0) {
+    const { data } = await admin
+      .from("verification_corrections")
+      .select("block_id, segment_id, corrected_text, corrected_meaning, verified_at")
+      .in("block_id", blockIds);
+    corrections = corrections.concat((data ?? []) as AssemblyCorrection[]);
   }
-  for (const [bid, qid] of blockToQ.entries()) {
-    if (!responseByQ.has(qid)) responseByQ.set(qid, (blockText.get(bid) ?? "").trim());
+  if (segmentIds.length > 0) {
+    const { data } = await admin
+      .from("verification_corrections")
+      .select("block_id, segment_id, corrected_text, corrected_meaning, verified_at")
+      .in("segment_id", segmentIds);
+    corrections = corrections.concat((data ?? []) as AssemblyCorrection[]);
   }
-  const verifiedResponses: Array<{ prompt: string; response: string }> = [];
-  for (const [qid, response] of responseByQ.entries()) {
-    const prompt = promptById.get(qid);
-    if (prompt && response) verifiedResponses.push({ prompt, response });
-  }
+
+  const verifiedResponses = assembleVerifiedResponses({
+    questions: (pqs ?? []) as AssemblyQuestion[],
+    blocks,
+    segments,
+    corrections,
+  });
 
   const { data: contribs } = await admin
     .from("student_contributions")
     .select("kind, text")
-    .eq("packet_id", packet.id);
+    .in("packet_id", packetIds);
   const studentContributions = (contribs ?? []).map((c: any) => ({
     kind: c.kind as string,
     text: c.text as string,

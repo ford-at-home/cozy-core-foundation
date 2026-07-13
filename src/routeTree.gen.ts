@@ -26,6 +26,7 @@ import { Route as AuthenticatedReturnPacketIdRouteImport } from './routes/_authe
 import { Route as AuthenticatedProjectPieceIdRouteImport } from './routes/_authenticated/project.$pieceId'
 import { Route as AuthenticatedPrintRunIdRouteImport } from './routes/_authenticated/print.$runId'
 import { Route as AuthenticatedPacketRunIdRouteImport } from './routes/_authenticated/packet.$runId'
+import { Route as AuthenticatedFollowupPacketIdRouteImport } from './routes/_authenticated/followup.$packetId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -116,6 +117,12 @@ const AuthenticatedPacketRunIdRoute =
     path: '/packet/$runId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedFollowupPacketIdRoute =
+  AuthenticatedFollowupPacketIdRouteImport.update({
+    id: '/followup/$packetId',
+    path: '/followup/$packetId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/sessions': typeof AuthenticatedSessionsRouteWithChildren
   '/api/transcribe': typeof ApiTranscribeRoute
+  '/followup/$packetId': typeof AuthenticatedFollowupPacketIdRoute
   '/packet/$runId': typeof AuthenticatedPacketRunIdRoute
   '/print/$runId': typeof AuthenticatedPrintRunIdRoute
   '/project/$pieceId': typeof AuthenticatedProjectPieceIdRoute
@@ -144,6 +152,7 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/sessions': typeof AuthenticatedSessionsRouteWithChildren
   '/api/transcribe': typeof ApiTranscribeRoute
+  '/followup/$packetId': typeof AuthenticatedFollowupPacketIdRoute
   '/packet/$runId': typeof AuthenticatedPacketRunIdRoute
   '/print/$runId': typeof AuthenticatedPrintRunIdRoute
   '/project/$pieceId': typeof AuthenticatedProjectPieceIdRoute
@@ -164,6 +173,7 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/sessions': typeof AuthenticatedSessionsRouteWithChildren
   '/api/transcribe': typeof ApiTranscribeRoute
+  '/_authenticated/followup/$packetId': typeof AuthenticatedFollowupPacketIdRoute
   '/_authenticated/packet/$runId': typeof AuthenticatedPacketRunIdRoute
   '/_authenticated/print/$runId': typeof AuthenticatedPrintRunIdRoute
   '/_authenticated/project/$pieceId': typeof AuthenticatedProjectPieceIdRoute
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/sessions'
     | '/api/transcribe'
+    | '/followup/$packetId'
     | '/packet/$runId'
     | '/print/$runId'
     | '/project/$pieceId'
@@ -202,6 +213,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/sessions'
     | '/api/transcribe'
+    | '/followup/$packetId'
     | '/packet/$runId'
     | '/print/$runId'
     | '/project/$pieceId'
@@ -221,6 +233,7 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/_authenticated/sessions'
     | '/api/transcribe'
+    | '/_authenticated/followup/$packetId'
     | '/_authenticated/packet/$runId'
     | '/_authenticated/print/$runId'
     | '/_authenticated/project/$pieceId'
@@ -360,6 +373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPacketRunIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/followup/$packetId': {
+      id: '/_authenticated/followup/$packetId'
+      path: '/followup/$packetId'
+      fullPath: '/followup/$packetId'
+      preLoaderRoute: typeof AuthenticatedFollowupPacketIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -382,6 +402,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedNewRoute: typeof AuthenticatedNewRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedSessionsRoute: typeof AuthenticatedSessionsRouteWithChildren
+  AuthenticatedFollowupPacketIdRoute: typeof AuthenticatedFollowupPacketIdRoute
   AuthenticatedPacketRunIdRoute: typeof AuthenticatedPacketRunIdRoute
   AuthenticatedPrintRunIdRoute: typeof AuthenticatedPrintRunIdRoute
   AuthenticatedProjectPieceIdRoute: typeof AuthenticatedProjectPieceIdRoute
@@ -396,6 +417,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedNewRoute: AuthenticatedNewRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedSessionsRoute: AuthenticatedSessionsRouteWithChildren,
+  AuthenticatedFollowupPacketIdRoute: AuthenticatedFollowupPacketIdRoute,
   AuthenticatedPacketRunIdRoute: AuthenticatedPacketRunIdRoute,
   AuthenticatedPrintRunIdRoute: AuthenticatedPrintRunIdRoute,
   AuthenticatedProjectPieceIdRoute: AuthenticatedProjectPieceIdRoute,
