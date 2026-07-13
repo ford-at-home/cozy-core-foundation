@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ACTIVE_RUN_STATUSES, type AgentRun, type RunStatus } from "@/lib/workflows.functions";
 import { runPieceAction, type PieceAction } from "@/lib/pieces.functions";
 import { isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
+import { runKindLabel } from "@/lib/journey";
 import type { Json } from "@/integrations/supabase/types";
 import MarkdownView from "@/components/MarkdownView";
 import { RunCostCard } from "@/components/RunCostCard";
@@ -138,7 +139,9 @@ function RunDetailPage() {
           <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
             {brand.product.name}
           </p>
-          <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Run</h1>
+          <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">
+            {run ? runKindLabel(run.kind) : "Run"}
+          </h1>
           <p className="mt-1 truncate font-mono text-xs text-muted-foreground" title={runId}>
             {runId}
           </p>
@@ -147,7 +150,7 @@ function RunDetailPage() {
           to="/dashboard"
           className="shrink-0 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 rounded-sm"
         >
-          ← Dashboard
+          ← Projects
         </Link>
       </div>
 
@@ -185,6 +188,41 @@ function RunDetailPage() {
               {activeStatusMessage(run.status, run.kind)}
             </div>
           )}
+
+          {run.kind === "followup_research" && run.status === "completed" && (
+            <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm">
+              Follow-up research complete.{" "}
+              {nextRunId ? (
+                <>
+                  Your revised packet is being built from it now —{" "}
+                  <Link
+                    to="/runs/$runId"
+                    params={{ runId: nextRunId }}
+                    className="font-medium underline"
+                  >
+                    follow along →
+                  </Link>
+                </>
+              ) : (
+                "Your revised packet is being prepared; it will appear in your project shortly."
+              )}
+            </div>
+          )}
+
+          {(run.kind === "document" || run.kind === "presentation") &&
+            run.status === "completed" &&
+            run.piece_id && (
+              <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm">
+                Your {run.kind === "document" ? "final paper" : "class presentation"} is ready.{" "}
+                <Link
+                  to="/projects/$pieceId"
+                  params={{ pieceId: run.piece_id }}
+                  className="font-medium underline"
+                >
+                  Download it from your project →
+                </Link>
+              </div>
+            )}
 
           {run.kind === "research" && run.status === "completed" && (
             <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm">
@@ -457,7 +495,11 @@ function activeStatusMessage(status: RunStatus, kind: string): string {
         return "In progress.";
     }
   }
-  if (kind === "research") {
+  if (kind === "research" || kind === "followup_research") {
+    const what =
+      kind === "followup_research"
+        ? "Researching your follow-up questions — a focused second pass, not a re-run of the whole topic."
+        : "Researching — scanning sources across the web and assembling a cited report.";
     switch (status) {
       case "requested":
       case "dispatching":
@@ -466,12 +508,19 @@ function activeStatusMessage(status: RunStatus, kind: string): string {
         return "Starting… — dispatch is unconfirmed; the reconciler is resolving it. This page updates live.";
       case "queued":
       case "running":
-        return "Researching — scanning sources across the web and assembling a cited report. Deep research usually takes 2–10 minutes. This page updates live.";
+        return `${what} This usually takes 2–10 minutes. This page updates live.`;
       case "awaiting_fetch":
-        return "Almost done — the report is ready; fetching it and starting the compose run.";
+        return kind === "followup_research"
+          ? "Almost done — the findings are in; building your revised packet next."
+          : "Almost done — the report is ready; fetching it and starting the compose run.";
       default:
         return "In progress.";
     }
+  }
+  if (kind === "document" || kind === "presentation") {
+    return kind === "document"
+      ? "Writing your final paper from your confirmed work. This takes about a minute."
+      : "Building your slides from the final paper. This takes about a minute.";
   }
   switch (status) {
     case "requested":

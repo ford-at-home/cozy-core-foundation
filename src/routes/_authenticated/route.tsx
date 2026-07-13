@@ -18,8 +18,8 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 const NAV_LINKS = [
-  { to: "/dashboard" as const, label: "Dashboard", short: "Home", icon: LayoutDashboard },
-  { to: "/new" as const, label: "New draft", short: "New", icon: PenLine },
+  { to: "/dashboard" as const, label: "Projects", short: "Projects", icon: LayoutDashboard },
+  { to: "/new" as const, label: "New project", short: "New", icon: PenLine },
   { to: "/sessions" as const, label: "Cost", short: "Cost", icon: CircleDollarSign },
   { to: "/profile" as const, label: "Profile", short: "Profile", icon: User },
 ];

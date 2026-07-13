@@ -84,13 +84,23 @@ function PacketReviewPage() {
             own, then approve and print.
           </p>
         </div>
-        <Link
-          to="/runs/$runId"
-          params={{ runId }}
-          className="inline-flex min-h-11 shrink-0 items-center text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 rounded-sm sm:min-h-0"
-        >
-          ← Back to run
-        </Link>
+        {packet ? (
+          <Link
+            to="/projects/$pieceId"
+            params={{ pieceId: packet.piece_id }}
+            className="inline-flex min-h-11 shrink-0 items-center text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 rounded-sm sm:min-h-0"
+          >
+            ← Your project
+          </Link>
+        ) : (
+          <Link
+            to="/runs/$runId"
+            params={{ runId }}
+            className="inline-flex min-h-11 shrink-0 items-center text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 rounded-sm sm:min-h-0"
+          >
+            ← Back to run
+          </Link>
+        )}
       </div>
 
       {loading && (

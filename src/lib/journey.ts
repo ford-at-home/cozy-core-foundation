@@ -193,3 +193,31 @@ const RUN_KIND_LABELS: Record<string, string> = {
 export function runKindLabel(kind: string): string {
   return RUN_KIND_LABELS[kind] ?? kind;
 }
+
+// ---------------------------------------------------------------------------
+// Project (piece) stage labels for the dashboard. `pieces.stage` is coarse —
+// the project hub derives the precise journey; the dashboard just answers
+// "roughly where is this and is anything happening right now".
+
+const PACKET_STAGE_LABELS: Record<string, string> = {
+  research: "Researching your topic",
+  drafted: "Packet ready — review and print",
+  printed: "Printed — working on paper",
+  annotating: "Working on paper",
+  finalized: "Finished",
+};
+
+const LONGFORM_STAGE_LABELS: Record<string, string> = {
+  research: "Researching",
+  proposed: "Proposal ready for your review",
+  iterating: "Revising the proposal",
+  drafted: "Final draft ready",
+  printed: "Printed — annotate by hand",
+  annotating: "Annotating on paper",
+  finalized: "Finished",
+};
+
+export function projectStageLabel(workflow: string, stage: string): string {
+  const table = workflow === "research_packet" ? PACKET_STAGE_LABELS : LONGFORM_STAGE_LABELS;
+  return table[stage] ?? stage;
+}

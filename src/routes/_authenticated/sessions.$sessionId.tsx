@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getSessionDetail, type PricingSource } from "@/lib/costs.functions";
 import { CostBadge, formatDuration, formatUsd } from "@/components/CostBadge";
 import { StatusPill } from "@/components/StatusPill";
+import { runKindLabel } from "@/lib/journey";
 import { Skeleton } from "@/components/ui/skeleton";
 import { pageTitle } from "@/config/brand";
 
@@ -84,7 +85,7 @@ function SessionDetailPage() {
                 className="block rounded-xl border border-border bg-card p-4 shadow-sm transition-colors active:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring/60"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <p className="font-medium capitalize">{r.kind}</p>
+                  <p className="font-medium">{runKindLabel(r.kind)}</p>
                   <StatusPill status={r.status} />
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
@@ -163,7 +164,7 @@ function SessionDetailPage() {
                         params={{ runId: r.id }}
                         className="font-medium underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-ring/60 rounded-sm"
                       >
-                        {r.kind}
+                        {runKindLabel(r.kind)}
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-xs">
