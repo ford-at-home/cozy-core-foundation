@@ -11,7 +11,7 @@
 // deno-lint-ignore-file no-explicit-any
 import { serve, authenticate, j, e } from "../_shared/http.ts";
 import { logEvent } from "../_shared/observability.ts";
-import { advanceStage } from "../_shared/workflow.ts";
+import { advanceStage, logPieceEvent } from "../_shared/workflow.ts";
 import { recordInference } from "../_shared/usage.ts";
 import {
   blocksToRows,
@@ -127,7 +127,10 @@ Deno.serve(
         .from("page_images")
         .update({ status: "failed", updated_at: new Date().toISOString() })
         .eq("id", pageImageId);
-      await settleReturnStatus(admin, ret?.id ?? null);
+      await settleReturnStatus(admin, ret?.id ?? null, {
+        pieceId: packet?.piece_id ?? null,
+        userId,
+      });
       logEvent(FN, "error", { requestId: rid, message: (err as Error).message });
       return e(FN, 502, "Recognition failed", {
         requestId: rid,
@@ -175,7 +178,10 @@ Deno.serve(
           updated_at: new Date().toISOString(),
         })
         .eq("id", pageImageId);
-      await settleReturnStatus(admin, ret?.id ?? null);
+      await settleReturnStatus(admin, ret?.id ?? null, {
+        pieceId: packet?.piece_id ?? null,
+        userId,
+      });
       return j({ pageImageId, blocksInserted: 0, quality: recognition.quality }, 200, rid);
     }
 
@@ -197,7 +203,7 @@ Deno.serve(
         updated_at: new Date().toISOString(),
       })
       .eq("id", pageImageId);
-    await settleReturnStatus(admin, ret?.id ?? null);
+    await settleReturnStatus(admin, ret?.id ?? null, { pieceId: packet?.piece_id ?? null, userId });
 
     if (packet?.piece_id) {
       await advanceStage(admin, { pieceId: packet.piece_id, to: "responses_need_review" });
@@ -209,9 +215,14 @@ Deno.serve(
 
 /**
  * Keep packet_returns.status truthful: once no page is still uploaded or
- * analyzing, the return is 'ready' (≥1 readable page) or 'failed'.
+ * analyzing, the return is 'ready' (≥1 readable page) or 'failed'. Settling
+ * logs a piece event so the activity history shows when the pages were read.
  */
-async function settleReturnStatus(admin: any, returnId: string | null): Promise<void> {
+async function settleReturnStatus(
+  admin: any,
+  returnId: string | null,
+  ctx?: { pieceId: string | null; userId: string },
+): Promise<void> {
   if (!returnId) return;
   const { data: pages } = await admin
     .from("page_images")
@@ -222,12 +233,24 @@ async function settleReturnStatus(admin: any, returnId: string | null): Promise<
   const pending = all.some((p) => p.status === "uploaded" || p.status === "analyzing");
   if (pending) return;
   const analyzed = all.filter((p) => p.status === "analyzed").length;
-  await admin
+  const status = analyzed > 0 ? "ready" : "failed";
+  const { data: updated } = await admin
     .from("packet_returns")
     .update({
-      status: analyzed > 0 ? "ready" : "failed",
+      status,
       submitted_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .eq("id", returnId);
+    .eq("id", returnId)
+    .neq("status", status)
+    .select("id");
+  // Log only on the transition (the .neq guard makes re-analysis a no-op).
+  if (ctx?.pieceId && (updated ?? []).length > 0) {
+    await logPieceEvent(admin, {
+      pieceId: ctx.pieceId,
+      userId: ctx.userId,
+      event: status === "ready" ? "return_read" : "return_read_failed",
+      metadata: { returnId, pagesAnalyzed: analyzed, pagesTotal: all.length },
+    });
+  }
 }

@@ -356,6 +356,41 @@ async function listVerifiedReturnIds(): Promise<Set<string>> {
 }
 
 // ---------------------------------------------------------------------------
+// Activity history (piece_events: append-only, owner SELECT, written only by
+// Edge Functions via logPieceEvent).
+
+export type PieceEvent = {
+  id: string;
+  piece_id: string;
+  user_id: string;
+  actor: string;
+  event: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+export async function listPieceEvents(pieceId: string): Promise<PieceEvent[]> {
+  const { data, error } = await supabase
+    .from("piece_events")
+    .select("*")
+    .eq("piece_id", pieceId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) throw new Error(error.message);
+  // The webhook and the reconciler can race on the same completion; both log
+  // the event. Keep one row per (event, runId) pair.
+  const seen = new Set<string>();
+  return ((data ?? []) as PieceEvent[]).filter((ev) => {
+    const runId = typeof ev.metadata?.runId === "string" ? ev.metadata.runId : null;
+    if (!runId) return true;
+    const key = `${ev.event}:${runId}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Artifact downloads (free — no credits attach to downloads).
 
 export async function artifactDownloadUrl(artifact: FinalArtifact): Promise<string> {

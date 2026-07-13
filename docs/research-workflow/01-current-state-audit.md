@@ -67,6 +67,17 @@ instead of `pieces.workflow_stage`):
 
 ## Capability inventory
 
+The table below is the original point-in-time audit (commit `979d666`).
+Capabilities delivered since, on the branches building the workflow frontend:
+photo return + handwriting recognition (`/return/$packetId`,
+`analyze-returned-page`), dictation return (`submit-dictation` + the same
+route), mandatory verification (`/review/$returnId`,
+`verify-student-responses`), follow-up questions with approval and the
+2-credit research pass (`/followup/$packetId`), final Word document and
+presentation with download (`create-final-document-job`,
+`create-presentation-job`, project-hub Finish card), and the activity
+history (`piece_events` in the hub).
+
 | Capability | Status | Where | Notes |
 | --- | --- | --- | --- |
 | Research pipeline (deep research) | Implemented | `supabase/functions/_shared/parallel.ts`, `_shared/research.ts`, `start-workflow` | Parallel Task API; output is freeform markdown + extracted source URLs (`ResearchResult`). No structured claims schema. |
@@ -92,7 +103,7 @@ instead of `pieces.workflow_stage`):
 | Privacy controls | Partial | RLS everywhere; `research-attachments` folder scoping | No retention policies, no handwriting profiles yet (Phases 2–3, 8). |
 | Annotation shorthand | Implemented | `contract/references/MARKUP.md` | Authoritative existing system (symbols, dials, directives, S{n}P{m}, numbered handles). **Reused as-is** — no new notation shipped. |
 | Reader-facing Socratic questions | Missing → Phase 1 | — | `notes/tighten.md` questions are writer-facing, not reader-facing. |
-| Activity record | Partial | `agent_run_events` | Append-only per-run audit trail exists; workflow-level surface is Phase 8. |
+| Activity record | Implemented | `agent_run_events` + `piece_events` | Per-run audit trail plus a workflow-level event log written by every Edge Function (`logPieceEvent`) and surfaced as the project hub's "Activity history". |
 | Relevant tests | Implemented | `tests/`, `supabase/functions/_tests/`, `supabase/tests/` | Print fidelity (real Chromium), prompt content, state machine, credits, billing boundaries. No React component tests (known gap). |
 
 ## Contradictions and dead ends found

@@ -327,13 +327,15 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
         const nextStage = workflowStageForCompletedKind(run.kind);
         if (nextStage) {
           await advanceStage(admin, { pieceId: run.piece_id, to: nextStage });
-          await logPieceEvent(admin, {
-            pieceId: run.piece_id,
-            userId: run.user_id,
-            event: `${run.kind}_completed`,
-            metadata: { runId: run.id },
-          });
         }
+        // Activity history: every completed run on a piece is an event,
+        // whether or not it maps to an FSM hop (research/packet don't).
+        await logPieceEvent(admin, {
+          pieceId: run.piece_id,
+          userId: run.user_id,
+          event: `${run.kind}_completed`,
+          metadata: { runId: run.id },
+        });
       }
     }
   }

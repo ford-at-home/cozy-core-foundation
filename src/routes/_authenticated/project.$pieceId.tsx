@@ -16,9 +16,11 @@ import {
   listArtifactsByPiece,
   listFollowupsByPackets,
   listPacketsByPiece,
+  listPieceEvents,
   listRunsByPiece,
   loadReturnSummaries,
   type FinalArtifact,
+  type PieceEvent,
 } from "@/lib/packet-workflow";
 import {
   derivePacketWorkflow,
@@ -177,6 +179,7 @@ function ProjectHubPage() {
             docxArtifact={data.artifacts.find((a) => a.id === view.docx?.id) ?? null}
             pptxArtifact={data.artifacts.find((a) => a.id === view.pptx?.id) ?? null}
           />
+          <ActivityHistory pieceId={pieceId} />
           <WhoDoesWhat />
         </>
       )}
@@ -732,6 +735,90 @@ function StageShell({
         {children}
       </div>
     </section>
+  );
+}
+
+// Plain-language labels for the piece_events audit trail. Unknown events fall
+// back to a humanized event name so new backend events never render blank.
+const EVENT_LABELS: Record<string, string> = {
+  research_completed: "Research finished",
+  packet_completed: "Your packet was prepared",
+  pages_uploaded: "You returned pages",
+  dictation_submitted: "You dictated your thoughts",
+  return_read: "Your pages were read",
+  return_read_failed: "Your pages couldn't be read",
+  verification_completed: "You approved what was read",
+  followups_prepared: "You submitted follow-up questions",
+  followups_approved: "You approved your follow-up questions",
+  followup_started: "Follow-up research started",
+  followup_research_completed: "Follow-up research finished",
+  final_docx_started: "Final document started",
+  final_docx_completed: "Final document ready",
+  final_pptx_started: "Presentation started",
+  final_pptx_completed: "Presentation ready",
+};
+
+function eventLabel(ev: PieceEvent): string {
+  const known = EVENT_LABELS[ev.event];
+  if (known) return known;
+  const humanized = ev.event.replace(/_/g, " ");
+  return humanized.charAt(0).toUpperCase() + humanized.slice(1);
+}
+
+function ActivityHistory({ pieceId }: { pieceId: string }) {
+  // Fetched only when opened — the history is a reference view, not part of
+  // the stage model the hub polls for.
+  const [open, setOpen] = useState(false);
+  const {
+    data: events,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["piece-events", pieceId],
+    queryFn: () => listPieceEvents(pieceId),
+    enabled: open,
+  });
+
+  return (
+    <details
+      className="rounded-xl border border-border bg-card p-5 text-sm sm:p-6"
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+    >
+      <summary className="min-h-11 cursor-pointer list-none font-medium">
+        Activity history — everything that happened on this project
+      </summary>
+      <div className="mt-4">
+        {isLoading && <p className="text-muted-foreground">Loading the history…</p>}
+        {error && (
+          <p role="alert" className="text-destructive">
+            {error instanceof Error ? error.message : "Could not load the history."}
+          </p>
+        )}
+        {events && events.length === 0 && (
+          <p className="text-muted-foreground">Nothing recorded yet.</p>
+        )}
+        {events && events.length > 0 && (
+          <ol className="space-y-2">
+            {events.map((ev) => (
+              <li key={ev.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                <time
+                  dateTime={ev.created_at}
+                  className="shrink-0 tabular-nums text-xs text-muted-foreground"
+                >
+                  {new Date(ev.created_at).toLocaleString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                </time>
+                <span className="min-w-0 break-words">{eventLabel(ev)}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    </details>
   );
 }
 
