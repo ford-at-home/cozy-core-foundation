@@ -1520,6 +1520,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_course_professor: {
+        Args: { _course_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_course_student: {
+        Args: { _course_id: string; _user_id: string }
+        Returns: boolean
+      }
       recompute_run_totals: { Args: { _run_id: string }; Returns: undefined }
       recompute_session_totals: {
         Args: { _session_id: string }
