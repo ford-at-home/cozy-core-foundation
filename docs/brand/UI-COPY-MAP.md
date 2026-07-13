@@ -42,7 +42,8 @@ disappear." CTAs: "Start a working draft" / "See how it works". Closing:
 | "+ New piece"                                                  | "+ New draft"                                        | Terminology                                 |
 | Empty state "No runs yet / Start one from the New piece page." | "No drafts yet / Start one from the New draft page." | Terminology                                 |
 | "Create your first piece"                                      | "Start your first draft"                             | Terminology                                 |
-| Table columns, StatusPill values                               | **retained**                                         | Technical state machine                     |
+| Table columns                                                  | **retained**                                         | Technical state machine                     |
+| StatusPill values                                              | Plain-language labels ("Working", "Done", "Didn't finish"); raw status kept as the pill's `title` | Audit P1.1 — students shouldn't parse `awaiting_fetch` |
 
 ## New (`new.tsx`)
 

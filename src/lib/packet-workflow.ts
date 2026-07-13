@@ -369,6 +369,31 @@ export type PieceEvent = {
   created_at: string;
 };
 
+/**
+ * Whether the student's most recent choice about the optional follow-up stage
+ * was to skip it. Skips are recorded as piece events (followups_skipped /
+ * followups_reopened, written by prepare-follow-up-questions); submitting or
+ * approving questions later also counts as reopening, so the latest signal
+ * wins.
+ */
+export async function getFollowupSkipped(pieceId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("piece_events")
+    .select("event")
+    .eq("piece_id", pieceId)
+    .in("event", [
+      "followups_skipped",
+      "followups_reopened",
+      "followups_prepared",
+      "followups_approved",
+    ])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as { event: string } | null)?.event === "followups_skipped";
+}
+
 export async function listPieceEvents(pieceId: string): Promise<PieceEvent[]> {
   const { data, error } = await supabase
     .from("piece_events")

@@ -55,6 +55,23 @@ export const approveFollowupQuestions = createServerFn({ method: "POST" })
   });
 
 /**
+ * Record skipping (or reopening) the optional follow-up stage. Persisted as
+ * an append-only piece event so the choice survives leaving the page; the
+ * project hub reads it back via getFollowupSkipped. Free.
+ */
+export const setFollowupSkip = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { packetId: string; skip: boolean }) => data)
+  .handler(async ({ data, context }): Promise<{ skipped: boolean }> => {
+    const { data: result, error } = await context.supabase.functions.invoke(
+      "prepare-follow-up-questions",
+      { body: data },
+    );
+    if (error) throw new Error(await extractEdgeError(error, "prepare-follow-up-questions"));
+    return result as { skipped: boolean };
+  });
+
+/**
  * Dispatch the focused second research pass over the approved questions.
  * Reserves 2 credits; idempotent on requestId (a retry returns the same run).
  * The result is a NEW packet version — the original is never modified.

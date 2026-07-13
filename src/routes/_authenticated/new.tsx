@@ -270,8 +270,8 @@ function NewDraftPage() {
             />
             <p className="text-xs text-muted-foreground">
               {isPacket
-                ? "Deep web research runs first (usually 2–10 minutes, with sources cited), then the packet is prepared from the report: findings, evidence discussion, and questions tailored to what was found."
-                : "Deep web research runs first (usually 2–10 minutes, with sources cited), then the draft is prepared from the report in your voice. The report is versioned with the draft."}
+                ? "Deep web research runs first (with sources cited), then the packet is prepared from the report: findings, evidence discussion, and questions tailored to what was found. You can watch its progress while it works."
+                : "Deep web research runs first (with sources cited), then the draft is prepared from the report in your voice. The report is versioned with the draft. You can watch its progress while it works."}
             </p>
           </label>
         )}

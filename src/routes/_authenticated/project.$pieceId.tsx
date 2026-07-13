@@ -2,8 +2,10 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { brand, pageTitle } from "@/config/brand";
+import { setFollowupSkip } from "@/lib/followup.functions";
 import {
   FINAL_ARTIFACT_COST,
   createFinalDocumentJob,
@@ -12,6 +14,7 @@ import {
 import { isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
 import {
   artifactDownloadUrl,
+  getFollowupSkipped,
   getPiece,
   listArtifactsByPiece,
   listFollowupsByPackets,
@@ -33,33 +36,7 @@ import {
   type StageRun,
 } from "@/lib/packet-stage";
 import { Skeleton } from "@/components/ui/skeleton";
-
-// Turn a raw provider/edge-function error string into a short student-readable
-// explanation. Returns null when we have nothing useful to say beyond the
-// generic "run didn't finish" copy.
-function interpretRunError(raw: string | null | undefined): { title: string; body: string } | null {
-  if (!raw) return null;
-  const msg = raw.toLowerCase();
-  if (msg.includes("hard limit") || msg.includes("increase your hard limit")) {
-    return {
-      title: "The research provider's account is over its spending limit.",
-      body: "This is a limit on the tool's own billing, not yours — no credits were charged. Please tell the site owner; students cannot fix this themselves.",
-    };
-  }
-  if (msg.includes("insufficient_credits") || msg.includes("insufficient credits")) {
-    return {
-      title: "You didn't have enough credits when this run tried to start.",
-      body: "Add credits from Billing and try again — the earlier attempt cost you nothing.",
-    };
-  }
-  if (msg.includes("provider responded")) {
-    return {
-      title: "The research provider rejected the request.",
-      body: raw,
-    };
-  }
-  return { title: "Details from the run:", body: raw };
-}
+import { interpretRunError } from "@/lib/run-error";
 
 // The guided hub for one research-packet project: one authoritative stage
 // model (src/lib/packet-stage.ts, derived from server-persisted rows), one
@@ -79,18 +56,19 @@ function ProjectHubPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["project", pieceId],
     queryFn: async () => {
-      const [piece, runs, packets, artifacts] = await Promise.all([
+      const [piece, runs, packets, artifacts, followupSkipped] = await Promise.all([
         getPiece(pieceId),
         listRunsByPiece(pieceId),
         listPacketsByPiece(pieceId),
         listArtifactsByPiece(pieceId),
+        getFollowupSkipped(pieceId),
       ]);
       const packetIds = packets.map((p) => p.id);
       const [returns, followups] = await Promise.all([
         loadReturnSummaries(packetIds),
         listFollowupsByPackets(packetIds),
       ]);
-      return { piece, runs, packets, returns, followups, artifacts };
+      return { piece, runs, packets, returns, followups, artifacts, followupSkipped };
     },
     refetchInterval: (query) => {
       // Poll while anything is in flight; realtime below covers the common
@@ -201,6 +179,7 @@ function ProjectHubPage() {
           <StageCard
             view={view}
             pieceId={pieceId}
+            followupSkipped={data.followupSkipped}
             followupRun={
               data.runs.find(
                 (r) =>
@@ -289,6 +268,7 @@ function LiveHeartbeat({ since }: { since: string }) {
 function StageCard({
   view,
   pieceId,
+  followupSkipped,
   followupRun,
   revisedPacket,
   docxArtifact,
@@ -296,6 +276,8 @@ function StageCard({
 }: {
   view: PacketWorkflowView;
   pieceId: string;
+  /** Server-persisted skip choice (latest followups_* piece event). */
+  followupSkipped: boolean;
   /** Non-terminal followup_research run, if one is in flight. */
   followupRun: { id: string } | null;
   /** The latest packet when it's a follow-up product (version > 1). */
@@ -304,10 +286,27 @@ function StageCard({
   docxArtifact: FinalArtifact | null;
   pptxArtifact: FinalArtifact | null;
 }) {
-  // Follow-up is optional: skipping shows the Finish card without recording
-  // anything server-side (creating the document is what commits the skip).
-  const [skipFollowup, setSkipFollowup] = useState(false);
+  // Follow-up is optional. The skip choice is persisted server-side as a
+  // piece event (audit P1.8) so leaving and returning lands back on Finish;
+  // the local override keeps the UI instant while the write is in flight.
+  const queryClient = useQueryClient();
+  const persistSkipFn = useServerFn(setFollowupSkip);
+  const [skipOverride, setSkipOverride] = useState<boolean | null>(null);
+  const skipFollowup = skipOverride ?? followupSkipped;
   const packetRunId = view.packet?.run_id ?? null;
+
+  async function chooseSkip(skip: boolean) {
+    setSkipOverride(skip);
+    if (!view.packet) return;
+    try {
+      await persistSkipFn({ data: { packetId: view.packet.id, skip } });
+      await queryClient.invalidateQueries({ queryKey: ["project", pieceId] });
+    } catch {
+      // The local choice still applies for this visit — worst case is the
+      // pre-persistence behavior (the skip is forgotten next time).
+      toast.error("Couldn't save this choice — it may not stick next time you open the project.");
+    }
+  }
 
   if (view.current === "research") {
     if (view.activeRun) {
@@ -317,7 +316,7 @@ function StageCard({
         <StageShell title="Research" status={label}>
           <p>
             {view.activeRun.kind === "research"
-              ? "Deep research is running — reading sources and assembling evidence. This usually takes 2–10 minutes."
+              ? "Deep research is running — reading sources and assembling evidence. The timer below shows how long it has been working."
               : "The research is done; your packet — findings, sources, and questions written for this specific research — is being prepared."}
           </p>
           <LiveHeartbeat since={view.activeRun.created_at} />
@@ -435,7 +434,7 @@ function StageCard({
       <StageShell title="Review" status={recognizing ? "Reading your notes…" : "Ready for review"}>
         <p>
           {recognizing
-            ? "Your pages are being read. This takes a minute or two — this page updates on its own."
+            ? "Your pages are being read — this page updates on its own."
             : "Your returned work has been read. Check what the system understood, fix anything it got wrong, and approve. Only your approved words move forward."}
         </p>
         {!recognizing && view.latestReturn && (
@@ -490,7 +489,7 @@ function StageCard({
               Ask follow-up questions
             </Link>
           )}
-          <button type="button" onClick={() => setSkipFollowup(true)} className={secondaryBtn}>
+          <button type="button" onClick={() => void chooseSkip(true)} className={secondaryBtn}>
             Skip — go to the final document
           </button>
         </div>
@@ -505,7 +504,7 @@ function StageCard({
       pptx={pptxArtifact}
       revisedPacket={revisedPacket}
       onBackToFollowup={
-        view.current === "follow_up" && skipFollowup ? () => setSkipFollowup(false) : null
+        view.current === "follow_up" && skipFollowup ? () => void chooseSkip(false) : null
       }
     />
   );
@@ -823,6 +822,8 @@ const EVENT_LABELS: Record<string, string> = {
   verification_completed: "You approved what was read",
   followups_prepared: "You submitted follow-up questions",
   followups_approved: "You approved your follow-up questions",
+  followups_skipped: "You skipped follow-up research",
+  followups_reopened: "You reopened the follow-up questions",
   followup_started: "Follow-up research started",
   followup_research_completed: "Follow-up research finished",
   final_docx_started: "Final document started",

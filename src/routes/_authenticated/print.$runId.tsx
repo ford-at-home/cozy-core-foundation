@@ -353,6 +353,25 @@ function PrintPage() {
         </div>
       )}
 
+      {/* Next step after paper: returning the work. Only when the real packet
+          row loaded (pieceId set) — the degraded fallback has no packet id to
+          return against. */}
+      {post && packetInfo?.pieceId && (
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-muted-foreground">
+            Finished working on paper? Return your pages as photos, dictate your answers, or both —
+            returning is free.
+          </p>
+          <Link
+            to="/return/$packetId"
+            params={{ packetId: packetInfo.packetId }}
+            className="inline-flex min-h-11 w-full shrink-0 items-center justify-center rounded-md border border-border px-4 text-sm font-medium transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/60 sm:w-auto"
+          >
+            Return your work →
+          </Link>
+        </div>
+      )}
+
       {post && (
         <>
           {iframeError && (

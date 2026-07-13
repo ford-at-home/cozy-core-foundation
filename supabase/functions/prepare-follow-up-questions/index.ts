@@ -11,6 +11,12 @@
 //   requires. Each item carries the original studentText (and the suggestion
 //   the student saw, if any) so provenance survives the replacement.
 //
+//   Skip ({ skip: true|false }): records the student's choice to skip the
+//   optional follow-up stage (or to reopen it) as an append-only piece event
+//   — followups_skipped / followups_reopened. No rows change; the project hub
+//   reads the latest of these events so the skip survives leaving the page
+//   (audit P1.8). No schema change: piece_events already exists.
+//
 // Rows are replaced wholesale per call; once any question on the packet is
 // 'researched' the set is frozen (the research already ran against it).
 // deno-lint-ignore-file no-explicit-any
@@ -29,6 +35,7 @@ Deno.serve(
     const body = await req.json().catch(() => ({}));
     const packetId = typeof body?.packetId === "string" ? body.packetId : "";
     const approve = body?.approve === true;
+    const skip = typeof body?.skip === "boolean" ? body.skip : null;
     if (!packetId)
       return e(FN, 400, "packetId required", { requestId: rid, code: "invalid_input" });
 
@@ -37,7 +44,9 @@ Deno.serve(
 
     let questions: string[] = [];
     let approvals: ApprovalItem[] = [];
-    if (approve) {
+    if (skip !== null) {
+      // Skip mode carries no questions — validation happens after ownership.
+    } else if (approve) {
       approvals = Array.isArray(body?.questions)
         ? body.questions
             .map((q: unknown) => {
@@ -104,6 +113,18 @@ Deno.serve(
         requestId: rid,
         code: "research_running",
       });
+    }
+
+    // Skip mode: record the choice and stop — question rows are untouched.
+    if (skip !== null) {
+      await logPieceEvent(admin, {
+        pieceId: packet.piece_id,
+        userId,
+        actor: "user",
+        event: skip ? "followups_skipped" : "followups_reopened",
+        metadata: { packetId },
+      });
+      return j({ skipped: skip }, 200, rid);
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

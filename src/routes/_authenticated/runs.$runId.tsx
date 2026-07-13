@@ -17,6 +17,7 @@ import {
 import { CREDIT_COST, isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
 import type { Json } from "@/integrations/supabase/types";
 import MarkdownView from "@/components/MarkdownView";
+import { interpretRunError } from "@/lib/run-error";
 import { RunCostCard } from "@/components/RunCostCard";
 import { StatusPill } from "@/components/StatusPill";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -156,9 +157,6 @@ function RunDetailPage() {
             {brand.product.name}
           </p>
           <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Run</h1>
-          <p className="mt-1 truncate font-mono text-xs text-muted-foreground" title={runId}>
-            {runId}
-          </p>
         </div>
         <Link
           to="/dashboard"
@@ -207,8 +205,9 @@ function RunDetailPage() {
           <RunCostCard runId={run.id} sessionId={run.session_id} runCostUsd={run.total_cost_usd} />
 
           {ACTIVE_RUN_STATUSES.includes(run.status) && (
-            <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
-              {activeStatusMessage(run.status, run.kind)}
+            <div className="space-y-3 rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+              <p>{activeStatusMessage(run.status, run.kind)}</p>
+              <ElapsedIndicator since={run.created_at} />
             </div>
           )}
 
@@ -240,9 +239,9 @@ function RunDetailPage() {
                   </>
                 )
               ) : isPacketWorkflow(run) ? (
-                "The packet run is being prepared; it will appear on your dashboard within a couple of minutes."
+                "The packet run is being prepared; it will appear on your dashboard shortly."
               ) : (
-                "The drafting run is being prepared; it will appear on your dashboard within a couple of minutes."
+                "The drafting run is being prepared; it will appear on your dashboard shortly."
               )}
             </div>
           )}
@@ -308,14 +307,7 @@ function RunDetailPage() {
           )}
 
           {(run.status === "failed" || run.status === "cancelled") && (
-            <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-              {run.status === "cancelled"
-                ? "This run was cancelled."
-                : (run.error ?? "The run failed without an error message.")}
-              <span className="mt-1 block text-xs text-muted-foreground">
-                Any credit held for this run was released — you were not charged.
-              </span>
-            </div>
+            <FailureBanner status={run.status} error={run.error} />
           )}
 
           {run.status === "completed" && (channels.length > 0 || brief) && (
@@ -869,6 +861,51 @@ function formatSecs(n: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+/** Ticking elapsed-time readout for in-flight runs — real observed time
+ *  instead of a made-up duration estimate. */
+function ElapsedIndicator({ since }: { since: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  const startMs = new Date(since).getTime();
+  const secs = Number.isFinite(startMs) ? Math.max(0, Math.floor((now - startMs) / 1000)) : 0;
+  const mins = Math.floor(secs / 60);
+  const rem = secs % 60;
+  const elapsed = mins > 0 ? `${mins}m ${String(rem).padStart(2, "0")}s` : `${rem}s`;
+  return (
+    <p className="flex items-center gap-2 text-xs">
+      <span
+        aria-hidden
+        className="inline-block h-1.5 w-1.5 flex-none animate-pulse rounded-full bg-emerald-500"
+      />
+      Working for <span className="font-mono text-foreground">{elapsed}</span>
+    </p>
+  );
+}
+
+/** Friendly failure/cancellation explanation; the raw error text lives in the
+ *  technical-details disclosure below, never here. */
+function FailureBanner({ status, error }: { status: string; error: string | null }) {
+  const detail =
+    status === "cancelled"
+      ? { title: "This run was cancelled.", body: "" }
+      : (interpretRunError(error) ?? {
+          title: "The run didn't finish.",
+          body: "",
+        });
+  return (
+    <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+      <p className="font-medium">{detail.title}</p>
+      {detail.body && <p className="mt-1 text-destructive/90">{detail.body}</p>}
+      <span className="mt-1 block text-xs text-muted-foreground">
+        Any credit held for this run was released — you were not charged.
+      </span>
+    </div>
+  );
+}
+
 /** A research run that will chain into a packet run (docs/research-workflow/). */
 function isPacketWorkflow(run: AgentRun): boolean {
   return (
@@ -941,7 +978,7 @@ function activeStatusMessage(status: RunStatus, kind: string): string {
         return "Starting… — dispatch is unconfirmed; the reconciler is resolving it. This page updates live.";
       case "queued":
       case "running":
-        return "Researching — scanning sources across the web and assembling a cited report. Deep research usually takes 2–10 minutes. This page updates live.";
+        return "Researching — scanning sources across the web and assembling a cited report. Deep research takes a while; the timer below shows how long it has been working. This page updates live.";
       case "awaiting_fetch":
         return "Almost done — the report is ready; fetching it and starting the drafting run.";
       default:
@@ -1076,91 +1113,113 @@ function RunDetailPanel({ run }: { run: AgentRun }) {
 
   return (
     <section className="rounded-xl border border-border bg-card p-5 space-y-4">
-      <div className="flex items-baseline justify-between gap-4">
-        <h2 className="font-serif text-lg">Run detail</h2>
-        <span className="text-xs text-muted-foreground">kind: {run.kind}</span>
-      </div>
+      <h2 className="font-serif text-lg">Run detail</h2>
 
       <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-        <Stat label="Created" value={formatTs(run.created_at)} />
-        <Stat label="Dispatched" value={formatTs(run.dispatched_at)} />
+        <Stat label="Started" value={formatTs(run.created_at)} />
         <Stat label="Completed" value={formatTs(run.completed_at)} />
         <Stat label="Duration" value={formatDuration(run)} />
-        <Stat label="Branch" value={run.branch ?? "—"} mono />
-        <Stat label="Piece" value={run.piece_id ?? "—"} mono />
       </dl>
 
-      {run.provider === "cursor" && (
-        <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs">
-          <span className="font-medium text-foreground">Watch the raw agent stream on Cursor:</span>{" "}
-          <a
-            href={
-              run.external_agent_id
-                ? `https://cursor.com/agents?id=${encodeURIComponent(run.external_agent_id)}`
-                : "https://cursor.com/agents"
-            }
-            target="_blank"
-            rel="noreferrer"
-            className="underline hover:text-foreground"
-          >
-            {run.external_agent_id ? "Open this agent on cursor.com →" : "Open cursor.com/agents →"}
-          </a>
-          {run.branch && (
-            <span className="ml-1 text-muted-foreground">
-              (branch <span className="font-mono">{run.branch}</span>)
-            </span>
+      {/* Identifiers, raw errors, and the transition log matter to the site
+          owner, not to students — collapsed by default (audit P1.1). */}
+      <details className="rounded-md border border-border/60 bg-background/40 px-3">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center text-xs font-medium text-muted-foreground hover:text-foreground">
+          Technical details
+        </summary>
+        <div className="space-y-4 pb-3">
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+            <Stat label="Run ID" value={run.id} mono />
+            <Stat label="Kind" value={run.kind} mono />
+            <Stat label="Branch" value={run.branch ?? "—"} mono />
+            <Stat label="Piece" value={run.piece_id ?? "—"} mono />
+            <Stat label="Dispatched" value={formatTs(run.dispatched_at)} />
+          </dl>
+
+          {run.provider === "cursor" && (
+            <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs">
+              <span className="font-medium text-foreground">
+                Watch the raw agent stream on Cursor:
+              </span>{" "}
+              <a
+                href={
+                  run.external_agent_id
+                    ? `https://cursor.com/agents?id=${encodeURIComponent(run.external_agent_id)}`
+                    : "https://cursor.com/agents"
+                }
+                target="_blank"
+                rel="noreferrer"
+                className="underline hover:text-foreground"
+              >
+                {run.external_agent_id
+                  ? "Open this agent on cursor.com →"
+                  : "Open cursor.com/agents →"}
+              </a>
+              {run.branch && (
+                <span className="ml-1 text-muted-foreground">
+                  (branch <span className="font-mono">{run.branch}</span>)
+                </span>
+              )}
+              <p className="mt-1 text-muted-foreground">
+                Requires access to the site owner's Cursor workspace — the branch name is enough to
+                locate the agent even without a deep link.
+              </p>
+            </div>
           )}
-          <p className="mt-1 text-muted-foreground">
-            Requires access to the site owner's Cursor workspace — the branch name is enough to
-            locate the agent even without a deep link.
-          </p>
-        </div>
-      )}
 
-      {run.error && (
-        <div className="space-y-1">
-          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Last error
+          {run.error && (
+            <div className="space-y-1">
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Last error (raw)
+              </div>
+              <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
+                {run.error}
+              </pre>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Status transitions
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Each line is a real signal from the system — either the cloud agent pushed us an
+              update (“from the agent”), our background checker polled and saw a change (“from our
+              minute check”), or our controller changed the run itself (“from the app”).
+            </p>
+            {eventsError && (
+              <p className="text-xs text-destructive">
+                Could not load event history: {eventsError}
+              </p>
+            )}
+            {timeline.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No transitions recorded yet.</p>
+            ) : (
+              <ol className="space-y-1.5 border-l border-border pl-3">
+                {timeline.map((entry, i) => (
+                  <li key={`${entry.at}-${i}`} className="text-xs">
+                    <div className="flex flex-wrap items-baseline gap-2">
+                      <span className="font-mono text-muted-foreground">{formatTs(entry.at)}</span>
+                      <span className="rounded bg-muted px-1.5 py-0.5 font-medium">
+                        {entry.status}
+                      </span>
+                      {entry.source && (
+                        <span
+                          className="text-muted-foreground"
+                          title={`raw source: ${entry.source}`}
+                        >
+                          {friendlySource(entry.source)}
+                        </span>
+                      )}
+                    </div>
+                    {entry.note && <div className="text-muted-foreground">{entry.note}</div>}
+                  </li>
+                ))}
+              </ol>
+            )}
           </div>
-          <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
-            {run.error}
-          </pre>
         </div>
-      )}
-
-      <div className="space-y-2">
-        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Status transitions
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Each line is a real signal from the system — either the cloud agent pushed us an update
-          (“from the agent”), our background checker polled and saw a change (“from our minute
-          check”), or our controller changed the run itself (“from the app”).
-        </p>
-        {eventsError && (
-          <p className="text-xs text-destructive">Could not load event history: {eventsError}</p>
-        )}
-        {timeline.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No transitions recorded yet.</p>
-        ) : (
-          <ol className="space-y-1.5 border-l border-border pl-3">
-            {timeline.map((entry, i) => (
-              <li key={`${entry.at}-${i}`} className="text-xs">
-                <div className="flex flex-wrap items-baseline gap-2">
-                  <span className="font-mono text-muted-foreground">{formatTs(entry.at)}</span>
-                  <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{entry.status}</span>
-                  {entry.source && (
-                    <span className="text-muted-foreground" title={`raw source: ${entry.source}`}>
-                      {friendlySource(entry.source)}
-                    </span>
-                  )}
-                </div>
-                {entry.note && <div className="text-muted-foreground">{entry.note}</div>}
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
+      </details>
     </section>
   );
 }
