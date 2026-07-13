@@ -59,6 +59,7 @@ Specification set: `docs/research-workflow/`.
 | `/print/$runId`                     | print-for-markup preview + PDF download (packet runs use the packet builder with response areas) |
 | `/return/$packetId`                 | `src/routes/_authenticated/return.$packetId.tsx` (return completed work: camera-first page photos via signed uploads + dictation via `useDictation`; all writes through Edge Functions) |
 | `/review/$returnId`                 | `src/routes/_authenticated/review.$returnId.tsx` (mandatory verification: photo beside recognized text, low-confidence gating, handwriting-vs-dictation conflict resolution, approval via `verify-student-responses`) |
+| `/followup/$packetId`               | `src/routes/_authenticated/followup.$packetId.tsx` (follow-up stage: submit up to 3 questions — typed / dictated / from `followup_opportunities` / from verified handwriting — visible suggested rewordings, explicit approval, then the 2-credit `run-follow-up-research` dispatch; result is a v+1 packet) |
 | `/billing`                          | `src/routes/_authenticated/billing.tsx` (balance, credit packs, purchase history, ledger, checkout return banners) |
 
 ### Mobile (verified — mobile is the primary interface)

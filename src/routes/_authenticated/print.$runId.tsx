@@ -116,7 +116,10 @@ function PrintPage() {
       } else {
         const content = extractPost(data.result);
         if (content) {
-          if (data.kind === "packet") {
+          // followup_research runs produce a revised packet (v+1) that prints
+          // through the same packet builder as v1 — same anchors, same
+          // question rendering, version stamped in the footer.
+          if (data.kind === "packet" || data.kind === "followup_research") {
             // Reviewed questions come from the packets tables. A missing
             // packet row (persistence flagged a problem) still prints the
             // body with the follow-up section, so paper is never blocked.

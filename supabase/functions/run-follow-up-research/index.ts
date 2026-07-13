@@ -117,7 +117,7 @@ Deno.serve(
       .select("slug")
       .eq("id", packet.piece_id)
       .maybeSingle();
-    const ctx = await loadPriorPacketContext(admin, packet.piece_id);
+    const ctx = await loadPriorPacketContext(admin, packet.piece_id, packet.id);
     const prompt = buildFollowUpPrompt({
       pieceSlug: piece?.slug ?? "piece",
       priorVersion: packet.version ?? 1,

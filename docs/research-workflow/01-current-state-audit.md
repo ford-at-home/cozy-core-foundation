@@ -38,6 +38,22 @@ instead of `pieces.workflow_stage`):
    every page is terminal. The UI still derives a return's effective status
    from rows (`deriveReturnUiStatus`) because the verification verdict lives
    in `verification_corrections`, not on the return row.
+3. ~~No approval path for follow-up questions~~ — fixed:
+   `run-follow-up-research` requires `followup_questions.status='approved'`
+   with `approved_text`, but the delivered `prepare-follow-up-questions` only
+   ever wrote `submitted`/`refined` and the client is SELECT-only on the
+   table, so the gate was unreachable. `prepare-follow-up-questions` now has
+   an approve mode (`{ approve: true, questions: [{studentText,
+   approvedText, suggestedText?}] }`) that preserves the student's original
+   wording alongside the approved one, and refuses changes once the set is
+   `researched`.
+4. ~~`loadPriorPacketContext` dropped most verified responses~~ — fixed: it
+   only joined blocks already carrying `linked_question_id` and ignored
+   dictation segments, correction-based question reassignment
+   (`corrected_meaning.questionId`), and rejections. The assembly is now the
+   pure `assembleVerifiedResponses` (tested in `_tests/followup.test.ts`)
+   walking packet → returns → pages → blocks plus segments, with the same
+   latest-correction-wins / empty-is-rejection rules as the review UI.
 
 ## Capability inventory
 
