@@ -27,6 +27,12 @@ export const Route = createFileRoute("/_authenticated/runs/$runId")({
   head: () => ({
     meta: [{ title: pageTitle("Run") }, { name: "robots", content: "noindex" }],
   }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    // Set by the revision panel's "not quite" CTA so the draft page can
+    // scroll to the dictation panel and prompt the user to mark up the
+    // revision they just came from.
+    fromRevision: typeof search.fromRevision === "string" ? search.fromRevision : undefined,
+  }),
   component: RunDetailPage,
 });
 
