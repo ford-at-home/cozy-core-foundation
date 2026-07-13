@@ -1,133 +1,115 @@
 
-# Parity Check: Clarity & Simplification Brief vs. Current Code
+# Clarity Pass: Unified Vocabulary, One Story, Two Depths
 
-Not an implementation plan — a map of where the brief's asks already exist, where they exist partially, and where they don't exist at all. Approve this and I'll turn the gaps into a scoped implementation plan.
+Turn the "best of both worlds" framing into shipped copy and light UI reorganization. **No new features, no schema changes, no professor scope, no new stages.** Both workflows keep operating exactly as they do — this pass only makes the user perceive one product. Word-doc and PowerPoint generation stay fully intact as the packet workflow's Finish stage; merged-PR draft stays as the longform workflow's Finish.
 
-## TL;DR
+## Shared stage vocabulary (single source of truth)
 
-Most of the brief's **stage model, naming, and workflow narrative already exist** for the research-packet workflow (`/project/$pieceId`, `src/lib/packet-stage.ts`, `docs/research-workflow/`, `docs/brand/UI-COPY-MAP.md`). The big real gaps are: (1) the app runs **two parallel workflows** ("draft" and "research-packet") and top-level surfaces still lead with the draft one, (2) **transition copy between stages** is thin, (3) **professor role doesn't exist in the schema at all**, (4) **error/recovery copy** and **credit explanations at point-of-value** are inconsistent, (5) **printed packet return instructions** exist but haven't been audited against the brief's checklist.
+Both workflows get named against the same six/seven verbs. The seventh (`Review` + `Follow up`) applies only to the packet path.
 
-## Legend
+```text
+Explore  →  Print  →  Think  →  Return  →  [Review  →  Follow up  →]  Finish
+```
 
-- ✅ Parity — implemented and consistent with the brief
-- 🟡 Partial — exists but incomplete or inconsistent
-- ❌ Gap — not implemented
-- ⛔ Out of scope for this codebase (would require new features/schema — brief says "no new features")
+- **Explore** — AI gathers research (packet) or drafts in your voice (longform).
+- **Print** — Generate the hardcopy with `S{n}P{m}` anchors.
+- **Think** — Off-screen, on paper. App shows "waiting for you".
+- **Return** — Photograph pages + dictate (packet) or paste/dictate an annotation transcript (longform).
+- **Review** — Correct what handwriting recognition read. *Packet only.*
+- **Follow up** — Approve up to three questions for another research pass. *Packet only, skippable.*
+- **Finish** — Download **Word doc and/or PowerPoint** (packet, via existing `create-final-document-job` + `create-presentation-job`) or approve & merge the revised draft (longform). Both endings preserved.
 
-## Phase-by-phase parity
+Codify in `src/lib/packet-stage.ts` as the shared `STAGE_LABELS` (already exists) and add a parallel `DRAFT_STAGE_LABELS` re-using the same six verbs. The draft-run page reads the current substate off `agent_runs.kind` and maps to one of those verbs.
 
-### Core Product Promise & Core Experience
-| Brief ask | Status | Where |
-|---|---|---|
-| One-sentence promise | 🟡 | `src/config/brand.ts` has `brand.meta.description` and `brand.product.descriptor`; both are draft-workflow-centric, not the "research → paper → return → refine → present" arc the brief wants. |
-| 7-step human arc (Research → Print → Think → Return → Review → Follow-up → Present) | ✅ (packet flow) / 🟡 (landing) | `PACKET_STAGES` in `src/lib/packet-stage.ts` matches almost exactly (`research, print, think, return, review, follow_up, finish`). Landing page `HOW_IT_WORKS` in `src/routes/index.tsx` tells a *different* 7-step story (Research/Prepare/Print/Think by hand/Return your marks/Refine/Keep the result) — the draft workflow, not the packet workflow. |
+## File-by-file changes
 
-### Phase 1 — Map existing workflow
-| Brief ask | Status | Where |
-|---|---|---|
-| Full audit doc | ✅ | `docs/research-workflow/01-current-state-audit.md` + `BACKEND-CAPABILITY-MATRIX.md` already do this exhaustively. |
-| Two workflows coexist and confuse | ❌ (not surfaced) | `pieces.workflow` = `longform` vs `research_packet`. Dashboard, `/new`, and landing don't distinguish or guide the choice; a first-time user won't know which they're starting. **This is the biggest information-architecture gap.** |
+### Landing (`src/routes/index.tsx`)
+- Rewrite `HOW_IT_WORKS` to the six shared verbs. Drop workflow-specific nouns from top-level headings.
+- Rewrite hero + one-sentence promise to match the shared arc; retain "Leave the screen. Keep the thread."
+- Add "What AI will / won't do" (three bullets each) from Phase 5 of the brief.
+- The `Finish` copy explicitly names "a Word document, a class presentation, or a revised draft merged to your repo" so a landing visitor sees all three real outputs.
+- CTA: "Start a project" → `/new`.
 
-### Phase 2 — Main path vs. optional paths
-| Brief ask | Status | Where |
-|---|---|---|
-| Progressive disclosure of return methods, follow-up, output formats | 🟡 | Project hub gates by derived stage, so downstream cards don't show until relevant. But `/return/$packetId` presents upload + dictation side-by-side without framing as "one decision", and follow-up doesn't have an explicit "Skip follow-up" affordance. |
+### `/new` (`src/routes/_authenticated/new.tsx`)
+- Rewrite the two mode cards using intent framing:
+  - **"Draft a piece in my voice"** (`longform`) — ends in a merged draft.
+  - **"Study a subject and write from it"** (`research_packet`) — ends in a Word doc and/or PowerPoint.
+- Below the toggle, preview the arc: "You'll Explore → Print → Think → Return → Refine → Finish" for longform, or the same with Review + Follow up inserted for packet. Each preview names its final output.
+- Rename primary button to **"Start"**.
 
-### Phase 3 — Define 4–7 user-facing stages
-| Brief ask | Status | Where |
-|---|---|---|
-| 4–7 stages, each with title/goal/primary action/completion/next | ✅ (structurally) / 🟡 (copy) | `STAGE_LABELS` + `derivePacketWorkflow` deliver 7 stages with one primary action each. Missing: one-sentence explanation per stage, explicit "completion condition", explicit "next-stage transition" copy. |
+### Dashboard (`src/routes/_authenticated/dashboard.tsx`)
+- Rename "Kind" column → "Stage"; render the shared verb via a new `deriveDashboardStage(row)` helper in `packet-stage.ts` that maps piece + latest run to one of the seven verbs.
+- Rename "New draft" → "New project".
+- Empty state uses "project".
 
-### Phase 4 — Naming audit
-| Brief ask | Status | Where |
-|---|---|---|
-| Internal-to-user language map | ✅ | `docs/brand/UI-COPY-MAP.md` is exactly this artifact, already thorough for chrome/auth/dashboard/new/profile/run/print. |
-| Consistent naming for packet, returned pages, review notes, follow-up, final paper, presentation | 🟡 | Packet workflow terms are consistent inside the packet hub. The **draft workflow still uses "piece" / "draft" / "revision" / "PR"** and those bleed into shared surfaces (Dashboard nav says "New draft"). The two vocabularies don't reconcile. |
-| Retire "artifact"/"ingestion"/"reconciliation"/"rendering" as primary UI terms | 🟡 | `final_artifacts` naming still surfaces in some copy (`FINAL_ARTIFACT_COST`, project-hub Finish card). Not audited end-to-end. |
+### Project hub (`src/routes/_authenticated/project.$pieceId.tsx`)
+- Already uses `STAGE_LABELS`. Add one-sentence description per stage (new `STAGE_DESCRIPTIONS` map).
+- Add transition copy at the top of the active stage card ("What just happened / What's next / You can leave — everything's saved").
+- Follow-up card gets an explicit **"Skip follow-up"** secondary action that jumps to Finish.
+- **Finish card** headline: "Create your final paper and slides." Body: single primary "Choose what to create" button; clicking reveals both docx and pptx options with per-artifact cost, current status (pending/generating/ready/failed via existing `final_artifacts` rows), and download links exactly as today. No generation logic changes; only visual weight and disclosure.
 
-### Phase 5 — Clarify the beginning
-| Brief ask | Status | Where |
-|---|---|---|
-| Landing page tells the full arc | 🟡 | Exists but tells the *draft* arc, not the packet arc, and doesn't say "what AI will not do". |
-| First-use onboarding | ❌ | No onboarding surface. |
-| `/new` explains the whole loop before starting | 🟡 | `/new` describes brief/draft prep only; doesn't preview return/review/follow-up/present. |
-| Printable packet instructions | 🟡 | `buildPacketPrintDocument` in `src/lib/print-document.ts` renders instructions on the packet — not audited against the brief's checklist (read/respond/dark ink/shorthand/3 questions/photograph/dictate/return-checklist). |
+### Draft-run page (`src/routes/_authenticated/runs.$runId.tsx`)
+- Small "Stage" pill mapping current run/piece state to one of the six shared verbs.
+- Rename revise-panel textarea heading to **"Return your marks"**.
+- Revision-approval panel keeps its "Approve & merge" / "Not quite — mark up & re-dictate" buttons (built last turn); surrounding copy uses shared vocabulary.
 
-### Phase 6 — Transition copy between stages
-| Brief ask | Status | Where |
-|---|---|---|
-| End-of-stage "what happened / what's next / can I leave" copy at every hand-off | ❌ | Project hub renders per-stage status labels but no consistent transition messages. Six of the seven transitions the brief lists have no dedicated copy. |
+### Return page (`src/routes/_authenticated/return.$packetId.tsx`)
+- Reframe upload + dictation as one decision: "How would you like to return your work?" with three cards (Upload photos, Dictate, or both). Progressive disclosure.
+- Add opening transition copy.
+- Rewrite blurred/missing-page recovery messages using Phase 11 template.
 
-### Phase 7 — Reduce cognitive load
-| Brief ask | Status | Where |
-|---|---|---|
-| One primary action per stage, defaults, collapsed advanced | ✅ (hub) / 🟡 (deep pages) | Hub is disciplined. `/runs/$runId`, `/review/$returnId`, `/followup/$packetId` have multiple equal-weight controls; not audited against the "one primary action" rule. |
+### Review page (`src/routes/_authenticated/review.$returnId.tsx`)
+- Opening explanation: "We read your handwriting, but it can be ambiguous. Confirm or correct before it feeds the next research pass."
+- Keep controls; rewrite section labels to plain language.
 
-### Phase 8 — Branching clarity
-| Brief ask | Status | Where |
-|---|---|---|
-| Return method as one decision | 🟡 | `/return/$packetId` shows both, not framed as a decision. |
-| Follow-up skippable and explicit | 🟡 | Skip is technically possible (Finish is reachable without follow-up per `packet-stage.ts:85–86`) but not clearly labeled as "Skip". |
-| Final output (docx / pptx / both) shown only after synthesis | ✅ | Project hub Finish card gates on prior stages. |
-| Revised packet rendering strategy (full/addendum/replacement) not user-exposed | ✅ | Only one strategy exists; not user-choice. |
+### Follow-up page (`src/routes/_authenticated/followup.$packetId.tsx`)
+- Opening explanation from Phase 6.
+- Explicit **"Skip follow-up and go to Finish"** button at equal visual weight to "Send for research".
 
-### Phase 9 — Status/progress
-| Brief ask | Status | Where |
-|---|---|---|
-| Plain-language statuses instead of "processing/queued/rendering" | 🟡 | `StatusPill` still shows raw run states in some places (`/runs/$runId`, dashboard). Project hub uses friendlier labels but derives from those raw states. |
-| Show current/completed/next/action-required/safe-to-leave | 🟡 | Stages show complete/current/upcoming; "safe to leave" and "action required" are not consistently signaled. |
+### Print (`src/lib/print-document.ts`)
+- Verify printed packet ends with a **Return checklist page**: read → respond → dark ink → shorthand legend → up to 3 questions → photograph one page at a time → dictate anything ambiguous → return to the project. Add missing items only.
+- Do not touch `S{n}P{m}` anchor logic or `contract/references/MARKUP.md`.
 
-### Phase 10 — Credits & payments at point-of-value
-| Brief ask | Status | Where |
-|---|---|---|
-| Explain credit cost at the point of action | 🟡 | `CostBadge`, `useCreditBalance`, `isInsufficientCreditsError` exist. Costs are shown near action buttons in most places but the "one credit = complete research packet, one credit = follow-up (up to 3 questions), everything else free" narrative from the brief is not written down in one place a user sees. `docs/BILLING.md` is the internal source of truth. |
-| Failure semantics for credits | ✅ (backend) / 🟡 (UI copy) | `docs/BILLING.md` guarantees reservation/release. User-facing recovery copy on failure is generic. |
+### Brand config (`src/config/brand.ts`)
+- Update `brand.meta.description` and `brand.product.descriptor` to the unified one-sentence promise. `brand.product.name` unchanged.
 
-### Phase 11 — Empty/error/recovery states
-| Brief ask | Status | Where |
-|---|---|---|
-| "What happened / preserved / do next / credits / continue elsewhere" for every failure | 🟡 | Some paths good (blurred page reshoot on `/return/$packetId`, artifact settle on failure per `01-current-state-audit.md` item 5). Global audit not done. |
+### New shared copy file (`src/config/workflow-copy.ts`)
+- Central export for every user-facing string in this pass: stage descriptions, transition messages, credit explanation, "what AI does / doesn't do", empty/error templates. So every surface pulls from one place.
 
-### Phase 12 — Printed instructions
-| Brief ask | Status | Where |
-|---|---|---|
-| Return-process instructions on paper (checklist, shorthand legend, dark ink, 3 questions, photograph, dictate) | 🟡 | Print includes packet body + `S{n}P{m}` anchors + `contract/references/MARKUP.md` shorthand. A **final return checklist page** and dark-ink/photograph guidance haven't been verified in the print output. |
+### Docs
+- Update `docs/brand/UI-COPY-MAP.md` with new mappings.
+- Add `docs/research-workflow/10-clarity-pass.md` recording the six-verb model and reconciliation.
 
-### Phase 13 — User-facing product language (16 surfaces)
-| Surface | Status |
-|---|---|
-| 1–4 One-sentence / short / expanded / how-it-works | 🟡 (landing tells the wrong arc) |
-| 5 Stage names + descriptions | ✅ names / ❌ descriptions |
-| 6 New-project intro | 🟡 |
-| 7 Printable packet instructions | 🟡 |
-| 8 Upload & dictation instructions | 🟡 |
-| 9 Verification explanation | 🟡 (`/review/$returnId` exists; explanatory copy not audited) |
-| 10 Follow-up explanation | 🟡 |
-| 11 Final output explanation | 🟡 |
-| 12 Professor-facing explanation | ⛔ (no professor role in schema) |
-| 13 Student-facing explanation | 🟡 |
-| 14 Credit explanation | 🟡 |
-| 15 Error/recovery copy | 🟡 |
+## What this pass does NOT change
 
-### Phase 14 — UX flow spec
-| Brief ask | Status |
-|---|---|
-| High-level + detailed + screen-by-screen + entry/exit + save-return + error paths | 🟡 — `docs/research-workflow/01…09` cover most; no consolidated single-source flow diagram. |
+- No changes to `pieces.workflow` / `workflow_stage` / `agent_runs.kind` / any schema.
+- No changes to Edge Functions, RLS, credit ledger, print CSS, `S{n}P{m}` anchors.
+- **No changes to `create-final-document-job` or `create-presentation-job`** — docx and pptx generation preserved exactly.
+- No changes to run orchestration, revision PR merge, GitHub integration.
+- No professor role, no assignments, no enrollments.
+- No onboarding modal or tour. Static copy only.
 
-### Phase 15 — Implement clarity layer
-Not applicable to parity check — this is where the follow-up implementation plan would land.
+## Order of work
 
-### Phase 16 — Validate with representative users
-❌ — No validation artifacts in repo.
+1. `src/lib/packet-stage.ts` + new `src/config/workflow-copy.ts` — shared vocabulary and copy constants first.
+2. `src/routes/index.tsx` + `src/config/brand.ts` — landing and brand meta.
+3. `src/routes/_authenticated/new.tsx` — mode framing.
+4. `src/routes/_authenticated/dashboard.tsx` — stage column.
+5. `src/routes/_authenticated/project.$pieceId.tsx` — transitions, Finish reframe, skip follow-up.
+6. `src/routes/_authenticated/return.$packetId.tsx` + `review.$returnId.tsx` + `followup.$packetId.tsx`.
+7. `src/routes/_authenticated/runs.$runId.tsx` — draft-run vocabulary alignment.
+8. `src/lib/print-document.ts` — printed return checklist audit.
+9. `docs/brand/UI-COPY-MAP.md` + `docs/research-workflow/10-clarity-pass.md`.
+10. Validation: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`; Playwright pass Landing → /new → /project hub confirming shared verbs render and Finish card exposes docx + pptx.
 
-## Two things the brief assumes exist that don't
+## Validation checklist
 
-1. **Professor role / assignments / enrollments.** Brief mentions "professor controls", professor-facing copy, and "professor may require follow-up". Per `BACKEND-CAPABILITY-MATRIX.md` §1: `courses`, `assignments`, `enrollments`, `app_role='professor'` — **all missing**. Would require new schema + RLS + UI. The brief also says "do not add features". These conflict — needs a decision.
-2. **A single workflow.** The brief describes one linear product; the codebase has two (`longform` draft workflow and `research_packet` workflow) that share chrome, `pieces`, `agent_runs`, credits, and print. The clarity work only lands cleanly after a decision about which workflow the product foregrounds — or how the two are named and separated on the landing/`/new`/dashboard surfaces.
+- First-time landing visitor can name the six/seven verbs after one read, and knows all three real outputs exist (docx, pptx, merged draft).
+- `/new` explains the difference between the two modes in one sentence each.
+- Every project-hub stage card answers: what just happened, what's next, can I leave.
+- Finish card in the packet hub still generates and downloads both docx and pptx.
+- Every credit cost stated at its point of value.
+- Every failure state names what happened, what's saved, credits consumed, and one concrete next action.
+- Printed packet ends with a self-contained return checklist.
 
-## What I'd propose next (if you approve this parity map)
-
-A scoped implementation plan for the 🟡 items in Phases 3, 5, 6, 8, 9, 10, 11, 12, 13 — no new features, no schema changes, no professor role. Two decisions I'd need from you first:
-
-1. **Workflow foregrounding.** Does the landing page + `/new` + dashboard become **research-packet-first** (matches this brief), **draft-first** (matches current copy), or **explicit two-mode chooser**?
-2. **Professor scope.** Drop from clarity pass entirely, or add a follow-on plan to build the schema?
+Approve and I'll execute in order.
