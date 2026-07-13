@@ -46,6 +46,9 @@ Deno.serve(serve(FN, async (req, rid) => {
     uploads.push({ pageNumber, storagePath: path, signedUrl: signed.signedUrl, token: signed.token });
   }
 
+  // FSM requires packet_ready -> awaiting_student_return -> student_return_received.
+  // Both hops are attempted; advanceStage no-ops if the packet is already past a stage.
+  await advanceStage(admin, { pieceId: packet.piece_id, to: "awaiting_student_return" });
   await advanceStage(admin, { pieceId: packet.piece_id, to: "student_return_received" });
   await logPieceEvent(admin, { pieceId: packet.piece_id, userId, event: "pages_uploaded", metadata: { returnId: ret.id, pageCount: pages.length } });
   logEvent(FN, "info", { requestId: rid, returnId: ret.id, pageCount: pages.length });
