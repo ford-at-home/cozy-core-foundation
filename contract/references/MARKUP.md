@@ -38,7 +38,7 @@ One color = **"use this as-is."** (Preserve in Edit Mode. Pull into new post in 
 | **SLOP** | scrub AI tells, re-voice | ANTI-SLOP.md |
 | **DEEPEN** | expand with accent layer | STYLE.md accents |
 | **TIGHTEN** / TIGHT | compress | STYLE.md |
-| **KSP** | restructure Pulse / Catalyst / Context / Handoff | KSP.md |
+| **KSP** | restructure Pulse / Catalyst / Context / Handoff | KSP.md (not vendored here — surface in unresolved.md) |
 | **EXAMPLE** / EX | insert concrete example | STYLE.md |
 | **HOOK** | rework as opener | STYLE.md |
 | **LAND** | rework as closer / punchline | STYLE.md |
@@ -174,7 +174,7 @@ Write as short uppercase tokens, in the margin or inline-circled. Each directive
 | **SLOP** | Scrub AI tells, re-voice per STYLE.md. | ANTI-SLOP.md |
 | **DEEPEN** | Expand with an accent layer. Voice picks which. | STYLE.md accent layers |
 | **TIGHTEN** (`TIGHT`) | Compress. Cut filler. Bukowski-default. | STYLE.md compression patterns |
-| **KSP** | Restructure to Pulse / Catalyst / Context / Handoff. | KSP.md |
+| **KSP** | Restructure to Pulse / Catalyst / Context / Handoff. | KSP.md — **not vendored** in this repo; record the directive in `notes/unresolved.md` instead of restructuring from memory (see `contract/README.md` "Not vendored") |
 | **EXAMPLE** (`EX`) | Insert a concrete example. Voice can hint at flavor. | STYLE.md "concrete > abstract" |
 | **HOOK** | Rework as opener. | STYLE.md "Paragraph Openings" |
 | **LAND** | Rework as closer / punchline. | STYLE.md "Final Output Standard" |
@@ -337,7 +337,9 @@ When a paper symbol has no voice content but requires it (e.g., `~` without a "h
 
 ## What This File is Not
 
-- Not a comprehensive editorial guide. See `STYLE.md` for voice.
-- Not a friction rubric. See `KSP.md` for that.
-- Not a channel strategy. See `CHANNELS.md` for that.
+- Not a comprehensive editorial guide. Voice arrives inline in this product
+  (see `contract/README.md` override 1; `STYLE.template.md` shows the shape).
+- Not a friction rubric. That was `KSP.md`, which is not vendored here.
+- Not a channel strategy. Channels are supplied inline too
+  (`CHANNELS.template.md` shows the shape).
 - Not exhaustive — directives can be added. Each new directive must declare its backing reference file before it ships.

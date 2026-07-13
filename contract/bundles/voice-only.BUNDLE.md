@@ -34,9 +34,10 @@ Use this bundle when:
 ## When this bundle does NOT apply
 
 - The user is dictating edits against a marked-up paper → **personal bundle**.
-- The user wants a friction score on an operational message → **ksp-score** skill.
-- The user wants a compressed Slack/email message → **ksp-compress bundle**.
-- The user wants a multi-channel rollout plan → **comm-plan** skill.
+- The user wants a friction score, message compression, or a rollout plan →
+  those come from the `ksp` / `comm-plan` sibling packages, which are **not
+  vendored** in this repo (see `contract/README.md` "Not vendored"). Say so
+  rather than improvising.
 - The user asks for pure proofreading (typos, grammar only) with no structural changes. This bundle restructures.
 
 ## What this bundle does
@@ -66,13 +67,13 @@ Two modes, auto-detected from inputs:
 |---|---|
 | `~/.me/voices/<name>.md` | The voice. Resolved from `brief.md`'s `Voice:` field. Accent layers applied sparingly per the voice file's "Accent layers" section. Loaded every invocation. |
 | `~/.me/voices/<name>.anti.md` | Paired anti-slop catalog. Scrubbed every invocation — even without an explicit SLOP directive, this bundle removes AI tells as part of normal voice work. Loaded if present. |
-| [`references/STORYTELLING.md`](../../references/STORYTELLING.md) | Piece architecture (translated Chappelle). Governs top-down restructure: where to start, what the reader thinks they're reading, when to move the target, how the closer reframes the rest. Read every invocation. |
+| [`references/STORYTELLING.md`](../references/STORYTELLING.md) | Piece architecture (translated Chappelle). Governs top-down restructure: where to start, what the reader thinks they're reading, when to move the target, how the closer reframes the rest. Read every invocation. |
 
-If the brief is missing a `Voice:` field or the named voice does not exist at `<repo>/.me/voices/<name>.md` or `~/.me/voices/<name>.md`, this bundle stops. See `skills/synthesize/SKILL.md` for the resolution rule.
+If the brief is missing a `Voice:` field or the named voice does not exist at `<repo>/.me/voices/<name>.md` or `~/.me/voices/<name>.md`, this bundle stops. See `../SKILL.md` for the resolution rule (in this product the voice arrives inline — `contract/README.md` override 1).
 
 ## Output format
 
-See `skills/synthesize/SKILL.md` "Output format — voice-only bundle" for the exact structure. Summary:
+See `../SKILL.md` "Output format — voice-only bundle" for the exact structure. Summary:
 
 - The rewritten piece, complete and publishable.
 - "What Changed (top-down)" — 3–5 bullets describing big-picture edits: structure shifts, argument tightening, cut sections, added framing. Not sentence-level diffs.
