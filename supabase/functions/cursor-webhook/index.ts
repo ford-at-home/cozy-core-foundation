@@ -22,6 +22,12 @@ import {
 import { recordInference, cursorInferenceUsage } from "../_shared/usage.ts";
 import { releaseRunCredits, settleRunCredits } from "../_shared/credits.ts";
 import { persistPacketResult } from "../_shared/packet.ts";
+import {
+  persistFinalArtifactResult,
+  persistFollowUpResult,
+} from "../_shared/followup-final.ts";
+import { advanceStage, logPieceEvent } from "../_shared/workflow.ts";
+import { workflowStageForCompletedKind } from "../_shared/complete.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("method not allowed", { status: 405 });
@@ -141,6 +147,10 @@ Deno.serve(async (req) => {
           // reconciler retries the whole fetch+persist.
           if (run.kind === "packet") {
             await persistPacketResult(admin, run, result);
+          } else if (run.kind === "followup_research") {
+            await persistFollowUpResult(admin, run, result);
+          } else if (run.kind === "final_docx" || run.kind === "final_pptx") {
+            await persistFinalArtifactResult(admin, run, slug ?? "piece");
           }
           await admin
             .from("agent_runs")
@@ -163,6 +173,16 @@ Deno.serve(async (req) => {
                 updated_at: new Date().toISOString(),
               })
               .eq("id", run.piece_id);
+            const nextStage = workflowStageForCompletedKind(run.kind);
+            if (nextStage) {
+              await advanceStage(admin, { pieceId: run.piece_id, to: nextStage });
+              await logPieceEvent(admin, {
+                pieceId: run.piece_id,
+                userId: run.user_id,
+                event: `${run.kind}_completed`,
+                metadata: { runId: run.id },
+              });
+            }
           }
         }
       } catch (err) {
