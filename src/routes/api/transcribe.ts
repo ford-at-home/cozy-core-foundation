@@ -61,9 +61,15 @@ export const Route = createFileRoute("/api/transcribe")({
         // Name the part for its real container so the model can decode it.
         const type = (file.type || "audio/webm").split(";")[0];
         const ext =
-          ({ "audio/webm": "webm", "audio/mp4": "m4a", "audio/mpeg": "mp3", "audio/wav": "wav", "audio/ogg": "ogg" } as Record<string, string>)[
-            type
-          ] ?? "webm";
+          (
+            {
+              "audio/webm": "webm",
+              "audio/mp4": "m4a",
+              "audio/mpeg": "mp3",
+              "audio/wav": "wav",
+              "audio/ogg": "ogg",
+            } as Record<string, string>
+          )[type] ?? "webm";
 
         const upstream = new FormData();
         upstream.append("model", MODEL);
@@ -84,7 +90,10 @@ export const Route = createFileRoute("/api/transcribe")({
           if (res.status === 429) {
             return json({ error: "Transcription rate-limited. Try again in a moment." }, 429);
           }
-          return json({ error: `Transcription failed (${res.status}): ${detail.slice(0, 300)}` }, 502);
+          return json(
+            { error: `Transcription failed (${res.status}): ${detail.slice(0, 300)}` },
+            502,
+          );
         }
         const body = (await res.json().catch(() => ({}))) as { text?: string };
         return json({ text: body.text ?? "" });
