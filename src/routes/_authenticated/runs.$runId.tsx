@@ -1123,8 +1123,14 @@ function RunDetailPanel({ run }: { run: AgentRun }) {
 
       {/* Identifiers, raw errors, and the transition log matter to the site
           owner, not to students — collapsed by default (audit P1.1). */}
-      <details className="rounded-md border border-border/60 bg-background/40 px-3">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center text-xs font-medium text-muted-foreground hover:text-foreground">
+      <details className="group rounded-md border border-border/60 bg-background/40 px-3">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden">
+          <span
+            aria-hidden
+            className="inline-block transition-transform duration-150 group-open:rotate-90"
+          >
+            ▸
+          </span>
           Technical details
         </summary>
         <div className="space-y-4 pb-3">
@@ -1157,7 +1163,7 @@ function RunDetailPanel({ run }: { run: AgentRun }) {
               </a>
               {run.branch && (
                 <span className="ml-1 text-muted-foreground">
-                  (branch <span className="font-mono">{run.branch}</span>)
+                  (branch <span className="font-mono break-all">{run.branch}</span>)
                 </span>
               )}
               <p className="mt-1 text-muted-foreground">
