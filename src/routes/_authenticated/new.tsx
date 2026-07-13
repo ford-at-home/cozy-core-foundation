@@ -398,11 +398,7 @@ function NewDraftPage() {
               ? uploadProgress
                 ? "Uploading…"
                 : "Creating…"
-              : mode === "topic"
-                ? "Research & prepare →"
-                : isPacket
-                  ? "Prepare packet →"
-                  : "Prepare draft →"}
+              : "Start →"}
           </button>
         </div>
       </form>
@@ -433,6 +429,51 @@ function ModeButton({
       }
     >
       {label}
+    </button>
+  );
+}
+
+function IntentCard({
+  label,
+  intent,
+  outcome,
+  arc,
+  active,
+  onClick,
+}: {
+  label: string;
+  intent: string;
+  outcome: string;
+  arc: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={
+        "flex min-h-11 w-full flex-col gap-2 rounded-lg border px-4 py-3.5 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring/60 " +
+        (active
+          ? "border-primary bg-primary/10 text-foreground"
+          : "border-border text-foreground hover:border-primary/40 hover:bg-accent/40")
+      }
+    >
+      <span
+        className={
+          "font-serif text-base tracking-tight sm:text-lg " +
+          (active ? "text-primary" : "text-foreground")
+        }
+      >
+        {label}
+      </span>
+      <span className="text-sm leading-relaxed text-muted-foreground">{intent}</span>
+      <span className="text-xs leading-relaxed text-foreground/80">{outcome}</span>
+      <span className="mt-1 font-mono text-[11px] tracking-wide text-muted-foreground/80">
+        {arc}
+      </span>
     </button>
   );
 }
