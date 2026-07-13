@@ -67,5 +67,7 @@ jobs:
       # deno.lock with the whole npm dependency graph on every run (worktree
       # churn locally, wasted work here). Test imports are version-pinned
       # URLs, so the lockfile adds nothing for this suite.
+      # --allow-read=supabase/functions: the handler tests dynamically import
+      # each Edge Function's index.ts (helpers/edge.ts loadHandler).
       - name: Run tests
-        run: deno test --allow-env --node-modules-dir=none --no-lock supabase/functions/_tests/
+        run: deno test --allow-env --allow-read=supabase/functions --node-modules-dir=none --no-lock supabase/functions/_tests/
