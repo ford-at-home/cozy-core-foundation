@@ -32,6 +32,7 @@ import { recordInference, cursorInferenceUsage } from "../_shared/usage.ts";
 import { releaseRunCredits, settleRunCredits, sweepStaleReservations } from "../_shared/credits.ts";
 import { reconcilePurchases } from "../_shared/stripe-reconcile.ts";
 import { persistPacketResult } from "../_shared/packet.ts";
+import { reopenFollowupAfterFailure } from "../_shared/followup.ts";
 
 const FN = "reconcile-runs";
 
@@ -167,15 +168,21 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
   // and release the hold so a retry is a clean fresh request.
   if (run.kind === "document" || run.kind === "presentation") {
     if (ageMin > INLINE_RELEASE_AFTER_MIN) {
-      await admin
+      // Conditional on non-terminal: a straggler edge invocation completing
+      // between our select and this write must not be clobbered to failed.
+      const { data: failedRow } = await admin
         .from("agent_runs")
         .update({
           status: "failed",
           error: "Generation was interrupted. You were not charged — try again.",
           completed_at: new Date().toISOString(),
         })
-        .eq("id", run.id);
-      await releaseRunCredits(admin, run, "inline generation interrupted", "reconciler");
+        .eq("id", run.id)
+        .not("status", "in", "(completed,failed,cancelled)")
+        .select("id");
+      if (failedRow && failedRow.length > 0) {
+        await releaseRunCredits(admin, run, "inline generation interrupted", "reconciler");
+      }
     }
     return;
   }
@@ -199,6 +206,7 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
         })
         .eq("id", run.id);
       await releaseRunCredits(admin, run, "dispatch never confirmed", "reconciler");
+      await reopenFollowupAfterFailure(admin, run);
     }
     return;
   }
@@ -217,6 +225,7 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
         })
         .eq("id", run.id);
       await releaseRunCredits(admin, run, "agent not found at provider", "reconciler");
+      await reopenFollowupAfterFailure(admin, run);
       return;
     }
     throw err;
@@ -244,6 +253,7 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
       .eq("id", run.id);
     if (update.status === "failed") {
       await releaseRunCredits(admin, run, "agent reported failure", "reconciler");
+      await reopenFollowupAfterFailure(admin, run);
     }
   }
 
@@ -262,6 +272,7 @@ async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
         })
         .eq("id", run.id);
       await releaseRunCredits(admin, run, "run cancelled", "reconciler");
+      await reopenFollowupAfterFailure(admin, run);
       return;
     }
     // Finished before the stop landed: raced; fall through to fetch.

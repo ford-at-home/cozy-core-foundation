@@ -239,7 +239,7 @@ function CourseSection({
               <select
                 value={followup}
                 onChange={(e) => setFollowup(e.target.value as typeof followup)}
-                className="min-h-11 rounded-md border border-input bg-background/60 px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                className="min-h-11 rounded-md border border-input bg-background/60 px-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-sm"
               >
                 <option value="allowed">Student's choice</option>
                 <option value="required">Required</option>
@@ -395,6 +395,13 @@ function AssignmentSection({
           <button
             type="button"
             onClick={() => {
+              if (
+                !window.confirm(
+                  `Delete "${assignment.topic}"? Student work stays; the assignment link is removed.`,
+                )
+              ) {
+                return;
+              }
               deleteAssignment(assignment.id)
                 .then(onDeleted)
                 .catch((err) => onError(err.message));

@@ -86,7 +86,7 @@ export function useDictation(onTranscript: (text: string) => void) {
       if (name === "NotAllowedError" || name === "SecurityError") {
         setError({
           message: "Microphone access was blocked.",
-          hint: "Click the mic icon in your browser's address bar, allow this site, and try again.",
+          hint: "Allow microphone access for this site in your browser settings, then try again.",
           retryable: true,
         });
       } else if (name === "NotFoundError" || name === "OverconstrainedError") {

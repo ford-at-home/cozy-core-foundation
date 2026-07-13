@@ -261,6 +261,20 @@ AS $$
   );
 $$;
 
+-- The check helpers exist for RLS policies (which execute as the invoking
+-- authenticated role); nothing anonymous should be able to probe role or
+-- enrollment facts for arbitrary UUIDs.
+REVOKE ALL ON FUNCTION public.has_role(uuid, text) FROM anon, public;
+GRANT EXECUTE ON FUNCTION public.has_role(uuid, text) TO authenticated;
+REVOKE ALL ON FUNCTION public.is_course_professor(uuid, uuid) FROM anon, public;
+GRANT EXECUTE ON FUNCTION public.is_course_professor(uuid, uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.is_enrolled(uuid, uuid) FROM anon, public;
+GRANT EXECUTE ON FUNCTION public.is_enrolled(uuid, uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.is_piece_professor(uuid, uuid) FROM anon, public;
+GRANT EXECUTE ON FUNCTION public.is_piece_professor(uuid, uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.is_packet_professor(uuid, uuid) FROM anon, public;
+GRANT EXECUTE ON FUNCTION public.is_packet_professor(uuid, uuid) TO authenticated;
+
 DROP POLICY IF EXISTS "Professors view assignment pieces" ON public.pieces;
 CREATE POLICY "Professors view assignment pieces"
   ON public.pieces FOR SELECT

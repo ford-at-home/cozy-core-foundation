@@ -111,20 +111,20 @@ export async function startFollowupResearch(
   return data as { runId: string };
 }
 
+// The client grant on packets is column-scoped (followup_state only), so
+// these updates must not touch other columns — updated_at included.
+
 /** The explicit, free skip: no follow-up research for this packet. */
 export async function skipFollowup(packetId: string): Promise<void> {
   const { error } = await db
     .from("packets")
-    .update({ followup_state: "skipped", updated_at: new Date().toISOString() })
+    .update({ followup_state: "skipped" })
     .eq("id", packetId);
   if (error) throw new Error(error.message);
 }
 
 /** Reopen a skipped follow-up decision. */
 export async function reopenFollowup(packetId: string): Promise<void> {
-  const { error } = await db
-    .from("packets")
-    .update({ followup_state: "open", updated_at: new Date().toISOString() })
-    .eq("id", packetId);
+  const { error } = await db.from("packets").update({ followup_state: "open" }).eq("id", packetId);
   if (error) throw new Error(error.message);
 }

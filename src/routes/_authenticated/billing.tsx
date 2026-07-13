@@ -219,7 +219,7 @@ function BillingPage() {
               ].map(([label, cost]) => (
                 <tr key={label as string} className="border-b border-border/60 last:border-0">
                   <td className="px-4 py-3 sm:px-5">{label}</td>
-                  <td className="px-4 py-3 text-right font-mono tabular-nums sm:px-5">
+                  <td className="whitespace-nowrap px-4 py-3 text-right font-mono tabular-nums sm:px-5">
                     {cost} credit{cost === 1 ? "" : "s"}
                   </td>
                 </tr>

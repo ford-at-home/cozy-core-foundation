@@ -107,6 +107,28 @@ export function parseRefinementResult(raw: string): RefinementSuggestion[] {
   return out;
 }
 
+/**
+ * When a follow-up run fails after its credits were released, the packet's
+ * followup_state must not stay stuck at 'researching' — that would block a
+ * loop the student was refunded for. Recognizes both halves of the chain:
+ * the followup_research run itself and the chained revised-packet run.
+ * Conditional on 'researching' so a completed loop is never reopened.
+ */
+export async function reopenFollowupAfterFailure(admin: any, run: any): Promise<void> {
+  const packetId =
+    run?.kind === "followup_research"
+      ? run?.input?.followup?.packet_id
+      : run?.kind === "packet"
+        ? run?.input?.packet?.supersedes_packet_id
+        : null;
+  if (typeof packetId !== "string" || !packetId) return;
+  await admin
+    .from("packets")
+    .update({ followup_state: "open", updated_at: new Date().toISOString() })
+    .eq("id", packetId)
+    .eq("followup_state", "researching");
+}
+
 const ORIGINAL_PACKET_PROMPT_CAP = 60_000;
 
 /**

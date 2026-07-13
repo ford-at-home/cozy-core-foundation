@@ -22,6 +22,7 @@ import {
 import { recordInference, cursorInferenceUsage } from "../_shared/usage.ts";
 import { releaseRunCredits, settleRunCredits } from "../_shared/credits.ts";
 import { persistPacketResult } from "../_shared/packet.ts";
+import { reopenFollowupAfterFailure } from "../_shared/followup.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("method not allowed", { status: 405 });
@@ -93,6 +94,7 @@ Deno.serve(async (req) => {
 
     if (update.status === "failed") {
       await releaseRunCredits(admin, run, "agent reported failure", "cursor-webhook");
+      await reopenFollowupAfterFailure(admin, run);
     }
 
     if (update.status === "awaiting_fetch") {

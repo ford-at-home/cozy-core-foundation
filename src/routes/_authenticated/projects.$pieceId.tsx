@@ -232,7 +232,7 @@ function ProjectHubPage() {
               <Link
                 to="/runs/$runId"
                 params={{ runId: activeRun.id }}
-                className="ml-auto shrink-0 text-xs text-muted-foreground underline hover:text-foreground"
+                className="ml-auto inline-flex min-h-11 shrink-0 items-center px-2 text-xs text-muted-foreground underline hover:text-foreground sm:min-h-0"
               >
                 Details
               </Link>
@@ -309,7 +309,7 @@ function ProjectHubPage() {
                   <Link
                     to="/print/$runId"
                     params={{ runId: newestPacket.run_id }}
-                    className="text-xs text-muted-foreground underline hover:text-foreground"
+                    className="inline-flex min-h-11 items-center text-xs text-muted-foreground underline hover:text-foreground sm:min-h-0"
                   >
                     Print the packet again
                   </Link>

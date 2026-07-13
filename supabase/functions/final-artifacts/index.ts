@@ -297,8 +297,15 @@ async function handle(req: Request, rid: string): Promise<Response> {
             paperSpec: paperSpec!,
           });
 
-    await admin.from("agent_runs").update({ status: "awaiting_fetch" }).eq("id", runId);
+    // Terminal is terminal: if the reconciler already failed this run (a
+    // slow invocation past the inline timeout) the hold was released — do
+    // not resurrect the run or settle credits the user got back.
     await admin
+      .from("agent_runs")
+      .update({ status: "awaiting_fetch" })
+      .eq("id", runId)
+      .not("status", "in", "(completed,failed,cancelled)");
+    const { data: completedRow } = await admin
       .from("agent_runs")
       .update({
         status: "completed",
@@ -312,8 +319,12 @@ async function handle(req: Request, rid: string): Promise<Response> {
         },
         completed_at: new Date().toISOString(),
       })
-      .eq("id", runId);
-    await settleRunCredits(admin, { id: runId }, "edge");
+      .eq("id", runId)
+      .not("status", "in", "(completed,failed,cancelled)")
+      .select("id");
+    if (completedRow && completedRow.length > 0) {
+      await settleRunCredits(admin, { id: runId }, "edge");
+    }
     return json(
       {
         runId,
@@ -334,7 +345,8 @@ async function handle(req: Request, rid: string): Promise<Response> {
         error: `Generation failed: ${message}. You were not charged — try again.`,
         completed_at: new Date().toISOString(),
       })
-      .eq("id", runId);
+      .eq("id", runId)
+      .not("status", "in", "(completed,failed,cancelled)");
     await releaseRunCredits(admin, { id: runId }, "final artifact generation failed", "edge");
     return err(502, "Generation failed. You were not charged — try again.", {
       requestId: rid,

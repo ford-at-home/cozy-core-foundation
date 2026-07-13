@@ -139,8 +139,9 @@ export function buildPrintDocument(source: string): string {
 // The packet document = packet body (markdown, S{n}P{m} anchors ON so
 // findings are annotatable) + question blocks with real ruled writing space +
 // three follow-up-research areas + handwriting guidance + return
-// instructions. ALL packet furniture is divs/spans only: the anchor counters
-// in print.css count p/headings/blockquote/pre/table, so question blocks
+// instructions. ALL packet furniture avoids anchor-countable tags (the
+// counters in print.css count p/headings/blockquote/pre/table; div/span and
+// inline tags like strong are invisible to them), so question blocks
 // consume zero anchors and the counting contract with
 // contract/references/MARKUP.md is untouched. Questions are addressed by
 // their printed Q{n} identifier instead.

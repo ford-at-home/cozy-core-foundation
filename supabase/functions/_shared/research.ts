@@ -16,7 +16,11 @@ import {
 } from "./parallel.ts";
 import { canTransition } from "./state.ts";
 import { buildComposePrompt, buildPacketPrompt } from "./prompt.ts";
-import { buildRevisedPacketPrompt, type FollowupQuestion } from "./followup.ts";
+import {
+  buildRevisedPacketPrompt,
+  reopenFollowupAfterFailure,
+  type FollowupQuestion,
+} from "./followup.ts";
 import { buildImageCreds } from "./image-token.ts";
 import { dispatchRun, resolveProvider } from "./dispatch.ts";
 import { ensureRunSession, recordInference } from "./usage.ts";
@@ -40,6 +44,7 @@ export async function reconcileResearch(admin: any, run: any): Promise<void> {
         })
         .eq("id", run.id);
       await releaseRunCredits(admin, run, "research dispatch never confirmed", "reconciler");
+      await reopenFollowupAfterFailure(admin, run);
     }
     return;
   }
@@ -71,6 +76,7 @@ export async function reconcileResearch(admin: any, run: any): Promise<void> {
       .eq("id", run.id);
     if (mapped === "failed") {
       await releaseRunCredits(admin, run, "research provider failure", "reconciler");
+      await reopenFollowupAfterFailure(admin, run);
     }
   }
 
@@ -90,6 +96,7 @@ export async function reconcileResearch(admin: any, run: any): Promise<void> {
       })
       .eq("id", run.id);
     await releaseRunCredits(admin, run, "research timed out", "reconciler");
+    await reopenFollowupAfterFailure(admin, run);
   }
 }
 
@@ -183,6 +190,7 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
       })
       .eq("id", run.id);
     await releaseRunCredits(admin, run, "research chain refused", "reconciler");
+    await reopenFollowupAfterFailure(admin, run);
     return;
   }
 

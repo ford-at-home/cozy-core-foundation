@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { projectStageLabel, runActivityLabel } from "@/lib/journey";
@@ -258,6 +258,18 @@ function DashboardPage() {
           </ul>
         )}
       </div>
+
+      {/* Course assignments have no nav tab (students only need it
+          occasionally); this is the mobile-reachable path besides /new. */}
+      <p className="text-sm text-muted-foreground">
+        In a class?{" "}
+        <Link
+          to="/assignments"
+          className="inline-flex min-h-11 items-center underline hover:text-foreground sm:min-h-0"
+        >
+          Join your course and see assignments →
+        </Link>
+      </p>
     </div>
   );
 }

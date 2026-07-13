@@ -206,12 +206,20 @@ CREATE POLICY "Users add own dictation segments"
     )
   );
 
+-- WITH CHECK re-verifies return ownership so an UPDATE cannot re-point a row
+-- at another user's return (professors can see student return ids).
 DROP POLICY IF EXISTS "Users edit own dictation segments" ON public.dictation_segments;
 CREATE POLICY "Users edit own dictation segments"
   ON public.dictation_segments FOR UPDATE
   TO authenticated
   USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK (
+    auth.uid() = user_id
+    AND EXISTS (
+      SELECT 1 FROM public.packet_returns r
+      WHERE r.id = return_id AND r.user_id = auth.uid()
+    )
+  );
 
 DROP POLICY IF EXISTS "Users delete own dictation segments" ON public.dictation_segments;
 CREATE POLICY "Users delete own dictation segments"
@@ -266,12 +274,28 @@ CREATE POLICY "Users add own corrections"
     )
   );
 
+-- WITH CHECK re-verifies return ownership so an UPDATE cannot re-point a row
+-- (return_id/block_id/segment_id) at another user's return.
 DROP POLICY IF EXISTS "Users edit own corrections" ON public.verification_corrections;
 CREATE POLICY "Users edit own corrections"
   ON public.verification_corrections FOR UPDATE
   TO authenticated
   USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK (
+    auth.uid() = user_id
+    AND EXISTS (
+      SELECT 1 FROM public.packet_returns r
+      WHERE r.id = return_id AND r.user_id = auth.uid()
+    )
+    AND (block_id IS NULL OR EXISTS (
+      SELECT 1 FROM public.recognized_blocks b
+      WHERE b.id = block_id AND b.user_id = auth.uid()
+    ))
+    AND (segment_id IS NULL OR EXISTS (
+      SELECT 1 FROM public.dictation_segments s
+      WHERE s.id = segment_id AND s.user_id = auth.uid()
+    ))
+  );
 
 DROP POLICY IF EXISTS "Users delete own corrections" ON public.verification_corrections;
 CREATE POLICY "Users delete own corrections"

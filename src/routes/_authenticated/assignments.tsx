@@ -144,6 +144,8 @@ function AssignmentsPage() {
           placeholder="Course join code (e.g. A1B2C3)"
           aria-label="Course join code"
           autoCapitalize="characters"
+          autoCorrect="off"
+          spellCheck={false}
           className="min-h-11 w-full rounded-md border border-input bg-background/60 px-3.5 font-mono text-base uppercase tracking-[0.15em] outline-none transition-shadow focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-sm"
         />
         <button
@@ -192,8 +194,8 @@ function AssignmentsPage() {
                   className="flex flex-col gap-3 rounded-md border border-border/60 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-medium">{a.title}</p>
-                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                    <p className="break-words text-sm font-medium">{a.title}</p>
+                    <p className="mt-0.5 break-words text-xs leading-relaxed text-muted-foreground">
                       {a.topic}
                     </p>
                   </div>

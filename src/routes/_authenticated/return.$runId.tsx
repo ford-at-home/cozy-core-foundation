@@ -231,13 +231,15 @@ function PhotoPanel({
         </p>
       </div>
 
+      {/* No `capture` attribute: on iOS it forces the camera and blocks the
+          photo library, so students who already photographed their pages
+          couldn't batch-upload. The picker offers "Take photo" natively. */}
       <input
         ref={inputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         multiple
-        className="sr-only"
+        className="peer sr-only"
         id="page-photos"
         onChange={(e) => void handleFiles(e.target.files)}
         disabled={busy}
@@ -245,7 +247,7 @@ function PhotoPanel({
       <label
         htmlFor="page-photos"
         className={
-          "inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-md border border-border px-4 text-sm font-medium transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/60 sm:w-auto " +
+          "inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-md border border-border px-4 text-sm font-medium transition-colors hover:bg-accent peer-focus-visible:ring-2 peer-focus-visible:ring-ring/60 sm:w-auto " +
           (busy ? "pointer-events-none opacity-50" : "")
         }
       >
@@ -253,7 +255,7 @@ function PhotoPanel({
           ? (progress ?? "Reading…")
           : pages.length > 0
             ? "+ Add more pages"
-            : "Add page photos"}
+            : "Take or add page photos"}
       </label>
 
       {notices.map((n, i) => (

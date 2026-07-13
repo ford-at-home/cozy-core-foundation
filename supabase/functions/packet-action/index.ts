@@ -238,6 +238,8 @@ async function startFollowupResearch(
   }
 
   // The loop's order is fixed: return your work and confirm the reading first.
+  // (The read check above is a fast path; the authoritative, race-proof claim
+  // of followup_state happens right before the run insert below.)
   const { data: ret } = await admin
     .from("packet_returns")
     .select("status")
@@ -305,6 +307,28 @@ async function startFollowupResearch(
     }
   }
 
+  // Atomically claim the packet: exactly one concurrent submission wins,
+  // even with distinct requestIds (a double-tap generates two). Losers get
+  // the same 409 as the fast-path check above.
+  const { data: claimed } = await admin
+    .from("packets")
+    .update({ followup_state: "researching", updated_at: new Date().toISOString() })
+    .eq("id", packet.id)
+    .in("followup_state", ["open", "skipped"])
+    .select("id");
+  if (!claimed || claimed.length === 0) {
+    return err(409, "Follow-up research already started for this packet.", {
+      requestId: rid,
+      code: "followup_already_started",
+    });
+  }
+  const reopenPacket = () =>
+    admin
+      .from("packets")
+      .update({ followup_state: "open", updated_at: new Date().toISOString() })
+      .eq("id", packet.id)
+      .eq("followup_state", "researching");
+
   const processor = resolveProcessor();
   const { data: inserted, error: insertErr } = await admin
     .from("agent_runs")
@@ -337,6 +361,7 @@ async function startFollowupResearch(
       .eq("idempotency_key", idempotencyKey)
       .maybeSingle();
     if (existing) return json({ runId: existing.id, pieceId: existing.piece_id }, 202, rid);
+    await reopenPacket();
     return err(500, insertErr?.message ?? "Insert failed", {
       requestId: rid,
       code: "run_insert_failed",
@@ -365,6 +390,7 @@ async function startFollowupResearch(
         completed_at: new Date().toISOString(),
       })
       .eq("id", runId);
+    await reopenPacket();
     if (reserved.code === "insufficient_credits") {
       return err(402, "Not enough credits for follow-up research.", {
         requestId: rid,
@@ -385,11 +411,6 @@ async function startFollowupResearch(
     title: topic,
     provider: "parallel",
   });
-
-  await admin
-    .from("packets")
-    .update({ followup_state: "researching", updated_at: new Date().toISOString() })
-    .eq("id", packet.id);
 
   await dispatchResearchRun({
     admin,
