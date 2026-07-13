@@ -1,8 +1,9 @@
 import { Link, Outlet, createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, PenLine, CircleDollarSign, User } from "lucide-react";
+import { LayoutDashboard, PenLine, CircleDollarSign, User, GraduationCap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { brand } from "@/config/brand";
+import { isProfessor } from "@/lib/courses";
 import { PageMark } from "@/components/PageMark";
 import { CreditBalance } from "@/components/CreditBalance";
 
@@ -23,6 +24,9 @@ const NAV_LINKS = [
   { to: "/profile" as const, label: "Profile", short: "Profile", icon: User },
 ];
 
+// Shown only to users holding the professor role; students never see it.
+const TEACH_LINK = { to: "/teach" as const, label: "Teach", short: "Teach", icon: GraduationCap };
+
 const navActive = "rounded-md px-3 py-2 bg-accent text-foreground";
 const navInactive =
   "rounded-md px-3 py-2 text-muted-foreground transition-colors hover:text-foreground hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background";
@@ -31,10 +35,23 @@ function AuthenticatedLayout() {
   const { user } = Route.useRouteContext();
   const navigate = useNavigate();
   const [email, setEmail] = useState<string | null>(user?.email ?? null);
+  const [teacher, setTeacher] = useState(false);
 
   useEffect(() => {
     setEmail(user?.email ?? null);
   }, [user]);
+
+  useEffect(() => {
+    let alive = true;
+    isProfessor().then((prof) => {
+      if (alive) setTeacher(prof);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [user]);
+
+  const navLinks = teacher ? [...NAV_LINKS, TEACH_LINK] : NAV_LINKS;
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -59,7 +76,7 @@ function AuthenticatedLayout() {
           </Link>
 
           <nav className="hidden items-center gap-1 text-sm sm:flex" aria-label="Primary">
-            {NAV_LINKS.map((link) => (
+            {navLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
@@ -97,8 +114,8 @@ function AuthenticatedLayout() {
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         aria-label="Primary"
       >
-        <ul className="mx-auto grid max-w-lg grid-cols-4">
-          {NAV_LINKS.map((link) => {
+        <ul className={"mx-auto grid max-w-lg " + (teacher ? "grid-cols-5" : "grid-cols-4")}>
+          {navLinks.map((link) => {
             const Icon = link.icon;
             return (
               <li key={link.to}>

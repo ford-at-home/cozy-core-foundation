@@ -91,18 +91,23 @@ async function handle(req: Request, rid: string): Promise<Response> {
     body = {};
   }
   const research = typeof body?.research === "string" ? body.research.trim() : "";
-  const topic = typeof body?.topic === "string" ? body.topic.trim() : "";
+  let topic = typeof body?.topic === "string" ? body.topic.trim() : "";
   const goal = typeof body?.goal === "string" ? body.goal.trim() : "";
   const requestId =
     typeof body?.requestId === "string" && body.requestId ? body.requestId : crypto.randomUUID();
   const rawAttachments = Array.isArray(body?.attachments) ? body.attachments : [];
+  const assignmentId = typeof body?.assignmentId === "string" ? body.assignmentId : "";
   // Workflow: the default long-form draft, or a college research packet
   // (docs/research-workflow/). Same orchestration either way; the packet
   // workflow swaps the compose prompt and skips the voice requirement.
-  const workflow = body?.workflow === "research_packet" ? "research_packet" : "longform";
+  // Assignment starts are always research packets.
+  const workflow =
+    body?.workflow === "research_packet" || assignmentId ? "research_packet" : "longform";
   const packetMode = workflow === "research_packet";
-  // Two entry points: bring research (paste/attach) or a topic to deep-research.
-  const researchMode = !research && rawAttachments.length === 0 && topic !== "";
+  // Two entry points: bring research (paste/attach) or a topic to
+  // deep-research. Assignment starts deep-research the assignment's topic.
+  const researchMode =
+    !research && rawAttachments.length === 0 && (topic !== "" || assignmentId !== "");
   logEvent(FN, "info", {
     requestId: rid,
     userId,
@@ -115,7 +120,7 @@ async function handle(req: Request, rid: string): Promise<Response> {
     clientRequestId: requestId,
     attachmentCount: rawAttachments.length,
   });
-  if (!research && rawAttachments.length === 0 && !topic) {
+  if (!research && rawAttachments.length === 0 && !topic && !assignmentId) {
     return err(400, "research, an attachment, or a topic is required", {
       requestId: rid,
       code: "no_input",
@@ -132,6 +137,32 @@ async function handle(req: Request, rid: string): Promise<Response> {
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  // --- 2b. Assignment start: enrollment is the authorization; the
+  //          assignment's topic is authoritative (never the client's).
+  if (assignmentId) {
+    const { data: assignment } = await admin
+      .from("assignments")
+      .select("id, course_id, topic")
+      .eq("id", assignmentId)
+      .maybeSingle();
+    if (!assignment) {
+      return err(404, "Assignment not found", { requestId: rid, code: "assignment_not_found" });
+    }
+    const { data: enrollment } = await admin
+      .from("enrollments")
+      .select("id")
+      .eq("course_id", assignment.course_id)
+      .eq("student_id", userId)
+      .maybeSingle();
+    if (!enrollment) {
+      return err(403, "You are not enrolled in this assignment's course.", {
+        requestId: rid,
+        code: "not_enrolled",
+      });
+    }
+    topic = assignment.topic;
+  }
 
   // --- 3. Idempotency: an existing run for this requestId wins -------------
   const idempotencyKey = `${researchMode ? "research" : packetMode ? "packet" : "compose"}:${userId}:${requestId}`;
@@ -184,7 +215,14 @@ async function handle(req: Request, rid: string): Promise<Response> {
   const slug = `${slugify(topic || goal || research.slice(0, 60))}-${crypto.randomUUID().slice(0, 6)}`;
   const { data: piece, error: pieceErr } = await admin
     .from("pieces")
-    .insert({ user_id: userId, slug, title: goal || topic || null, stage: "research", workflow })
+    .insert({
+      user_id: userId,
+      slug,
+      title: goal || topic || null,
+      stage: "research",
+      workflow,
+      assignment_id: assignmentId || null,
+    })
     .select("id")
     .single();
   if (pieceErr || !piece) {

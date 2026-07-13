@@ -70,6 +70,9 @@ export type StartWorkflowInput = {
   /** Which pipeline this run feeds: a long-form draft (default) or a
    *  college research packet (docs/research-workflow/). */
   workflow?: "longform" | "research_packet";
+  /** Start from a course assignment: the server verifies enrollment and
+   *  uses the assignment's topic (always a research packet). */
+  assignmentId?: string;
   requestId?: string;
   attachments?: Array<{
     path: string; // storage path within research-attachments bucket

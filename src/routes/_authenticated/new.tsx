@@ -214,6 +214,15 @@ function NewPiecePage() {
         />
       </div>
 
+      {isPacket && (
+        <p className="text-sm text-muted-foreground">
+          Working from a class assignment?{" "}
+          <Link to="/assignments" className="underline hover:text-foreground">
+            Join your course and start it there →
+          </Link>
+        </p>
+      )}
+
       {!profileLoading && !hasStyle && needsStyle && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
           Your voice profile is empty, and drafting without a voice is refused by design.{" "}

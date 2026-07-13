@@ -13,11 +13,13 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiTranscribeRouteImport } from './routes/api/transcribe'
+import { Route as AuthenticatedTeachRouteImport } from './routes/_authenticated/teach'
 import { Route as AuthenticatedSessionsRouteImport } from './routes/_authenticated/sessions'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/new'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedBillingRouteImport } from './routes/_authenticated/billing'
+import { Route as AuthenticatedAssignmentsRouteImport } from './routes/_authenticated/assignments'
 import { Route as ApiPublicGenerateImageRouteImport } from './routes/api/public/generate-image'
 import { Route as AuthenticatedVerifyRunIdRouteImport } from './routes/_authenticated/verify.$runId'
 import { Route as AuthenticatedSessionsSessionIdRouteImport } from './routes/_authenticated/sessions.$sessionId'
@@ -46,6 +48,11 @@ const ApiTranscribeRoute = ApiTranscribeRouteImport.update({
   path: '/api/transcribe',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedTeachRoute = AuthenticatedTeachRouteImport.update({
+  id: '/teach',
+  path: '/teach',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSessionsRoute = AuthenticatedSessionsRouteImport.update({
   id: '/sessions',
   path: '/sessions',
@@ -71,6 +78,12 @@ const AuthenticatedBillingRoute = AuthenticatedBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAssignmentsRoute =
+  AuthenticatedAssignmentsRouteImport.update({
+    id: '/assignments',
+    path: '/assignments',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicGenerateImageRoute = ApiPublicGenerateImageRouteImport.update({
   id: '/api/public/generate-image',
   path: '/api/public/generate-image',
@@ -120,11 +133,13 @@ const AuthenticatedPacketRunIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/assignments': typeof AuthenticatedAssignmentsRoute
   '/billing': typeof AuthenticatedBillingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/new': typeof AuthenticatedNewRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/sessions': typeof AuthenticatedSessionsRouteWithChildren
+  '/teach': typeof AuthenticatedTeachRoute
   '/api/transcribe': typeof ApiTranscribeRoute
   '/packet/$runId': typeof AuthenticatedPacketRunIdRoute
   '/print/$runId': typeof AuthenticatedPrintRunIdRoute
@@ -138,11 +153,13 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/assignments': typeof AuthenticatedAssignmentsRoute
   '/billing': typeof AuthenticatedBillingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/new': typeof AuthenticatedNewRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/sessions': typeof AuthenticatedSessionsRouteWithChildren
+  '/teach': typeof AuthenticatedTeachRoute
   '/api/transcribe': typeof ApiTranscribeRoute
   '/packet/$runId': typeof AuthenticatedPacketRunIdRoute
   '/print/$runId': typeof AuthenticatedPrintRunIdRoute
@@ -158,11 +175,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/assignments': typeof AuthenticatedAssignmentsRoute
   '/_authenticated/billing': typeof AuthenticatedBillingRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/new': typeof AuthenticatedNewRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/sessions': typeof AuthenticatedSessionsRouteWithChildren
+  '/_authenticated/teach': typeof AuthenticatedTeachRoute
   '/api/transcribe': typeof ApiTranscribeRoute
   '/_authenticated/packet/$runId': typeof AuthenticatedPacketRunIdRoute
   '/_authenticated/print/$runId': typeof AuthenticatedPrintRunIdRoute
@@ -178,11 +197,13 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/assignments'
     | '/billing'
     | '/dashboard'
     | '/new'
     | '/profile'
     | '/sessions'
+    | '/teach'
     | '/api/transcribe'
     | '/packet/$runId'
     | '/print/$runId'
@@ -196,11 +217,13 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/assignments'
     | '/billing'
     | '/dashboard'
     | '/new'
     | '/profile'
     | '/sessions'
+    | '/teach'
     | '/api/transcribe'
     | '/packet/$runId'
     | '/print/$runId'
@@ -215,11 +238,13 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/assignments'
     | '/_authenticated/billing'
     | '/_authenticated/dashboard'
     | '/_authenticated/new'
     | '/_authenticated/profile'
     | '/_authenticated/sessions'
+    | '/_authenticated/teach'
     | '/api/transcribe'
     | '/_authenticated/packet/$runId'
     | '/_authenticated/print/$runId'
@@ -269,6 +294,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTranscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/teach': {
+      id: '/_authenticated/teach'
+      path: '/teach'
+      fullPath: '/teach'
+      preLoaderRoute: typeof AuthenticatedTeachRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/sessions': {
       id: '/_authenticated/sessions'
       path: '/sessions'
@@ -302,6 +334,13 @@ declare module '@tanstack/react-router' {
       path: '/billing'
       fullPath: '/billing'
       preLoaderRoute: typeof AuthenticatedBillingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/assignments': {
+      id: '/_authenticated/assignments'
+      path: '/assignments'
+      fullPath: '/assignments'
+      preLoaderRoute: typeof AuthenticatedAssignmentsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/public/generate-image': {
@@ -377,11 +416,13 @@ const AuthenticatedSessionsRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAssignmentsRoute: typeof AuthenticatedAssignmentsRoute
   AuthenticatedBillingRoute: typeof AuthenticatedBillingRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedNewRoute: typeof AuthenticatedNewRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedSessionsRoute: typeof AuthenticatedSessionsRouteWithChildren
+  AuthenticatedTeachRoute: typeof AuthenticatedTeachRoute
   AuthenticatedPacketRunIdRoute: typeof AuthenticatedPacketRunIdRoute
   AuthenticatedPrintRunIdRoute: typeof AuthenticatedPrintRunIdRoute
   AuthenticatedProjectsPieceIdRoute: typeof AuthenticatedProjectsPieceIdRoute
@@ -391,11 +432,13 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAssignmentsRoute: AuthenticatedAssignmentsRoute,
   AuthenticatedBillingRoute: AuthenticatedBillingRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedNewRoute: AuthenticatedNewRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedSessionsRoute: AuthenticatedSessionsRouteWithChildren,
+  AuthenticatedTeachRoute: AuthenticatedTeachRoute,
   AuthenticatedPacketRunIdRoute: AuthenticatedPacketRunIdRoute,
   AuthenticatedPrintRunIdRoute: AuthenticatedPrintRunIdRoute,
   AuthenticatedProjectsPieceIdRoute: AuthenticatedProjectsPieceIdRoute,
