@@ -62,11 +62,16 @@ export function resolveProcessor(): string {
   return p && (PROCESSORS as readonly string[]).includes(p) ? p : DEFAULT_PROCESSOR;
 }
 
-export async function createResearchTask(topic: string, processor: string): Promise<ParallelTask> {
+export async function createResearchTask(
+  topic: string,
+  processor: string,
+  /** Prebuilt task input (e.g. a follow-up query); defaults to the standard framing. */
+  rawInput?: string,
+): Promise<ParallelTask> {
   const res = await parallelFetch("", {
     method: "POST",
     body: JSON.stringify({
-      input: buildResearchQuery(topic),
+      input: rawInput ?? buildResearchQuery(topic),
       processor,
       task_spec: { output_schema: { type: "text" } },
     }),

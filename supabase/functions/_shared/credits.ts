@@ -22,6 +22,9 @@ export const CREDIT_COST = {
   resynth: 1,
   ready: 1,
   revise: 1,
+  followup: 2, // follow-up research pass (covers the chained revised packet)
+  document: 1, // final paper (.docx) generation
+  presentation: 1, // class presentation (.pptx) generation
 } as const;
 
 /**

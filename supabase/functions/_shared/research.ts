@@ -16,6 +16,7 @@ import {
 } from "./parallel.ts";
 import { canTransition } from "./state.ts";
 import { buildComposePrompt, buildPacketPrompt } from "./prompt.ts";
+import { buildRevisedPacketPrompt, type FollowupQuestion } from "./followup.ts";
 import { buildImageCreds } from "./image-token.ts";
 import { dispatchRun, resolveProvider } from "./dispatch.ts";
 import { ensureRunSession, recordInference } from "./usage.ts";
@@ -99,6 +100,19 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
   // Which workflow this research feeds: the long-form compose chain (default,
   // and all pre-workflow rows) or a research packet (docs/research-workflow/).
   const packetMode = run.input?.workflow === "research_packet";
+  // Follow-up pass (Phase 5): chains a REVISED packet (version n+1) instead
+  // of a fresh one. Everything the revision needs was stored in the run's
+  // input at dispatch (packet-action), so a crash-resweep stays deterministic.
+  const followup =
+    run.kind === "followup_research" && run.input?.followup && typeof run.input.followup === "object"
+      ? (run.input.followup as {
+          packet_id: string;
+          version: number;
+          questions: FollowupQuestion[];
+          original_packet_body?: string;
+          base_branch?: string | null;
+        })
+      : null;
 
   const raw = await getResearchResult(run.external_run_id);
   const report = buildResearchReport({
@@ -193,6 +207,11 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
         research: report,
         from_research_run: run.id,
         ...(packetMode ? { workflow: "research_packet" } : {}),
+        // Revised packets persist as version n+1 superseding the original
+        // (read by persistPacketResult).
+        ...(followup
+          ? { packet: { version: followup.version, supersedes_packet_id: followup.packet_id } }
+          : {}),
       },
     })
     .select("id")
@@ -242,30 +261,40 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
       });
     }
     const imageCreds = await buildImageCreds(composeRunId);
-    const prompt = packetMode
-      ? buildPacketPrompt({
+    const prompt = followup
+      ? buildRevisedPacketPrompt({
           pieceSlug: piece.slug,
-          research: report,
-          goal,
-          imageStyle,
-          imageEndpoint: imageCreds?.endpoint,
-          imageToken: imageCreds?.token,
+          followupReport: report,
+          originalPacketBody: followup.original_packet_body ?? "",
+          questions: followup.questions ?? [],
+          version: followup.version,
         })
-      : buildComposePrompt({
-          pieceSlug: piece.slug,
-          research: report,
-          goal,
-          styleText,
-          imageStyle,
-          imageEndpoint: imageCreds?.endpoint,
-          imageToken: imageCreds?.token,
-        });
+      : packetMode
+        ? buildPacketPrompt({
+            pieceSlug: piece.slug,
+            research: report,
+            goal,
+            imageStyle,
+            imageEndpoint: imageCreds?.endpoint,
+            imageToken: imageCreds?.token,
+          })
+        : buildComposePrompt({
+            pieceSlug: piece.slug,
+            research: report,
+            goal,
+            styleText,
+            imageStyle,
+            imageEndpoint: imageCreds?.endpoint,
+            imageToken: imageCreds?.token,
+          });
     await dispatchRun({
       admin,
       provider: resolveProvider(),
       runId: composeRunId,
       prompt,
-      ref: Deno.env.get("AGENT_REPO_REF") ?? "main",
+      // A revised packet starts from the original packet run's branch so the
+      // research/ and packet/ files are present to carry forward.
+      ref: followup?.base_branch ?? Deno.env.get("AGENT_REPO_REF") ?? "main",
       autoCreatePr: false,
     });
   }

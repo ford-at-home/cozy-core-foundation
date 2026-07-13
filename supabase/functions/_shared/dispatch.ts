@@ -134,6 +134,8 @@ export async function dispatchResearchRun(args: {
   runId: string;
   topic: string;
   processor: string;
+  /** Prebuilt task input (follow-up passes); defaults to the standard framing. */
+  query?: string;
 }): Promise<void> {
   const { admin, runId } = args;
   const logEvent = (eventType: string, payload: unknown) =>
@@ -145,7 +147,7 @@ export async function dispatchResearchRun(args: {
     });
 
   try {
-    const task = await createResearchTask(args.topic, args.processor);
+    const task = await createResearchTask(args.topic, args.processor, args.query);
     await admin
       .from("agent_runs")
       .update({

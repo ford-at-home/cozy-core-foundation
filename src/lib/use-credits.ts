@@ -9,6 +9,9 @@ export const CREDIT_COST = {
   resynth: 1,
   ready: 1,
   revise: 1,
+  followup: 2,
+  document: 1,
+  presentation: 1,
 } as const;
 
 /**

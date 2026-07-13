@@ -183,10 +183,22 @@ function fileFromResult(result: any, name: string): string | null {
  */
 export async function persistPacketResult(
   admin: any,
-  run: { id: string; user_id: string; piece_id: string | null },
+  run: { id: string; user_id: string; piece_id: string | null; input?: any },
   result: any,
 ): Promise<void> {
   if (!run.piece_id) throw new Error("packet run has no piece");
+
+  // Revised packets (Phase 5) carry their version + provenance in the run
+  // input, set at chain time by completeResearchAndChain.
+  const packetMeta =
+    run.input?.packet && typeof run.input.packet === "object"
+      ? (run.input.packet as { version?: number; supersedes_packet_id?: string })
+      : null;
+  const version =
+    typeof packetMeta?.version === "number" && packetMeta.version > 1 ? packetMeta.version : 1;
+  const supersedes = typeof packetMeta?.supersedes_packet_id === "string"
+    ? packetMeta.supersedes_packet_id
+    : null;
 
   const analysisRaw = fileFromResult(result, "analysis.json");
   const questionsRaw = fileFromResult(result, "questions.json");
@@ -220,13 +232,28 @@ export async function persistPacketResult(
       piece_id: run.piece_id,
       run_id: run.id,
       user_id: run.user_id,
-      version: 1,
+      version,
+      supersedes_packet_id: supersedes,
       status: "generated",
       analysis,
     },
     { onConflict: "run_id", ignoreDuplicates: true },
   );
   if (packetErr) throw new Error(`packet upsert failed: ${packetErr.message}`);
+
+  // A revised packet closes out the follow-up loop on the packet it
+  // supersedes (idempotent: repeated updates write the same values).
+  if (supersedes) {
+    await admin
+      .from("packets")
+      .update({ followup_state: "researched", updated_at: new Date().toISOString() })
+      .eq("id", supersedes);
+    await admin
+      .from("followup_questions")
+      .update({ status: "researched", updated_at: new Date().toISOString() })
+      .eq("packet_id", supersedes)
+      .eq("status", "approved");
+  }
 
   const { data: packet, error: readErr } = await admin
     .from("packets")

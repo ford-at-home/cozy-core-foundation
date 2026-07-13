@@ -150,7 +150,10 @@ Deno.serve(async (req) => {
 });
 
 async function reconcileOne(admin: any, provider: AgentProvider, run: any) {
-  if (run.kind === "research") return reconcileResearch(admin, run);
+  // Follow-up passes are Parallel runs too; same reconciliation, different chain.
+  if (run.kind === "research" || run.kind === "followup_research") {
+    return reconcileResearch(admin, run);
+  }
   const ageMin = (Date.now() - new Date(run.created_at).getTime()) / 60_000;
 
   // Never dispatched, or ambiguous dispatch: without vendor-side correlation
