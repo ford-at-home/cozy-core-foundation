@@ -24,7 +24,8 @@ export const Route = createFileRoute("/_authenticated/print/$runId")({
 // show up on paper without regenerating anything.
 type PacketPrintInfo = {
   packetId: string;
-  version: number;
+  /** null = packet row unreadable; the header omits the version stamp. */
+  version: number | null;
   status: "generated" | "reviewed" | null;
   pieceId: string | null;
   questions: PacketPrintQuestion[];
@@ -144,18 +145,29 @@ function PrintPage() {
                   })),
                 });
               } else {
+                // Degraded: no packet row yet. Print the body with the default
+                // follow-up section, no version stamp (guessing "v1" on a
+                // revised packet would be wrong on paper), and say so.
+                toast.warning("Printing without the tailored questions.", {
+                  description:
+                    "This packet's reviewed questions couldn't be loaded — the default follow-up section is included instead.",
+                });
                 setPacketInfo({
                   packetId: runId,
-                  version: 1,
+                  version: null,
                   status: null,
                   pieceId: null,
                   questions: [],
                 });
               }
             } catch {
+              toast.warning("Printing without the tailored questions.", {
+                description:
+                  "This packet's reviewed questions couldn't be loaded — the default follow-up section is included instead.",
+              });
               setPacketInfo({
                 packetId: runId,
-                version: 1,
+                version: null,
                 status: null,
                 pieceId: null,
                 questions: [],

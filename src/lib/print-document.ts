@@ -161,7 +161,10 @@ export interface PacketPrintQuestion {
 export interface PacketPrintOptions {
   /** Packet id printed in the header (shortened for the page). */
   packetId: string;
-  version?: number;
+  /** Packet version for the header stamp; null/undefined omits the stamp
+   *  (degraded path where the packet row couldn't be read — printing a
+   *  wrong "v1" on a revised packet would be worse than no stamp). */
+  version?: number | null;
 }
 
 /** Ruled-line counts per writing-space size (0.35in per line — comfortable
@@ -240,10 +243,10 @@ const RETURN_INSTRUCTIONS_HTML = `
 
 function packetHeaderHtml(opts: PacketPrintOptions): string {
   const shortId = escapeHtml(opts.packetId.slice(0, 8));
-  const version = opts.version ?? 1;
+  const stamp = opts.version != null ? ` · v${opts.version}` : "";
   return [
     '<div class="packet-header">',
-    `<div class="packet-header-id">Research packet ${shortId} · v${version}</div>`,
+    `<div class="packet-header-id">Research packet ${shortId}${stamp}</div>`,
     '<div class="packet-fields">',
     '<div class="packet-field"><span class="packet-field-label">Name</span><span class="packet-field-line"></span></div>',
     '<div class="packet-field"><span class="packet-field-label">Course</span><span class="packet-field-line"></span></div>',
@@ -265,8 +268,10 @@ export function buildPacketPrintDocument(
 ): string {
   const title = extractTitle(source);
   const ordered = [...questions].sort((a, b) => a.position - b.position);
+  // The first followup-function question shapes the "Further research"
+  // section; any extras print as regular questions rather than vanishing.
   const followup = ordered.find((q) => q.function === "followup") ?? null;
-  const regular = ordered.filter((q) => q.function !== "followup");
+  const regular = ordered.filter((q) => q !== followup);
 
   const questionBlocks = regular.map((q, i) => questionBlockHtml(q, i + 1)).join("\n");
   const questionsSection =
