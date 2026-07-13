@@ -57,6 +57,52 @@ describe("buildPrintDocument", () => {
     expect(doc).toContain("@page :first");
   });
 
+  it("prints the full markup key: marks, edits, dials, directives, example, avoid-note", () => {
+    for (const label of ["Marks", "Edits", "Dials", "Directives", "Refer", "Example", "Avoid"]) {
+      expect(doc).toContain(`<span class="markup-legend-label">${label}</span>`);
+    }
+    // The six symbols with their meanings.
+    expect(doc).toContain("✓ keep");
+    expect(doc).toContain("✗ cut");
+    expect(doc).toContain("~ rework (say how)");
+    expect(doc).toContain("★ expand");
+    expect(doc).toContain("→ move (say where)");
+    expect(doc).toContain("? unsure");
+    // Scope, replacement, insertion, approval-by-default.
+    expect(doc).toContain("underline or circle words to narrow it");
+    expect(doc).toContain("strike the old words");
+    expect(doc).toContain("caret ^ at the spot");
+    expect(doc).toContain("unmarked = unchanged");
+    // What NOT to draw.
+    expect(doc).toContain("writing over the margin anchors, inventing symbols");
+  });
+
+  it("repeats a minimal symbol reminder in the bottom-left margin, off on page 1", () => {
+    expect(doc).toContain("@bottom-left");
+    expect(doc).toContain('content: "✓ keep ✗ cut ~ rework ★ expand → move ? unsure"');
+    // print.css turns the box off on the first page, where the legend sits.
+    const firstPageRule = doc.slice(doc.indexOf("@page :first"));
+    expect(firstPageRule).toContain("@bottom-left");
+    expect(firstPageRule).toContain("content: none");
+  });
+
+  it("stamps a per-page document identifier when a documentId is provided", () => {
+    const withId = buildPrintDocument(source, {
+      documentId: "0a1b2c3d-ffff-4444-aaaa-999999999999",
+    });
+    expect(withId).toContain("@top-right");
+    expect(withId).toContain('content: "draft 0a1b2c3d"');
+    // Without an id there is no top-right box at all (nothing to attribute).
+    expect(doc).not.toContain("@top-right");
+  });
+
+  it("trims very long titles in the running header so the top strip cannot collide", () => {
+    const longTitle = "# " + "An Extremely Long Title About Orphaned Tools And Their Costs";
+    const built = buildPrintDocument(`${longTitle}\n\nBody.`);
+    expect(built).toContain("…");
+    expect(built).not.toContain('content: "An Extremely Long Title About Orphaned Tools And Their Costs"');
+  });
+
   it("uses an empty running header when the document has no heading", () => {
     const untitled = buildPrintDocument("Just a paragraph.");
     expect(untitled).toContain("<title>Hardcopy Draft</title>");

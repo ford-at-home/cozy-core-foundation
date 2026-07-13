@@ -75,6 +75,13 @@ describe("buildPacketPrintDocument", () => {
     const degraded = buildPacketPrintDocument(BODY, [], { ...OPTS, version: null });
     expect(degraded).toContain("Research packet 0a1b2c3d</div>");
     expect(degraded).not.toContain("· v");
+    // The per-page identifier degrades the same way: id without version.
+    expect(degraded).toContain('content: "packet 0a1b2c3d"');
+  });
+
+  it("stamps the packet id + version top-right on every page (scan attribution)", () => {
+    expect(doc).toContain("@top-right");
+    expect(doc).toContain('content: "packet 0a1b2c3d · v1"');
   });
 
   it("keeps the existing markup legend and adds the handwriting guidance", () => {
