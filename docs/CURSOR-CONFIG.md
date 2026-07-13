@@ -98,7 +98,9 @@ and any deltas.
 | Cloud Agent default model                                  | _(fill in)_ | Cloud Agents settings                            |
 | Max Mode                                                   | Always on (forced by Cursor for Cloud Agents) | Documented; no toggle |
 | Long-running agents enabled?                               | _(fill in)_ | Cloud Agents team settings                      |
-| Model IDs exposed by `GET /v1/models` on this account      | _(fill in)_ | `curl -H "Authorization: Bearer $CURSOR_API_KEY" https://api.cursor.com/v1/models` |
+| v1 REST API enabled for this account?                      | _(fill in)_ | `curl -u "$CURSOR_API_KEY:" https://api.cursor.com/v1/me` — JSON body = yes, 401/404/HTML = no |
+| Model IDs exposed by `GET /v1/models` on this account      | _(fill in)_ | `curl -u "$CURSOR_API_KEY:" https://api.cursor.com/v1/models` |
+| v1 launch payload subagent shape                           | _(fill in from a probe POST /v1/agents response)_ | See Follow-up 1 in Cloud Agent workflow configuration below |
 
 ## Recommended settings
 
@@ -218,10 +220,43 @@ line 12: `const BASE_URL = "https://api.cursor.com"; ... "/v0/agents"`).
 v0 does not expose subagents. The `docs/cursor-api-research.md` file
 notes that the v1 endpoint schemas were "not established" in retrievable
 first-party content at the time of that research; that gap has to close
-before code is written. Approximate scope:
+before code is written.
 
-- Live probe of the account: `GET /v1/models` and a minimal `POST /v1/agents`
-  call to confirm the schema and the subagent shape on this account.
+*Live-probe the account first.* The v1 REST API is a public beta at
+`https://api.cursor.com/v1/` and supports both Basic and Bearer
+authentication with the same `crsr_...` API key used for v0. Verify
+availability on this account before writing dispatch code:
+
+```bash
+# Confirm the API key is valid on v1 and that v1 is enabled for the account.
+curl --request GET \
+  --url https://api.cursor.com/v1/me \
+  -u "$CURSOR_API_KEY:"
+# Success: JSON body describing the API key holder. Anything else (401, 404,
+# HTML) means v1 is not enabled or the endpoint is not reachable from your
+# network — stop and record the failure in the substitution log before proceeding.
+
+# List the model IDs v1 exposes for this account (schema may differ from v0).
+curl --request GET \
+  --url https://api.cursor.com/v1/models \
+  -u "$CURSOR_API_KEY:"
+
+# Minimal launch call to capture the actual v1 launch schema. Use a throwaway
+# prompt and a spend limit. Cancel the returned run afterwards to avoid billing.
+curl --request POST \
+  --url https://api.cursor.com/v1/agents \
+  -u "$CURSOR_API_KEY:" \
+  --header 'content-type: application/json' \
+  --data '{"prompt":{"text":"noop probe — cancel immediately"},"source":{"repository":"https://github.com/ford-at-home/cozy-core-foundation","ref":"main"},"target":{"autoCreatePr":false}}'
+```
+
+Save the returned JSON bodies alongside the model substitution log — those
+are the authoritative schema the new provider file must be typed against.
+The subagent shape (nested under the launch payload, or a separate
+endpoint) is one of the facts to record from the launch response.
+
+Approximate scope of the migration itself:
+
 - New `provider.cursor.v1.ts` or a version parameter on `CursorProvider`.
 - Update `dispatch.ts` to select the transport (fallback to v0 for
   compatibility during rollout).
@@ -231,8 +266,8 @@ before code is written. Approximate scope:
 - Lovable-side redeploy.
 
 Sized as: medium — new provider file (~100 lines), dispatch and
-reconciler updates, webhook handling, live-probe verification, plus one
-work item to Lovable for the deploy.
+reconciler updates, webhook handling, plus the live-probe verification
+above and one work item to Lovable for the deploy.
 
 **Follow-up 2: subagent split on the migrated transport.** Once v1 / SDK
 dispatch is live, add the planner / executor / reviewer subagent config
