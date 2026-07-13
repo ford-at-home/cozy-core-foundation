@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -8,7 +8,12 @@ import {
   type AgentRun,
   type RunStatus,
 } from "@/lib/workflows.functions";
-import { approveRevisionPr, runPieceAction, type PieceAction } from "@/lib/pieces.functions";
+import {
+  approveRevisionPr,
+  checkRevisionPrStatus,
+  runPieceAction,
+  type PieceAction,
+} from "@/lib/pieces.functions";
 import { isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
 import type { Json } from "@/integrations/supabase/types";
 import MarkdownView from "@/components/MarkdownView";
@@ -16,6 +21,7 @@ import { RunCostCard } from "@/components/RunCostCard";
 import { StatusPill } from "@/components/StatusPill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { brand, pageTitle } from "@/config/brand";
+import { useDictation } from "@/hooks/use-dictation";
 
 export const Route = createFileRoute("/_authenticated/runs/$runId")({
   head: () => ({
