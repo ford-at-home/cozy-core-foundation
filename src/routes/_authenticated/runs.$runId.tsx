@@ -8,7 +8,7 @@ import {
   type AgentRun,
   type RunStatus,
 } from "@/lib/workflows.functions";
-import { runPieceAction, type PieceAction } from "@/lib/pieces.functions";
+import { approveRevisionPr, runPieceAction, type PieceAction } from "@/lib/pieces.functions";
 import { isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
 import type { Json } from "@/integrations/supabase/types";
 import MarkdownView from "@/components/MarkdownView";
@@ -490,10 +490,7 @@ function ActionsPanel({ run }: { run: AgentRun }) {
       )}
 
       {run.kind === "revision" && (
-        <p className="text-sm text-muted-foreground">
-          Final version produced. Approve its pull request on GitHub, then copy the piece from the
-          tabs above wherever it's going.
-        </p>
+        <RevisionApprovalPanel pieceId={run.piece_id!} runId={run.id} />
       )}
 
       <p className="text-xs text-muted-foreground">
@@ -513,6 +510,112 @@ function ActionsPanel({ run }: { run: AgentRun }) {
         </p>
       )}
     </section>
+  );
+}
+
+function RevisionApprovalPanel({ pieceId, runId }: { pieceId: string; runId: string }) {
+  const [prUrl, setPrUrl] = useState<string | null>(null);
+  const [mergedAt, setMergedAt] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const approve = useServerFn(approveRevisionPr);
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from("pieces")
+      .select("final_pr_url, final_pr_merged_at")
+      .eq("id", pieceId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        setPrUrl((data as { final_pr_url: string | null }).final_pr_url ?? null);
+        setMergedAt(
+          (data as { final_pr_merged_at: string | null }).final_pr_merged_at ?? null,
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pieceId]);
+
+  async function onApprove() {
+    if (pending) return;
+    setPending(true);
+    setError(null);
+    setNote(null);
+    try {
+      const res = await approve({ data: { runId } });
+      if (res.prUrl) setPrUrl(res.prUrl);
+      if (res.alreadyMerged) {
+        setMergedAt((prev) => prev ?? new Date().toISOString());
+        setNote("The pull request was already merged.");
+      } else {
+        setMergedAt(res.mergedAt ?? new Date().toISOString());
+        setNote("Merged. The final version is now on the main branch.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Approve failed");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  if (mergedAt) {
+    return (
+      <div className="space-y-2 text-sm">
+        <p className="text-muted-foreground">
+          Approved and merged {new Date(mergedAt).toLocaleString()}. The final version is on the
+          main branch — copy the piece from the tabs above wherever it's going.
+        </p>
+        {prUrl && (
+          <a
+            href={prUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex text-xs text-muted-foreground underline hover:text-foreground"
+          >
+            View merged PR on GitHub ↗
+          </a>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Final version produced. Approving squash-merges the pull request into <code>main</code>{" "}
+        and marks this piece as shipped.
+      </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <button
+          type="button"
+          onClick={onApprove}
+          disabled={pending}
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
+        >
+          {pending ? "Merging…" : "Approve & merge"}
+        </button>
+        {prUrl && (
+          <a
+            href={prUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-muted-foreground underline hover:text-foreground"
+          >
+            View PR on GitHub ↗
+          </a>
+        )}
+      </div>
+      {note && <p className="text-xs text-muted-foreground">{note}</p>}
+      {error && (
+        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 

@@ -1,0 +1,1 @@
+ALTER TABLE public.pieces ADD COLUMN IF NOT EXISTS final_pr_merged_at timestamptz;
