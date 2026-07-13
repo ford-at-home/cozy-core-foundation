@@ -22,6 +22,13 @@ GitHub repo, and the author reviews on screen, prints a wide-margin US Letter
 copy for pen markup, then types the annotations back to trigger a revision
 run.
 
+A second **workflow** (`pieces.workflow = 'research_packet'`, alongside the
+default `'longform'`) turns the same pipeline into a research-and-learning
+loop for college students: research → printable packet with tailored Socratic
+questions and handwriting space → paper annotation → (later phases) photo/
+dictation return, follow-up research, and final Word/PowerPoint artifacts.
+Specification set: `docs/research-workflow/`.
+
 ## Frontend (verified)
 
 | Concern          | Implementation                                                                                                                                                                                                                                                                                     |
@@ -47,7 +54,8 @@ run.
 | `/profile`                          | `src/routes/_authenticated/profile.tsx` (voice/style + dictation) |
 | `/sessions`, `/sessions/$sessionId` | cost views                                                        |
 | `/runs/$runId`                      | run detail, outputs, actions (ready / resynth / revise)           |
-| `/print/$runId`                     | print-for-markup preview + PDF download                           |
+| `/packet/$runId`                    | `src/routes/_authenticated/packet.$runId.tsx` (research-packet question review: edit / lock / add / approve) |
+| `/print/$runId`                     | print-for-markup preview + PDF download (packet runs use the packet builder with response areas) |
 | `/billing`                          | `src/routes/_authenticated/billing.tsx` (balance, credit packs, purchase history, ledger, checkout return banners) |
 
 ### Mobile (verified — mobile is the primary interface)
@@ -88,6 +96,12 @@ run.
   `tests/print-fidelity.test.ts` (real Chromium: rendered anchors vs. the
   reference walker in `tests/anchor-reference.ts`, PDF pagination, page
   furniture; artifacts land in `test-artifacts/print/`).
+- `buildPacketPrintDocument` (same file) wraps the same renderer for research
+  packets: packet header, MARKUP.md legend, handwriting guidance, question
+  blocks with ruled response areas, follow-up section, return instructions —
+  all built from `div`/`span` furniture so it consumes **zero** S{n}P{m}
+  anchors (the counting rule is untouched). Layout spec:
+  `docs/research-workflow/03-printable-packet.md`.
 - Everything targets **US Letter**. There is no A4 anywhere.
 
 ## Backend — Supabase (verified)
@@ -112,6 +126,8 @@ Project id `dlaojinagezrlbwyritd` (`supabase/config.toml`).
 | `credit_products`                                 | Purchasable packs; checkout validates client-sent price ids against this table                           |
 | `purchases`, `billing_customers`, `subscriptions` | Stripe object mirrors (Stripe stays the source of truth for payment state)                               |
 | `stripe_events`                                   | Webhook inbox, PK = Stripe event id (duplicate delivery = no-op insert); RLS deny-all, service-role only |
+| `packets`                                         | One row per completed packet run (`workflow='research_packet'`): analysis jsonb, status `generated → reviewed`; unique `run_id` |
+| `packet_questions`                                | Tailored Socratic questions per packet; question text/lock are owner-editable content under RLS; unique `(packet_id, position)` |
 
 RLS: users read/write their own rows where user-editable (profiles, sessions,
 inferences); **INSERT/UPDATE/DELETE on `pieces`/`agent_runs` are revoked for
@@ -141,9 +157,11 @@ Shared modules in `supabase/functions/_shared/`: `state.ts` (run state machine),
 `complete.ts` (monotonic completion + GitHub fetch-back), `usage.ts`
 (idempotent `recordInference`), `credits.ts` (reserve/settle/release/sweep),
 `billing.ts` (refund reversal), `stripe-reconcile.ts` (re-checks Stripe for
-missed webhooks), `prompt.ts` (cloud-agent prompt builders), `webhook.ts`,
-`parallel.ts`, `research.ts`, `provider.cursor.ts`, `provider.stub.ts`,
-`observability.ts`.
+missed webhooks), `prompt.ts` (cloud-agent prompt builders, including
+`buildPacketPrompt`), `packet.ts` (packet JSON validation + idempotent
+persistence into `packets`/`packet_questions`, called before a packet run is
+marked completed), `webhook.ts`, `parallel.ts`, `research.ts`,
+`provider.cursor.ts`, `provider.stub.ts`, `observability.ts`.
 
 ### Run state machine (verified — `_shared/state.ts`)
 

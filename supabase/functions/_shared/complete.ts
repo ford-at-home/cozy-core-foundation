@@ -50,6 +50,8 @@ export function mainFileForKind(kind: string): string {
       return "draft.md";
     case "revision":
       return "final.md";
+    case "packet":
+      return "packet/packet.md";
     default:
       return "proposal.md";
   }
@@ -69,6 +71,9 @@ export function stageForCompletedKind(kind: string): string {
       return "drafted";
     case "revision":
       return "finalized";
+    case "packet":
+      // A completed packet is print-ready, like a draft.
+      return "drafted";
     default:
       return "proposed";
   }
@@ -79,6 +84,33 @@ export async function fetchRunResult(run: RunRow, slug: string) {
   if (!run.branch) return null;
   const dir = `pieces/${slug}`;
   const mainFile = mainFileForKind(run.kind);
+
+  // Research packets ship the packet body plus two JSON sidecars (structured
+  // analysis + tailored questions) that _shared/packet.ts persists to the
+  // packets tables. The body is exposed as post.md so the run tabs and the
+  // print route work unchanged.
+  if (run.kind === "packet") {
+    const [main, analysis, questions] = await Promise.all([
+      fetchFileFromBranch(`${dir}/${mainFile}`, run.branch),
+      fetchFileFromBranch(`${dir}/packet/analysis.json`, run.branch),
+      fetchFileFromBranch(`${dir}/packet/questions.json`, run.branch),
+    ]);
+    if (main === null) return null;
+    return {
+      brief: null,
+      channels: [
+        {
+          channel: "packet",
+          files: [
+            { name: "post.md", content: main },
+            ...(analysis ? [{ name: "analysis.json", content: analysis }] : []),
+            ...(questions ? [{ name: "questions.json", content: questions }] : []),
+          ],
+        },
+      ],
+    };
+  }
+
   const [main, brief, toResearch, tighten, unresolved] = await Promise.all([
     fetchFileFromBranch(`${dir}/${mainFile}`, run.branch),
     fetchFileFromBranch(`${dir}/brief.md`, run.branch),

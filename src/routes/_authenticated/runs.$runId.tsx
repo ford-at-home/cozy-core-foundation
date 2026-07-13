@@ -206,6 +206,20 @@ function RunDetailPage() {
             </div>
           )}
 
+          {run.kind === "packet" && run.status === "completed" && (
+            <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm">
+              Research packet ready.{" "}
+              <Link
+                to="/packet/$runId"
+                params={{ runId: run.id }}
+                className="font-medium underline"
+              >
+                Review the questions →
+              </Link>{" "}
+              then print it with real writing space and answer by hand.
+            </div>
+          )}
+
           {(run.status === "failed" || run.status === "cancelled") && (
             <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
               {run.status === "cancelled"
@@ -257,9 +271,10 @@ function RunDetailPage() {
             </div>
           )}
 
-          {run.status === "completed" && run.piece_id && run.kind !== "research" && (
-            <ActionsPanel run={run} />
-          )}
+          {run.status === "completed" &&
+            run.piece_id &&
+            run.kind !== "research" &&
+            run.kind !== "packet" && <ActionsPanel run={run} />}
         </>
       )}
     </div>
@@ -425,6 +440,23 @@ function ActionsPanel({ run }: { run: AgentRun }) {
 }
 
 function activeStatusMessage(status: RunStatus, kind: string): string {
+  if (kind === "packet") {
+    switch (status) {
+      case "requested":
+      case "dispatching":
+        return "Starting — handing the packet build to the cloud agent.";
+      case "dispatch_unknown":
+        return "Starting… — dispatch is unconfirmed; the reconciler is resolving it. This page updates live.";
+      case "queued":
+        return "Queued — the agent's workspace is being prepared.";
+      case "running":
+        return "Working — analyzing the research and writing questions tailored to its findings. This page updates live.";
+      case "awaiting_fetch":
+        return "Almost done — the packet is written; fetching it back and saving the questions for review.";
+      default:
+        return "In progress.";
+    }
+  }
   if (kind === "research") {
     switch (status) {
       case "requested":

@@ -19,7 +19,7 @@
 
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { buildComposePrompt, slugify } from "../_shared/prompt.ts";
+import { buildComposePrompt, buildPacketPrompt, slugify } from "../_shared/prompt.ts";
 import { dispatchResearchRun, dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
 import { resolveProcessor } from "../_shared/parallel.ts";
 import { buildImageCreds } from "../_shared/image-token.ts";
@@ -96,11 +96,17 @@ async function handle(req: Request, rid: string): Promise<Response> {
   const requestId =
     typeof body?.requestId === "string" && body.requestId ? body.requestId : crypto.randomUUID();
   const rawAttachments = Array.isArray(body?.attachments) ? body.attachments : [];
+  // Workflow: the default long-form draft, or a college research packet
+  // (docs/research-workflow/). Same orchestration either way; the packet
+  // workflow swaps the compose prompt and skips the voice requirement.
+  const workflow = body?.workflow === "research_packet" ? "research_packet" : "longform";
+  const packetMode = workflow === "research_packet";
   // Two entry points: bring research (paste/attach) or a topic to deep-research.
   const researchMode = !research && rawAttachments.length === 0 && topic !== "";
   logEvent(FN, "info", {
     requestId: rid,
     userId,
+    workflow,
     mode: researchMode ? "research" : "compose",
     hasResearch: research.length > 0,
     researchChars: research.length,
@@ -128,7 +134,7 @@ async function handle(req: Request, rid: string): Promise<Response> {
   });
 
   // --- 3. Idempotency: an existing run for this requestId wins -------------
-  const idempotencyKey = `${researchMode ? "research" : "compose"}:${userId}:${requestId}`;
+  const idempotencyKey = `${researchMode ? "research" : packetMode ? "packet" : "compose"}:${userId}:${requestId}`;
   {
     const { data: existing } = await admin
       .from("agent_runs")
@@ -149,7 +155,10 @@ async function handle(req: Request, rid: string): Promise<Response> {
     .maybeSingle();
   const styleText = (profile?.style_text ?? "").trim();
   const imageStyle = (profile?.image_style ?? "").trim();
-  if (!styleText) {
+  // Research packets are research artifacts, not the author's prose — the
+  // student's voice enters at final synthesis (Phase 6), so no voice
+  // requirement here. Long-form drafting still refuses to run without one.
+  if (!styleText && !packetMode) {
     return err(422, "Your voice profile is empty. Describe your style at /profile first.", {
       requestId: rid,
       code: "empty_voice",
@@ -175,7 +184,7 @@ async function handle(req: Request, rid: string): Promise<Response> {
   const slug = `${slugify(topic || goal || research.slice(0, 60))}-${crypto.randomUUID().slice(0, 6)}`;
   const { data: piece, error: pieceErr } = await admin
     .from("pieces")
-    .insert({ user_id: userId, slug, title: goal || topic || null, stage: "research" })
+    .insert({ user_id: userId, slug, title: goal || topic || null, stage: "research", workflow })
     .select("id")
     .single();
   if (pieceErr || !piece) {
@@ -191,13 +200,15 @@ async function handle(req: Request, rid: string): Promise<Response> {
     .insert({
       user_id: userId,
       piece_id: piece.id,
-      kind: researchMode ? "research" : "proposal",
+      kind: researchMode ? "research" : packetMode ? "packet" : "proposal",
       status: "dispatching",
       idempotency_key: idempotencyKey,
       // style_text deliberately NOT stored here (sensitive profile data).
+      // workflow rides in input so the research→compose chain knows which
+      // kind of run to chain (research.ts).
       input: researchMode
-        ? { topic, goal: goal || null, processor }
-        : { research, goal: goal || null, topic: topic || null },
+        ? { topic, goal: goal || null, processor, workflow }
+        : { research, goal: goal || null, topic: topic || null, workflow },
     })
     .select("id")
     .single();
@@ -223,7 +234,7 @@ async function handle(req: Request, rid: string): Promise<Response> {
     userId,
     runId,
     amount: creditCost,
-    reason: researchMode ? "deep-research start" : "compose",
+    reason: researchMode ? "deep-research start" : packetMode ? "research packet" : "compose",
   });
   if (!reserved.ok) {
     await admin
@@ -272,22 +283,33 @@ async function handle(req: Request, rid: string): Promise<Response> {
   const attachments = await resolveAttachments(admin, userId, rawAttachments, runId);
 
   // --- 6. Dispatch ----------------------------------------------------------
+  const prompt = packetMode
+    ? buildPacketPrompt({
+        pieceSlug: slug,
+        research,
+        goal: goal || null,
+        imageStyle,
+        imageEndpoint: imageCreds?.endpoint,
+        imageToken: imageCreds?.token,
+        attachments,
+      })
+    : buildComposePrompt({
+        pieceSlug: slug,
+        research,
+        goal: goal || null,
+        styleText,
+        imageStyle,
+        imageEndpoint: imageCreds?.endpoint,
+        imageToken: imageCreds?.token,
+        attachments,
+      });
   await dispatchRun({
     admin,
     provider: resolveProvider(),
     runId,
-    prompt: buildComposePrompt({
-      pieceSlug: slug,
-      research,
-      goal: goal || null,
-      styleText,
-      imageStyle,
-      imageEndpoint: imageCreds?.endpoint,
-      imageToken: imageCreds?.token,
-      attachments,
-    }),
+    prompt,
     ref: Deno.env.get("AGENT_REPO_REF") ?? "main",
-    autoCreatePr: false, // proposal runs push a branch only; PRs come later via "ready"
+    autoCreatePr: false, // proposal/packet runs push a branch only; no PR moment here
   });
 
   return json({ runId, pieceId: piece.id }, 202, rid);

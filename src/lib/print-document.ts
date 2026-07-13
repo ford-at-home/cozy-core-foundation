@@ -132,3 +132,172 @@ export function buildPrintDocument(source: string): string {
     "</html>",
   ].join("\n");
 }
+
+// -----------------------------------------------------------------------------
+// Research packet (docs/research-workflow/03-printable-packet.md).
+//
+// The packet document = packet body (markdown, S{n}P{m} anchors ON so
+// findings are annotatable) + question blocks with real ruled writing space +
+// three follow-up-research areas + handwriting guidance + return
+// instructions. ALL packet furniture is divs/spans only: the anchor counters
+// in print.css count p/headings/blockquote/pre/table, so question blocks
+// consume zero anchors and the counting contract with
+// contract/references/MARKUP.md is untouched. Questions are addressed by
+// their printed Q{n} identifier instead.
+// -----------------------------------------------------------------------------
+
+export type PacketResponseSpace = "lines_3" | "lines_5" | "third_page" | "half_page" | "box";
+
+export interface PacketPrintQuestion {
+  position: number;
+  /** Question function; "followup" renders as the follow-up-research section. */
+  function: string;
+  claim_ref: string;
+  prompt: string;
+  guidance: string | null;
+  response_space: PacketResponseSpace;
+}
+
+export interface PacketPrintOptions {
+  /** Packet id printed in the header (shortened for the page). */
+  packetId: string;
+  version?: number;
+}
+
+/** Ruled-line counts per writing-space size (0.35in per line — comfortable
+ * handwriting). third_page ≈ 2.8in, half_page ≈ 3.85in of ruled space. */
+const RESPONSE_LINE_COUNT: Record<Exclude<PacketResponseSpace, "box">, number> = {
+  lines_3: 3,
+  lines_5: 5,
+  third_page: 8,
+  half_page: 11,
+};
+
+const DEFAULT_CREDIBILITY_PROMPT =
+  "What source, dataset, expert, institution, or type of evidence would make the answer credible?";
+
+function responseAreaHtml(space: PacketResponseSpace): string {
+  if (space === "box") return '<div class="response-box"></div>';
+  const n = RESPONSE_LINE_COUNT[space];
+  return `<div class="response-lines">${'<div class="response-line"></div>'.repeat(n)}</div>`;
+}
+
+function questionBlockHtml(q: PacketPrintQuestion, qNumber: number): string {
+  const refLine = q.claim_ref
+    ? `<span class="pq-ref">refers to ${escapeHtml(q.claim_ref)}</span>`
+    : "";
+  const guidance = q.guidance ? `<div class="pq-guidance">${escapeHtml(q.guidance)}</div>` : "";
+  return [
+    '<div class="packet-question">',
+    `<div class="pq-head"><span class="pq-id">Q${qNumber}</span>${refLine}</div>`,
+    `<div class="pq-prompt">${escapeHtml(q.prompt)}</div>`,
+    guidance,
+    responseAreaHtml(q.response_space),
+    "</div>",
+  ].join("\n");
+}
+
+function followupSectionHtml(q: PacketPrintQuestion | null, qNumber: number): string {
+  const prompt = q
+    ? escapeHtml(q.prompt)
+    : "Which of this packet's findings deserves further investigation? Write up to three " +
+      "follow-up research questions you want answered with authoritative evidence.";
+  const credibility = escapeHtml(q?.guidance || DEFAULT_CREDIBILITY_PROMPT);
+  const areas = [1, 2, 3]
+    .map((n) =>
+      [
+        '<div class="packet-question packet-followup-area">',
+        `<div class="pq-head"><span class="pq-id">${q ? `Q${qNumber}` : "F"}.${n}</span><span class="pq-ref">follow-up question ${n}</span></div>`,
+        responseAreaHtml("lines_5"),
+        `<div class="pq-guidance">${credibility}</div>`,
+        responseAreaHtml("lines_3"),
+        "</div>",
+      ].join("\n"),
+    )
+    .join("\n");
+  return [
+    '<div class="packet-section">',
+    '<div class="packet-section-title">Further research</div>',
+    `<div class="pq-prompt">${prompt}</div>`,
+    areas,
+    "</div>",
+  ].join("\n");
+}
+
+// Calm, non-judgmental guidance so recognition works; always offers the
+// dictation alternative (docs/research-workflow/03, §handwriting guidance).
+const HANDWRITING_GUIDANCE_HTML = `
+<div class="handwriting-guidance">
+  <div class="markup-legend-title">Writing your answers</div>
+  <div class="handwriting-guidance-body">Another system will read this page later, so give it a fair chance: print clearly rather than using cursive where possible, use dark ink, write inside the response areas, keep page and question numbers visible, draw shorthand marks distinctly, cross out mistakes with a clear single line, and give arrows visible endpoints. If your handwriting is difficult to read, you may dictate your answers and reference the page number, question number, or annotation mark. The system will combine your dictation with the photographed pages.</div>
+</div>`;
+
+const RETURN_INSTRUCTIONS_HTML = `
+<div class="packet-section packet-return">
+  <div class="packet-section-title">Returning this packet</div>
+  <div class="handwriting-guidance-body">When you have read, annotated, and answered on paper: photograph each completed page (one page per photo works best — whole page in frame, no glare, page number visible), then upload the photos in the app. Or dictate your answers, referencing page and question numbers. Blank space is fine; answer what earned your attention.</div>
+</div>`;
+
+function packetHeaderHtml(opts: PacketPrintOptions): string {
+  const shortId = escapeHtml(opts.packetId.slice(0, 8));
+  const version = opts.version ?? 1;
+  return [
+    '<div class="packet-header">',
+    `<div class="packet-header-id">Research packet ${shortId} · v${version}</div>`,
+    '<div class="packet-fields">',
+    '<div class="packet-field"><span class="packet-field-label">Name</span><span class="packet-field-line"></span></div>',
+    '<div class="packet-field"><span class="packet-field-label">Course</span><span class="packet-field-line"></span></div>',
+    '<div class="packet-field"><span class="packet-field-label">Date</span><span class="packet-field-line"></span></div>',
+    "</div>",
+    "</div>",
+  ].join("\n");
+}
+
+/**
+ * Build the self-contained print document for a research packet. Same
+ * renderer, geometry, fonts, and anchor rule as buildPrintDocument; the
+ * packet adds writing space and question blocks as non-anchor furniture.
+ */
+export function buildPacketPrintDocument(
+  source: string,
+  questions: PacketPrintQuestion[],
+  opts: PacketPrintOptions,
+): string {
+  const title = extractTitle(source);
+  const ordered = [...questions].sort((a, b) => a.position - b.position);
+  const followup = ordered.find((q) => q.function === "followup") ?? null;
+  const regular = ordered.filter((q) => q.function !== "followup");
+
+  const questionBlocks = regular.map((q, i) => questionBlockHtml(q, i + 1)).join("\n");
+  const questionsSection =
+    regular.length > 0
+      ? [
+          '<div class="packet-section">',
+          '<div class="packet-section-title">Questions for your written response</div>',
+          questionBlocks,
+          "</div>",
+        ].join("\n")
+      : "";
+
+  return [
+    "<!doctype html>",
+    '<html lang="en">',
+    "<head>",
+    '<meta charset="utf-8">',
+    `<title>${escapeHtml(title ?? brand.product.name)}</title>`,
+    `<style>${fontFaces}</style>`,
+    `<style>${printCss}</style>`,
+    `<style>${pageFurnitureCss(title)}</style>`,
+    "</head>",
+    '<body class="with-anchors">',
+    packetHeaderHtml(opts),
+    MARKUP_LEGEND_HTML,
+    HANDWRITING_GUIDANCE_HTML,
+    markdown.render(source),
+    questionsSection,
+    followupSectionHtml(followup, regular.length + 1),
+    RETURN_INSTRUCTIONS_HTML,
+    "</body>",
+    "</html>",
+  ].join("\n");
+}

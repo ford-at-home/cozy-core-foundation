@@ -59,5 +59,9 @@ jobs:
         with:
           deno-version: v2.x
 
+      # --node-modules-dir=none: the repo root has a package.json, which makes
+      # Deno expect an npm-managed node_modules/ when resolving npm type refs
+      # (e.g. stripe's `/// <reference types="node" />`). This job never runs
+      # npm ci, so tell Deno to use its own cache instead.
       - name: Run tests
-        run: deno test --allow-env supabase/functions/_tests/
+        run: deno test --allow-env --node-modules-dir=none supabase/functions/_tests/

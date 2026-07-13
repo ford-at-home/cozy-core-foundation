@@ -27,6 +27,7 @@ function NewPiecePage() {
   const router = useRouter();
   const start = useServerFn(startWorkflow);
   const fetchProfile = useServerFn(getMyProfile);
+  const [workflow, setWorkflow] = useState<"longform" | "research_packet">("longform");
   const [mode, setMode] = useState<"paste" | "topic">("paste");
   const [research, setResearch] = useState("");
   const [topic, setTopic] = useState("");
@@ -51,10 +52,15 @@ function NewPiecePage() {
   const creditCost = mode === "topic" ? CREDIT_COST.research : CREDIT_COST.compose;
   const outOfCredits = balance !== null && balance < creditCost;
 
+  // Research packets need no voice profile — the packet is a research
+  // artifact, not the author's prose (voice enters at final synthesis).
+  const isPacket = workflow === "research_packet";
+  const needsStyle = !isPacket;
+
   const canSubmit =
     !submitting &&
     !profileLoading &&
-    hasStyle &&
+    (hasStyle || !needsStyle) &&
     !outOfCredits &&
     (mode === "topic" ? topic.trim() !== "" : research.trim() !== "" || files.length > 0);
 
@@ -109,7 +115,7 @@ function NewPiecePage() {
     try {
       if (mode === "topic") {
         const { runId } = await start({
-          data: { topic: topic.trim(), goal: goal.trim(), requestId },
+          data: { topic: topic.trim(), goal: goal.trim(), workflow, requestId },
         });
         router.navigate({ to: "/runs/$runId", params: { runId } });
         return;
@@ -146,7 +152,7 @@ function NewPiecePage() {
       }
 
       const { runId } = await start({
-        data: { research, goal: goal.trim(), requestId, attachments },
+        data: { research, goal: goal.trim(), workflow, requestId, attachments },
       });
       router.navigate({ to: "/runs/$runId", params: { runId } });
     } catch (err) {
@@ -168,18 +174,47 @@ function NewPiecePage() {
         <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           {brand.product.name}
         </p>
-        <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">New draft</h1>
+        <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">
+          {isPacket ? "New research packet" : "New draft"}
+        </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Bring your research, and AI prepares a structured working draft from it — written in your
-          voice, taken from{" "}
-          <Link to="/profile" className="underline hover:text-foreground">
-            your profile
-          </Link>
-          . When it's ready, print it and continue by hand.
+          {isPacket ? (
+            <>
+              Bring research (or a topic to research), and AI prepares a printable packet: findings
+              with sources, plus questions written for that specific research. You read, annotate,
+              and answer on paper.
+            </>
+          ) : (
+            <>
+              Bring your research, and AI prepares a structured working draft from it — written in
+              your voice, taken from{" "}
+              <Link to="/profile" className="underline hover:text-foreground">
+                your profile
+              </Link>
+              . When it's ready, print it and continue by hand.
+            </>
+          )}
         </p>
       </div>
 
-      {!profileLoading && !hasStyle && (
+      <div
+        className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+        role="tablist"
+        aria-label="What to prepare"
+      >
+        <ModeButton
+          label="Working draft"
+          active={workflow === "longform"}
+          onClick={() => setWorkflow("longform")}
+        />
+        <ModeButton
+          label="Research packet"
+          active={workflow === "research_packet"}
+          onClick={() => setWorkflow("research_packet")}
+        />
+      </div>
+
+      {!profileLoading && !hasStyle && needsStyle && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
           Your voice profile is empty, and drafting without a voice is refused by design.{" "}
           <Link to="/profile" className="font-medium underline">
@@ -234,9 +269,9 @@ function NewPiecePage() {
               className="w-full resize-y rounded-md border border-input bg-background/60 px-3.5 py-3 text-base leading-relaxed outline-none transition-shadow focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 sm:text-sm"
             />
             <p className="text-xs text-muted-foreground">
-              Deep web research runs first (usually 2–10 minutes, with sources cited), then the
-              draft is prepared from the report in your voice. The report is versioned with the
-              draft.
+              {isPacket
+                ? "Deep web research runs first (usually 2–10 minutes, with sources cited), then the packet is prepared from the report: findings, evidence discussion, and questions tailored to what was found."
+                : "Deep web research runs first (usually 2–10 minutes, with sources cited), then the draft is prepared from the report in your voice. The report is versioned with the draft."}
             </p>
           </label>
         )}
@@ -344,7 +379,9 @@ function NewPiecePage() {
 
         <div className="flex flex-col gap-3 border-t border-border/60 pt-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-muted-foreground">
-            Voice: {profileLoading ? "loading…" : hasStyle ? "from your profile" : "not set"}
+            {isPacket
+              ? "No voice needed — packets are research artifacts"
+              : `Voice: ${profileLoading ? "loading…" : hasStyle ? "from your profile" : "not set"}`}
             {" · "}
             Uses {creditCost} credit{creditCost === 1 ? "" : "s"}
             {balance !== null ? ` (you have ${balance})` : ""}
@@ -361,7 +398,9 @@ function NewPiecePage() {
                 : "Creating…"
               : mode === "topic"
                 ? "Research & prepare →"
-                : "Prepare draft →"}
+                : isPacket
+                  ? "Prepare packet →"
+                  : "Prepare draft →"}
           </button>
         </div>
       </form>

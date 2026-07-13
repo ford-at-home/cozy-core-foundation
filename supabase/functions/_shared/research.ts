@@ -15,7 +15,7 @@ import {
   mapParallelStatus,
 } from "./parallel.ts";
 import { canTransition } from "./state.ts";
-import { buildComposePrompt } from "./prompt.ts";
+import { buildComposePrompt, buildPacketPrompt } from "./prompt.ts";
 import { buildImageCreds } from "./image-token.ts";
 import { dispatchRun, resolveProvider } from "./dispatch.ts";
 import { ensureRunSession, recordInference } from "./usage.ts";
@@ -96,6 +96,9 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
   const topic = typeof run.input?.topic === "string" ? run.input.topic : "";
   const goal = typeof run.input?.goal === "string" ? run.input.goal : null;
   const processor = typeof run.input?.processor === "string" ? run.input.processor : "unknown";
+  // Which workflow this research feeds: the long-form compose chain (default,
+  // and all pre-workflow rows) or a research packet (docs/research-workflow/).
+  const packetMode = run.input?.workflow === "research_packet";
 
   const raw = await getResearchResult(run.external_run_id);
   const report = buildResearchReport({
@@ -148,14 +151,17 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
     ? await admin.from("pieces").select("slug").eq("id", run.piece_id).maybeSingle()
     : { data: null };
 
-  if (!styleText || !piece?.slug) {
+  // Packets need no voice (the packet is a research artifact); long-form
+  // composing still refuses to run without one.
+  if ((!styleText && !packetMode) || !piece?.slug) {
     await admin
       .from("agent_runs")
       .update({
         status: "failed",
-        error: !styleText
-          ? "Research completed, but your voice profile is now empty; composing is refused by design. Fill /profile and resubmit."
-          : "Research completed, but the piece row is missing.",
+        error:
+          !styleText && !packetMode
+            ? "Research completed, but your voice profile is now empty; composing is refused by design. Fill /profile and resubmit."
+            : "Research completed, but the piece row is missing.",
         result: researchResultShape(report, null),
         completed_at: new Date().toISOString(),
       })
@@ -165,8 +171,9 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
   }
 
   // Exactly-once chain: the idempotency key is derived from THIS research
-  // run, so concurrent sweeps or crash-retries converge on one compose run.
-  const chainKey = `compose:${run.user_id}:research:${run.id}`;
+  // run, so concurrent sweeps or crash-retries converge on one chained run.
+  const chainKind = packetMode ? "packet" : "proposal";
+  const chainKey = `${packetMode ? "packet" : "compose"}:${run.user_id}:research:${run.id}`;
   let composeRunId: string | null = null;
   let needsDispatch = false;
   const { data: insertedChain, error: chainErr } = await admin
@@ -174,13 +181,19 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
     .insert({
       user_id: run.user_id,
       piece_id: run.piece_id,
-      kind: "proposal",
+      kind: chainKind,
       status: "dispatching",
       idempotency_key: chainKey,
       // The research run's credit hold covers this chained run; settlement
       // and release resolve it via parent_run_id.
       parent_run_id: run.id,
-      input: { goal, topic, research: report, from_research_run: run.id },
+      input: {
+        goal,
+        topic,
+        research: report,
+        from_research_run: run.id,
+        ...(packetMode ? { workflow: "research_packet" } : {}),
+      },
     })
     .select("id")
     .single();
@@ -229,19 +242,29 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
       });
     }
     const imageCreds = await buildImageCreds(composeRunId);
+    const prompt = packetMode
+      ? buildPacketPrompt({
+          pieceSlug: piece.slug,
+          research: report,
+          goal,
+          imageStyle,
+          imageEndpoint: imageCreds?.endpoint,
+          imageToken: imageCreds?.token,
+        })
+      : buildComposePrompt({
+          pieceSlug: piece.slug,
+          research: report,
+          goal,
+          styleText,
+          imageStyle,
+          imageEndpoint: imageCreds?.endpoint,
+          imageToken: imageCreds?.token,
+        });
     await dispatchRun({
       admin,
       provider: resolveProvider(),
       runId: composeRunId,
-      prompt: buildComposePrompt({
-        pieceSlug: piece.slug,
-        research: report,
-        goal,
-        styleText,
-        imageStyle,
-        imageEndpoint: imageCreds?.endpoint,
-        imageToken: imageCreds?.token,
-      }),
+      prompt,
       ref: Deno.env.get("AGENT_REPO_REF") ?? "main",
       autoCreatePr: false,
     });

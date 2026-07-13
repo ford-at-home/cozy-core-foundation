@@ -3,7 +3,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
-import { buildPrintDocument, extractPost } from "@/lib/print-document";
+import {
+  buildPacketPrintDocument,
+  buildPrintDocument,
+  extractPost,
+  type PacketPrintQuestion,
+} from "@/lib/print-document";
+import { getPacketByRunId, listPacketQuestions } from "@/lib/packets";
 import { brand, pageTitle } from "@/config/brand";
 
 export const Route = createFileRoute("/_authenticated/print/$runId")({
@@ -13,9 +19,15 @@ export const Route = createFileRoute("/_authenticated/print/$runId")({
   component: PrintPage,
 });
 
+// Packet runs print through the packet builder: the reviewed questions (with
+// their writing space) come from the packets tables so review-screen edits
+// show up on paper without regenerating anything.
+type PacketPrintInfo = { packetId: string; version: number; questions: PacketPrintQuestion[] };
+
 function PrintPage() {
   const { runId } = Route.useParams();
   const [post, setPost] = useState<string | null>(null);
+  const [packetInfo, setPacketInfo] = useState<PacketPrintInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [iframeReady, setIframeReady] = useState(false);
@@ -72,6 +84,7 @@ function PrintPage() {
   useEffect(() => {
     let cancelled = false;
     setPost(null);
+    setPacketInfo(null);
     setError(null);
     setLoading(true);
     setIframeReady(false);
@@ -80,38 +93,65 @@ function PrintPage() {
     setModalReady(false);
     setModalError(null);
 
-    supabase
-      .from("agent_runs")
-      .select("result, status")
-      .eq("id", runId)
-      .maybeSingle()
-      .then(
-        ({
-          data,
-          error,
-        }: {
-          data: { result: Json | null; status: string } | null;
-          error: { message: string } | null;
-        }) => {
-          if (cancelled) return;
-          if (error) setError(error.message);
-          else if (!data) setError("Run not found.");
-          else {
-            const content = extractPost(data.result);
-            if (content) {
-              setPost(content);
-              setError(null);
-            } else {
-              setError(
-                data.status === "completed"
-                  ? "This run has no printable piece."
-                  : "This run hasn't completed yet — the piece isn't available to print.",
-              );
+    async function load() {
+      const { data, error } = (await supabase
+        .from("agent_runs")
+        .select("result, status, kind")
+        .eq("id", runId)
+        .maybeSingle()) as {
+        data: { result: Json | null; status: string; kind: string } | null;
+        error: { message: string } | null;
+      };
+      if (cancelled) return;
+      if (error) {
+        setError(error.message);
+      } else if (!data) {
+        setError("Run not found.");
+      } else {
+        const content = extractPost(data.result);
+        if (content) {
+          if (data.kind === "packet") {
+            // Reviewed questions come from the packets tables. A missing
+            // packet row (persistence flagged a problem) still prints the
+            // body with the follow-up section, so paper is never blocked.
+            try {
+              const packet = await getPacketByRunId(runId);
+              if (cancelled) return;
+              if (packet) {
+                const questions = await listPacketQuestions(packet.id);
+                if (cancelled) return;
+                setPacketInfo({
+                  packetId: packet.id,
+                  version: packet.version,
+                  questions: questions.map((q) => ({
+                    position: q.position,
+                    function: q.function,
+                    claim_ref: q.claim_ref,
+                    prompt: q.prompt,
+                    guidance: q.guidance,
+                    response_space: q.response_space,
+                  })),
+                });
+              } else {
+                setPacketInfo({ packetId: runId, version: 1, questions: [] });
+              }
+            } catch {
+              setPacketInfo({ packetId: runId, version: 1, questions: [] });
             }
           }
-          setLoading(false);
-        },
-      );
+          setPost(content);
+          setError(null);
+        } else {
+          setError(
+            data.status === "completed"
+              ? "This run has no printable piece."
+              : "This run hasn't completed yet — the piece isn't available to print.",
+          );
+        }
+      }
+      setLoading(false);
+    }
+    load();
     return () => {
       cancelled = true;
     };
@@ -122,7 +162,16 @@ function PrintPage() {
   // restyle body, h1, p, ... — can't leak into the app. The same document is
   // what the browser's print engine paginates, so screen preview, print
   // preview, Save-as-PDF, and paper all share one renderer.
-  const srcDoc = useMemo(() => (post ? buildPrintDocument(post) : ""), [post]);
+  const srcDoc = useMemo(() => {
+    if (!post) return "";
+    if (packetInfo) {
+      return buildPacketPrintDocument(post, packetInfo.questions, {
+        packetId: packetInfo.packetId,
+        version: packetInfo.version,
+      });
+    }
+    return buildPrintDocument(post);
+  }, [post, packetInfo]);
 
   function openPreview() {
     setModalReady(false);
