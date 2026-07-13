@@ -30,6 +30,114 @@ export const STAGE_LABELS: Record<PacketStageKey, string> = {
   finish: "Finish",
 };
 
+/** One-sentence, plain-language explanation of what each stage IS.
+ *  Used by the stepper description and hub cards so users always know
+ *  what the current stage means without having to reason from the label. */
+export const STAGE_DESCRIPTIONS: Record<PacketStageKey, string> = {
+  research:
+    "AI gathers sources and prepares your working packet — findings and questions written for what it found.",
+  print: "Review the tailored questions, then print a clean hardcopy with anchors on every block.",
+  think:
+    "Off-screen, on paper. Read, annotate, answer, and note up to three follow-up research questions of your own.",
+  return:
+    "Bring your work back: photograph the pages, dictate your notes, or both. You can leave and come back.",
+  review:
+    "Confirm what the system read from your handwriting. Only your approved words move forward.",
+  follow_up: "Optional. Approve up to three questions for a focused second research pass.",
+  finish:
+    "Create your final Word document and (optionally) a class presentation — from the research and your verified contributions.",
+};
+
+// -----------------------------------------------------------------------
+// Shared vocabulary across BOTH workflows.
+//
+// The draft (longform) workflow maps its internal run/kind states onto the
+// same six user-facing verbs, so a user who does both flows never learns two
+// vocabularies. This is presentation-only — no orchestration changes.
+// -----------------------------------------------------------------------
+
+/** The six-verb spine both workflows share. Packet adds Review + Follow up. */
+export const SHARED_STAGES = ["explore", "print", "think", "return", "refine", "finish"] as const;
+export type SharedStageKey = (typeof SHARED_STAGES)[number];
+
+export const SHARED_STAGE_LABELS: Record<SharedStageKey, string> = {
+  explore: "Explore",
+  print: "Print",
+  think: "Think",
+  return: "Return",
+  refine: "Refine",
+  finish: "Finish",
+};
+
+/** Map a packet-workflow stage to the shared vocabulary. */
+export function packetStageToShared(stage: PacketStageKey): SharedStageKey {
+  switch (stage) {
+    case "research":
+      return "explore";
+    case "print":
+      return "print";
+    case "think":
+      return "think";
+    case "return":
+    case "review":
+      return "return";
+    case "follow_up":
+      return "refine";
+    case "finish":
+      return "finish";
+  }
+}
+
+/** Map a draft-workflow run kind + status to a shared verb, for the
+ *  dashboard stage column. `runKind` is the latest run's kind; when the
+ *  piece has no runs yet we default to Explore. */
+export function draftRunToShared(
+  runKind: string | null,
+  runStatus: string | null,
+  finalPrMerged: boolean,
+): SharedStageKey {
+  if (finalPrMerged) return "finish";
+  const terminal = runStatus === "completed";
+  switch (runKind) {
+    case null:
+      return "explore";
+    case "research":
+      return terminal ? "print" : "explore";
+    case "proposal":
+    case "compose":
+    case "draft":
+      return terminal ? "print" : "explore";
+    case "revision":
+      return terminal ? "finish" : "refine";
+    default:
+      return "explore";
+  }
+}
+
+/** Row-level input for the dashboard stage helper. */
+export type DashboardStageInput = {
+  workflow: "longform" | "research_packet" | string;
+  latestRun: { kind: string; status: string } | null;
+  packetView: PacketWorkflowView | null;
+  finalPrMerged: boolean;
+};
+
+/** Give the dashboard a single shared verb per row, regardless of workflow. */
+export function deriveDashboardStage(input: DashboardStageInput): {
+  key: SharedStageKey;
+  label: string;
+} {
+  const key: SharedStageKey =
+    input.workflow === "research_packet" && input.packetView
+      ? packetStageToShared(input.packetView.current)
+      : draftRunToShared(
+          input.latestRun?.kind ?? null,
+          input.latestRun?.status ?? null,
+          input.finalPrMerged,
+        );
+  return { key, label: SHARED_STAGE_LABELS[key] };
+}
+
 const TERMINAL_RUN_STATUSES = new Set(["completed", "failed", "cancelled"]);
 
 export type StageRun = {

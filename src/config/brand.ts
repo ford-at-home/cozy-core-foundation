@@ -19,12 +19,12 @@ export const brand = {
     /** Provisional — do not treat as final. */
     name: "Hardcopy Draft",
     descriptor:
-      "A research and drafting collaborator built to move between AI, paper, handwriting, and voice.",
+      "Research with AI. Think on paper. Return your notes. Finish in Word, slides, or a merged draft — in your voice.",
   },
   meta: {
     title: "Hardcopy Tools | AI That Knows When to Disappear",
     description:
-      "Research and create with AI, continue on paper, and bring your handwritten thinking back into a refined artifact that sounds like you.",
+      "Research a subject with AI, print a working hardcopy, mark it up by hand, and return your notes — turning your thinking into a Word document, a class presentation, or a merged draft in your voice.",
   },
 } as const;
 

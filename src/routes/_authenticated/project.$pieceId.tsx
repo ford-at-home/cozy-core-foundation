@@ -24,6 +24,7 @@ import {
 } from "@/lib/packet-workflow";
 import {
   derivePacketWorkflow,
+  STAGE_DESCRIPTIONS,
   type PacketWorkflowView,
   type StageArtifact,
   type StageFollowup,
@@ -94,20 +95,24 @@ function ProjectHubPage() {
     ? derivePacketWorkflow({
         runs: data.runs as StageRun[],
         packets: data.packets as StagePacket[],
-        returns: data.returns.map((r): StageReturn => ({
-          id: r.id,
-          status: r.uiStatus,
-          created_at: r.created_at,
-        })),
+        returns: data.returns.map(
+          (r): StageReturn => ({
+            id: r.id,
+            status: r.uiStatus,
+            created_at: r.created_at,
+          }),
+        ),
         followups: data.followups as StageFollowup[],
         artifacts: data.artifacts
           .filter((a) => a.kind === "docx" || a.kind === "pptx")
-          .map((a): StageArtifact => ({
-            id: a.id,
-            kind: a.kind as "docx" | "pptx",
-            status: a.status,
-            created_at: a.created_at,
-          })),
+          .map(
+            (a): StageArtifact => ({
+              id: a.id,
+              kind: a.kind as "docx" | "pptx",
+              status: a.status,
+              created_at: a.created_at,
+            }),
+          ),
       })
     : null;
 
@@ -119,10 +124,10 @@ function ProjectHubPage() {
         </p>
         <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Research project</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Start with a question. {brand.company.name} researches the subject and prepares a packet
-          you print, read, and mark by hand. Return your pages or dictate your thoughts, review what
-          the system understood, then create a final document shaped by your own reasoning. You can
-          leave and come back — everything here is saved.
+          Explore → Print → Think → Return → Review → Follow&nbsp;up → Finish. AI carries the
+          research, you do the thinking on paper, and the project ends with a Word document and (if
+          you want) a class presentation. You can leave and come back at any point — everything here
+          is saved.
         </p>
       </div>
 
@@ -161,6 +166,15 @@ function ProjectHubPage() {
       {data?.piece && data.piece.workflow === "research_packet" && view && (
         <>
           <StageStepper view={view} />
+          <p
+            className="rounded-lg border border-border/60 bg-background/40 px-4 py-3 text-sm leading-relaxed text-muted-foreground"
+            aria-label="Current stage description"
+          >
+            <span className="font-medium text-foreground">
+              {view.stages.find((s) => s.state === "current")?.label ?? "Finish"}.
+            </span>{" "}
+            {STAGE_DESCRIPTIONS[view.current]}
+          </p>
           <StageCard
             view={view}
             pieceId={pieceId}

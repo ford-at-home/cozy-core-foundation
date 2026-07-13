@@ -7,6 +7,7 @@ import { getMyProfile } from "@/lib/profile.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { brand, pageTitle } from "@/config/brand";
 import { CREDIT_COST, isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
+import { MODE_COPY } from "@/config/workflow-copy";
 
 // New draft: paste research, optionally steer with a goal, and prepare a
 // draft. Voice is NOT an input here — it comes from the signed-in user's
@@ -183,42 +184,31 @@ function NewDraftPage() {
         <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           {brand.product.name}
         </p>
-        <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">
-          {isPacket ? "New research packet" : "New draft"}
-        </h1>
+        <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">New project</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          {isPacket ? (
-            <>
-              Start with a question. {brand.company.name} researches the subject and prepares a
-              packet you can print, read, and mark by hand. Return your pages or dictate your
-              thoughts, review what the system understood, then create a final document and
-              presentation shaped by your own reasoning.
-            </>
-          ) : (
-            <>
-              Bring your research, and AI prepares a structured working draft from it — written in
-              your voice, taken from{" "}
-              <Link to="/profile" className="underline hover:text-foreground">
-                your profile
-              </Link>
-              . When it's ready, print it and continue by hand.
-            </>
-          )}
+          What are you starting? Both modes follow the same loop — explore, print, think, return,
+          refine, finish — and end in a real artifact.
         </p>
       </div>
 
       <div
-        className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2"
         role="tablist"
         aria-label="What to prepare"
       >
-        <ModeButton
-          label="Working draft"
+        <IntentCard
+          label={MODE_COPY.longform.label}
+          intent={MODE_COPY.longform.intent}
+          outcome={MODE_COPY.longform.outcome}
+          arc={MODE_COPY.longform.arc}
           active={workflow === "longform"}
           onClick={() => setWorkflow("longform")}
         />
-        <ModeButton
-          label="Research packet"
+        <IntentCard
+          label={MODE_COPY.research_packet.label}
+          intent={MODE_COPY.research_packet.intent}
+          outcome={MODE_COPY.research_packet.outcome}
+          arc={MODE_COPY.research_packet.arc}
           active={workflow === "research_packet"}
           onClick={() => setWorkflow("research_packet")}
         />
@@ -402,15 +392,7 @@ function NewDraftPage() {
             aria-busy={submitting}
             className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 sm:w-auto"
           >
-            {submitting
-              ? uploadProgress
-                ? "Uploading…"
-                : "Creating…"
-              : mode === "topic"
-                ? "Research & prepare →"
-                : isPacket
-                  ? "Prepare packet →"
-                  : "Prepare draft →"}
+            {submitting ? (uploadProgress ? "Uploading…" : "Creating…") : "Start →"}
           </button>
         </div>
       </form>
@@ -441,6 +423,51 @@ function ModeButton({
       }
     >
       {label}
+    </button>
+  );
+}
+
+function IntentCard({
+  label,
+  intent,
+  outcome,
+  arc,
+  active,
+  onClick,
+}: {
+  label: string;
+  intent: string;
+  outcome: string;
+  arc: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={
+        "flex min-h-11 w-full flex-col gap-2 rounded-lg border px-4 py-3.5 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring/60 " +
+        (active
+          ? "border-primary bg-primary/10 text-foreground"
+          : "border-border text-foreground hover:border-primary/40 hover:bg-accent/40")
+      }
+    >
+      <span
+        className={
+          "font-serif text-base tracking-tight sm:text-lg " +
+          (active ? "text-primary" : "text-foreground")
+        }
+      >
+        {label}
+      </span>
+      <span className="text-sm leading-relaxed text-muted-foreground">{intent}</span>
+      <span className="text-xs leading-relaxed text-foreground/80">{outcome}</span>
+      <span className="mt-1 font-mono text-[11px] tracking-wide text-muted-foreground/80">
+        {arc}
+      </span>
     </button>
   );
 }

@@ -1,6 +1,7 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { brand } from "@/config/brand";
 import { PageMark } from "@/components/PageMark";
+import { AI_WILL_DO, AI_WONT_DO, HOW_IT_WORKS } from "@/config/workflow-copy";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -9,36 +10,8 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const HOW_IT_WORKS: { step: string; body: string }[] = [
-  {
-    step: "Research",
-    body: "Bring a question, an idea, sources, or a rough dump of notes. Use AI to gather and organize the material — or let it research the topic for you, with sources cited.",
-  },
-  {
-    step: "Prepare",
-    body: "AI turns the research into a structured working draft, written in your voice and built for reading and annotation.",
-  },
-  {
-    step: "Print",
-    body: "Generate a clean hardcopy with wide margins and small anchors on every block, so any part of the page is easy to point at later.",
-  },
-  {
-    step: "Think by hand",
-    body: "Read the pages wherever you think best. Underline, cross out, star, question, and write direction in the margins.",
-  },
-  {
-    step: "Return your marks",
-    body: "Bring the annotations back with a simple shorthand — dictate them or type them in. “S4P3: tighten.” “Mark three: cut.” The system knows what you mean.",
-  },
-  {
-    step: "Refine",
-    body: "The system reconciles the draft, the research, and your annotations into the next version.",
-  },
-  {
-    step: "Keep the result",
-    body: "A finished artifact that reflects your reading, your judgment, and your voice — yours to publish wherever it's going.",
-  },
-];
+// HOW_IT_WORKS lives in src/config/workflow-copy.ts so /new, dashboard,
+// and the project hub all tell the same six-verb story.
 
 const PAPER_QUALITIES: string[] = [
   "Finite and visible",
@@ -69,6 +42,7 @@ function Index() {
         <Hero />
         <Problem />
         <HowItWorks />
+        <AICompact />
         <FirstProduct />
         <WhyPaper />
         <Authorship />
@@ -146,12 +120,12 @@ function Hero() {
           {brand.company.line}
         </h1>
         <p className="mx-auto max-w-xl text-base leading-relaxed text-muted-foreground">
-          Research, draft, and organize with AI. Then print your work, step away from the screen,
-          and continue by hand.
+          Research a subject with AI. Print a working hardcopy. Think and mark it up by hand. Return
+          your notes. Finish in Word, slides, or a merged draft — in your voice.
         </p>
         <div className="flex flex-col items-center justify-center gap-3 pt-2 sm:flex-row">
           <Link to="/auth" className={`${primaryCta} w-full sm:w-auto`}>
-            Start a working draft
+            Start a project
           </Link>
           <a href="#how-it-works" className={`${secondaryCta} w-full sm:w-auto`}>
             See how it works
@@ -274,11 +248,12 @@ function HowItWorks() {
         <div className="space-y-3">
           <Kicker>How it works</Kicker>
           <h2 className="font-serif text-2xl tracking-tight sm:text-4xl">
-            Prepare. Print. Think. Mark. Return.
+            Explore. Print. Think. Return. Refine. Finish.
           </h2>
           <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Not a one-click process — a collaboration loop. The AI does the carrying; you do the
-            thinking.
+            Not a one-click process — a collaboration loop. The same six verbs whether you're
+            drafting a piece in your voice or studying a subject and writing from it. The AI does
+            the carrying; you do the thinking.
           </p>
         </div>
         <ol className="space-y-0">
@@ -321,23 +296,61 @@ function FirstProduct() {
             {brand.product.descriptor}
           </p>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            It helps you produce essays, reports, proposals, research briefs, speeches, chapters —
-            thoughtful long-form work. You set your voice once; every draft is prepared in it, and
-            every revision carries your marks forward.
+            Draft a piece in your voice, or study a subject and write from it — the same loop either
+            way. Every project ends in a real artifact: a merged draft in your repo, a Word
+            document, or a class presentation.
           </p>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Signing up includes three credits. A finished draft uses one; starting with deep
-            research uses two. Printing and marking up what you've made is always free, and nothing
-            is charged for work that fails.
+            Signing up includes three credits. A prepared draft or packet uses one; a focused
+            follow-up research pass uses two; the Word document and presentation each use their own
+            credits when you create them. Printing, reviewing, correcting, dictating, and
+            downloading are free — and nothing is charged for work that fails.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link to="/auth" className={`${primaryCta} w-full sm:w-auto`}>
-              Start a working draft
+              Start a project
             </Link>
             <p className="text-xs text-muted-foreground">
               A working name — the label may change; the loop won't.
             </p>
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AICompact() {
+  return (
+    <section className="border-t border-border/60 px-4 py-14 sm:py-20">
+      <div className="mx-auto grid max-w-3xl gap-8 sm:grid-cols-2">
+        <div className="space-y-3">
+          <Kicker>What AI does</Kicker>
+          <ul className="space-y-2">
+            {AI_WILL_DO.map((item) => (
+              <li key={item} className="flex gap-2 text-sm leading-relaxed text-foreground">
+                <span
+                  className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70"
+                  aria-hidden
+                />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="space-y-3">
+          <Kicker>What AI doesn't do</Kicker>
+          <ul className="space-y-2">
+            {AI_WONT_DO.map((item) => (
+              <li key={item} className="flex gap-2 text-sm leading-relaxed text-muted-foreground">
+                <span
+                  className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/40"
+                  aria-hidden
+                />
+                {item}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </section>
@@ -461,7 +474,7 @@ function FinalAction() {
           {brand.company.philosophy}
         </h2>
         <Link to="/auth" className={primaryCta}>
-          Start your first working draft
+          Start your first project
         </Link>
       </div>
     </section>

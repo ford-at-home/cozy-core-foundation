@@ -5,6 +5,7 @@ import { isPacketWorkflowRun, listMyRuns, type AgentRun } from "@/lib/workflows.
 import { StatusPill } from "@/components/StatusPill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { brand, pageTitle } from "@/config/brand";
+import { draftRunToShared, packetStageToShared, SHARED_STAGE_LABELS } from "@/lib/packet-stage";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -39,6 +40,22 @@ function DashboardPage() {
     return isPacketWorkflowRun(run) ? `Research packet · ${run.kind}` : run.kind;
   }
 
+  // A row-level shared verb without loading full packet state per row.
+  // Packet runs use their internal `kind` mapped onto the packet stage; a
+  // completed research/packet run means the user is at "Print"; a running
+  // one means "Explore". Drafts use the same draft→shared mapping.
+  function runStage(run: AgentRun): string {
+    if (isPacketWorkflowRun(run)) {
+      const completed = run.status === "completed";
+      if (run.kind === "research") return SHARED_STAGE_LABELS[completed ? "print" : "explore"];
+      if (run.kind === "packet") return SHARED_STAGE_LABELS[completed ? "think" : "explore"];
+      if (run.kind === "followup_research")
+        return SHARED_STAGE_LABELS[completed ? "finish" : "refine"];
+      return SHARED_STAGE_LABELS[packetStageToShared("research")];
+    }
+    return SHARED_STAGE_LABELS[draftRunToShared(run.kind, run.status, false)];
+  }
+
   const runs = data?.runs ?? [];
 
   return (
@@ -49,14 +66,14 @@ function DashboardPage() {
             {brand.product.name}
           </p>
           <h1 className="mt-1 font-serif text-3xl tracking-tight sm:text-5xl">Dashboard</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Your 20 most recent runs.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Your 20 most recent projects.</p>
         </div>
         <button
           type="button"
           onClick={() => router.navigate({ to: "/new" })}
           className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto"
         >
-          + New draft
+          + New project
         </button>
       </div>
 
@@ -121,15 +138,15 @@ function DashboardPage() {
               </svg>
             </div>
             <div className="space-y-1">
-              <p className="font-serif text-xl">No drafts yet</p>
-              <p className="text-sm text-muted-foreground">Start one from the New draft page.</p>
+              <p className="font-serif text-xl">No projects yet</p>
+              <p className="text-sm text-muted-foreground">Start one from the New project page.</p>
             </div>
             <button
               type="button"
               onClick={() => router.navigate({ to: "/new" })}
               className="mt-2 inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60"
             >
-              Start your first draft
+              Start your first project
             </button>
           </div>
         )}
@@ -146,7 +163,12 @@ function DashboardPage() {
                     className="flex w-full min-h-14 flex-col gap-2 px-4 py-3.5 text-left transition-colors active:bg-accent/50 focus-visible:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm font-medium capitalize">{runLabel(r)}</span>
+                      <span className="text-sm font-medium">
+                        <span className="capitalize">{runStage(r)}</span>
+                        <span className="ml-2 text-xs font-normal capitalize text-muted-foreground">
+                          {runLabel(r)}
+                        </span>
+                      </span>
                       <StatusPill status={r.status} />
                     </div>
                     <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
@@ -164,6 +186,9 @@ function DashboardPage() {
                   <tr>
                     <th scope="col" className="px-5 py-3 font-medium">
                       Created
+                    </th>
+                    <th scope="col" className="px-5 py-3 font-medium">
+                      Stage
                     </th>
                     <th scope="col" className="px-5 py-3 font-medium">
                       Type
@@ -195,6 +220,7 @@ function DashboardPage() {
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         {new Date(r.created_at).toLocaleString()}
                       </td>
+                      <td className="px-5 py-3.5">{runStage(r)}</td>
                       <td className="px-5 py-3.5 text-muted-foreground">{runLabel(r)}</td>
                       <td className="px-5 py-3.5">
                         <StatusPill status={r.status} />
