@@ -13,7 +13,12 @@ export async function advanceStage(
     _actor: args.actor ?? null,
   });
   if (error) {
-    logEvent("workflow", "warn", { event: "advance_failed", pieceId: args.pieceId, to: args.to, message: error.message });
+    logEvent("workflow", "warn", {
+      event: "advance_failed",
+      pieceId: args.pieceId,
+      to: args.to,
+      message: error.message,
+    });
     return { ok: false, message: error.message };
   }
   return { ok: true, stage: data as string };
@@ -21,7 +26,13 @@ export async function advanceStage(
 
 export async function logPieceEvent(
   admin: any,
-  args: { pieceId: string; userId: string; event: string; actor?: string; metadata?: Record<string, unknown> },
+  args: {
+    pieceId: string;
+    userId: string;
+    event: string;
+    actor?: string;
+    metadata?: Record<string, unknown>;
+  },
 ): Promise<void> {
   try {
     await admin.from("piece_events").insert({
@@ -32,6 +43,9 @@ export async function logPieceEvent(
       metadata: args.metadata ?? {},
     });
   } catch (err) {
-    logEvent("workflow", "warn", { event: "log_piece_event_failed", message: (err as Error).message });
+    logEvent("workflow", "warn", {
+      event: "log_piece_event_failed",
+      message: (err as Error).message,
+    });
   }
 }

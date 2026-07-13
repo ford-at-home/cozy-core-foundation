@@ -44,7 +44,10 @@ async function fetchFileFromBranch(path: string, branch: string): Promise<string
 }
 
 /** Binary-safe read for DOCX/PPTX/PDF deliverables. */
-export async function fetchBinaryFromBranch(path: string, branch: string): Promise<Uint8Array | null> {
+export async function fetchBinaryFromBranch(
+  path: string,
+  branch: string,
+): Promise<Uint8Array | null> {
   const { owner, repo } = githubApiBase();
   const headers: Record<string, string> = {
     Accept: "application/vnd.github.raw+json",
