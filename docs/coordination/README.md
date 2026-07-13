@@ -111,6 +111,11 @@ blocks: []
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 priority: P0
+# Optional but recommended when the work will spend real money on the API pool
+# (Cloud Agent runs, paid research, paid provider calls). See the "Model and
+# cost fields" subsection below.
+# model_class: general
+# estimated_cost_usd: 0.05
 ---
 ```
 
@@ -118,6 +123,8 @@ Allowed `status`: `draft`, `requested`, `acknowledged`, `in_progress`,
 `blocked`, `ready_for_review`, `completed`, `cancelled`.
 Allowed `owner`: `cursor`, `lovable`, `human`, `shared`.
 Allowed `priority`: `P0`, `P1`, `P2`, `P3`.
+Allowed `model_class` (optional): `cheap-fast`, `general`,
+`high-intelligence`, `premium`.
 
 **Request body sections** (all required):
 
@@ -163,11 +170,40 @@ Allowed `priority`: `P0`, `P1`, `P2`, `P3`.
 ## Recommended Next Action
 ```
 
+**Optional result section — `## Model and Cost`.** Required in spirit when
+the work involved paid runs (Cloud Agent, deep research, paid provider
+calls). Record the model actually used (may differ from `model_class` in
+the request), the observed cost from the Cursor usage dashboard or Admin
+API, and a link to the dashboard row if available. This is what makes the
+30-day measurement in [../agent-metrics.md](../agent-metrics.md) possible
+without manual archaeology.
+
 Requests that ask for backend action must additionally state: the exact
 backend action, repository files involved, which environment to inspect or
 modify, evidence required, whether deployment is permitted, whether data
 creation is permitted, whether real external-service calls are permitted,
 cost constraints, rollback/recovery expectations, and completion criteria.
+
+## Model and cost fields
+
+The optional `model_class` and `estimated_cost_usd` frontmatter fields, plus
+the optional `## Model and Cost` result section, exist so the 30-day
+measurement process in [../agent-metrics.md](../agent-metrics.md) can join
+work items to observed Cursor spend. The full policy is in the
+[model-selection-and-spend skill](../../.cursor/skills/model-selection-and-spend/SKILL.md);
+the classes are:
+
+- `cheap-fast` — Composer 2.5, Auto, Haiku-class, Gemini Flash.
+- `general` — Composer 2.5 / Auto for standard implementation.
+- `high-intelligence` — Sonnet-class, GPT-5.2 – 5.4, Gemini 3 Pro.
+- `premium` — Opus-class, GPT-5.5, Fable 5 — used mostly for planning
+  and diff review, rarely as executor.
+
+Fields are optional (they were added after WI-0001 – WI-0007 were filed and
+existing rows are grandfathered), but strongly recommended for any WI
+whose owner will dispatch a Cloud Agent or run paid research. Repository
+files never switch the active model; these fields document intent and
+observed reality only.
 
 ## Work-item lifecycle
 
