@@ -161,6 +161,44 @@ export type Database = {
           },
         ]
       }
+      assignments: {
+        Row: {
+          course_id: string
+          created_at: string
+          due_at: string | null
+          id: string
+          prompt: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          prompt?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          prompt?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_customers: {
         Row: {
           created_at: string
@@ -179,6 +217,33 @@ export type Database = {
           email?: string | null
           stripe_customer_id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      courses: {
+        Row: {
+          created_at: string
+          id: string
+          professor_id: string
+          term: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          professor_id: string
+          term?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          professor_id?: string
+          term?: string | null
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -330,6 +395,208 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      dictation_segments: {
+        Row: {
+          created_at: string
+          id: string
+          packet_id: string
+          resolved_target: Json
+          return_id: string | null
+          segment_order: number
+          storage_path: string | null
+          transcript: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          packet_id: string
+          resolved_target?: Json
+          return_id?: string | null
+          segment_order?: number
+          storage_path?: string | null
+          transcript?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          packet_id?: string
+          resolved_target?: Json
+          return_id?: string | null
+          segment_order?: number
+          storage_path?: string | null
+          transcript?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dictation_segments_packet_id_fkey"
+            columns: ["packet_id"]
+            isOneToOne: false
+            referencedRelation: "packets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dictation_segments_return_id_fkey"
+            columns: ["return_id"]
+            isOneToOne: false
+            referencedRelation: "packet_returns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enrollments: {
+        Row: {
+          course_id: string
+          created_at: string
+          id: string
+          student_id: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          id?: string
+          student_id: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrollments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      final_artifacts: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          piece_id: string
+          provenance: Json
+          run_id: string | null
+          status: string
+          storage_path: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          piece_id: string
+          provenance?: Json
+          run_id?: string | null
+          status?: string
+          storage_path?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          piece_id?: string
+          provenance?: Json
+          run_id?: string | null
+          status?: string
+          storage_path?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "final_artifacts_piece_id_fkey"
+            columns: ["piece_id"]
+            isOneToOne: false
+            referencedRelation: "pieces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "final_artifacts_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "agent_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      followup_questions: {
+        Row: {
+          approved_text: string | null
+          created_at: string
+          id: string
+          packet_id: string
+          position: number
+          status: string
+          student_text: string
+          suggested_text: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved_text?: string | null
+          created_at?: string
+          id?: string
+          packet_id: string
+          position: number
+          status?: string
+          student_text: string
+          suggested_text?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved_text?: string | null
+          created_at?: string
+          id?: string
+          packet_id?: string
+          position?: number
+          status?: string
+          student_text?: string
+          suggested_text?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "followup_questions_packet_id_fkey"
+            columns: ["packet_id"]
+            isOneToOne: false
+            referencedRelation: "packets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      handwriting_profiles: {
+        Row: {
+          consent_at: string
+          profile_text: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          consent_at?: string
+          profile_text?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          consent_at?: string
+          profile_text?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       inferences: {
         Row: {
@@ -544,6 +811,44 @@ export type Database = {
           },
         ]
       }
+      packet_returns: {
+        Row: {
+          created_at: string
+          id: string
+          packet_id: string
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          packet_id: string
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          packet_id?: string
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "packet_returns_packet_id_fkey"
+            columns: ["packet_id"]
+            isOneToOne: false
+            referencedRelation: "packets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       packets: {
         Row: {
           analysis: Json | null
@@ -605,8 +910,91 @@ export type Database = {
           },
         ]
       }
+      page_images: {
+        Row: {
+          created_at: string
+          id: string
+          page_number: number | null
+          quality: Json
+          return_id: string
+          status: string
+          storage_path: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          page_number?: number | null
+          quality?: Json
+          return_id: string
+          status?: string
+          storage_path: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          page_number?: number | null
+          quality?: Json
+          return_id?: string
+          status?: string
+          storage_path?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_images_return_id_fkey"
+            columns: ["return_id"]
+            isOneToOne: false
+            referencedRelation: "packet_returns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      piece_events: {
+        Row: {
+          actor: string
+          created_at: string
+          event: string
+          id: string
+          metadata: Json
+          piece_id: string
+          user_id: string
+        }
+        Insert: {
+          actor?: string
+          created_at?: string
+          event: string
+          id?: string
+          metadata?: Json
+          piece_id: string
+          user_id: string
+        }
+        Update: {
+          actor?: string
+          created_at?: string
+          event?: string
+          id?: string
+          metadata?: Json
+          piece_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piece_events_piece_id_fkey"
+            columns: ["piece_id"]
+            isOneToOne: false
+            referencedRelation: "pieces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pieces: {
         Row: {
+          assignment_id: string | null
           created_at: string
           draft_pr_url: string | null
           final_pr_url: string | null
@@ -618,8 +1006,10 @@ export type Database = {
           updated_at: string
           user_id: string
           workflow: string
+          workflow_stage: string
         }
         Insert: {
+          assignment_id?: string | null
           created_at?: string
           draft_pr_url?: string | null
           final_pr_url?: string | null
@@ -631,8 +1021,10 @@ export type Database = {
           updated_at?: string
           user_id: string
           workflow?: string
+          workflow_stage?: string
         }
         Update: {
+          assignment_id?: string | null
           created_at?: string
           draft_pr_url?: string | null
           final_pr_url?: string | null
@@ -644,8 +1036,17 @@ export type Database = {
           updated_at?: string
           user_id?: string
           workflow?: string
+          workflow_stage?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pieces_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -783,6 +1184,63 @@ export type Database = {
         }
         Relationships: []
       }
+      recognized_blocks: {
+        Row: {
+          annotation_type: string | null
+          confidence: number
+          created_at: string
+          id: string
+          interpretation_confidence: number | null
+          linked_anchor: string | null
+          linked_question_id: string | null
+          location: Json
+          page_image_id: string
+          text: string
+          user_id: string
+        }
+        Insert: {
+          annotation_type?: string | null
+          confidence?: number
+          created_at?: string
+          id?: string
+          interpretation_confidence?: number | null
+          linked_anchor?: string | null
+          linked_question_id?: string | null
+          location?: Json
+          page_image_id: string
+          text?: string
+          user_id: string
+        }
+        Update: {
+          annotation_type?: string | null
+          confidence?: number
+          created_at?: string
+          id?: string
+          interpretation_confidence?: number | null
+          linked_anchor?: string | null
+          linked_question_id?: string | null
+          location?: Json
+          page_image_id?: string
+          text?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recognized_blocks_linked_question_id_fkey"
+            columns: ["linked_question_id"]
+            isOneToOne: false
+            referencedRelation: "packet_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recognized_blocks_page_image_id_fkey"
+            columns: ["page_image_id"]
+            isOneToOne: false
+            referencedRelation: "page_images"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sessions: {
         Row: {
           completed_at: string | null
@@ -872,6 +1330,44 @@ export type Database = {
         }
         Relationships: []
       }
+      student_contributions: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          packet_id: string
+          source: string
+          text: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          packet_id: string
+          source?: string
+          text: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          packet_id?: string
+          source?: string
+          text?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_contributions_packet_id_fkey"
+            columns: ["packet_id"]
+            isOneToOne: false
+            referencedRelation: "packets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           created_at: string
@@ -908,6 +1404,78 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      verification_corrections: {
+        Row: {
+          block_id: string | null
+          corrected_meaning: Json | null
+          corrected_text: string
+          created_at: string
+          id: string
+          segment_id: string | null
+          user_id: string
+          verified_at: string
+          verified_by: string | null
+        }
+        Insert: {
+          block_id?: string | null
+          corrected_meaning?: Json | null
+          corrected_text: string
+          created_at?: string
+          id?: string
+          segment_id?: string | null
+          user_id: string
+          verified_at?: string
+          verified_by?: string | null
+        }
+        Update: {
+          block_id?: string | null
+          corrected_meaning?: Json | null
+          corrected_text?: string
+          created_at?: string
+          id?: string
+          segment_id?: string | null
+          user_id?: string
+          verified_at?: string
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_corrections_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "recognized_blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verification_corrections_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "dictation_segments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -921,6 +1489,10 @@ export type Database = {
           _reason: string
           _user_id: string
         }
+        Returns: string
+      }
+      advance_workflow_stage: {
+        Args: { _actor?: string; _piece_id: string; _to: string }
         Returns: string
       }
       grant_credits: {
@@ -937,6 +1509,13 @@ export type Database = {
           _user_id: string
         }
         Returns: string
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
       recompute_run_totals: { Args: { _run_id: string }; Returns: undefined }
       recompute_session_totals: {
@@ -959,7 +1538,7 @@ export type Database = {
       settle_reservation: { Args: { _run_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "professor" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1086,6 +1665,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "professor", "user"],
+    },
   },
 } as const
