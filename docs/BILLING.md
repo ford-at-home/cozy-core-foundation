@@ -196,6 +196,9 @@ SELECT * FROM purchases WHERE status = 'pending' AND created_at < now() - interv
 blocking generations (usage is still metered and recorded); unset to
 re-enforce.
 
+Deferred (schema exists, no code path — see "Open product decisions" in the
+[README](../README.md)): subscriptions, promo grants, credit expiration.
+
 ## Failure scenarios (authoritative state → recovery)
 
 - **Payment succeeds, redirect fails** → webhook already granted; balance is

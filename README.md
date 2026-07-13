@@ -133,6 +133,28 @@ the browser never talks to Stripe directly.
 | JWT verification per function | `supabase/config.toml` | webhooks/cron `verify_jwt = false` (they authenticate by signature/token); user-facing functions `true` |
 | Reconciler cron | migration `20260711150000_reconciler_cron.sql` | every 2 min via pg_cron + pg_net |
 
+## Open product decisions
+
+Documented here rather than silently decided in code. None of these block the
+current product; each needs an owner call before implementation:
+
+- **Subscriptions.** The `subscriptions` table and `subscription_grant`
+  ledger type exist in the schema, but no Stripe subscription webhooks, grant
+  path, or UI are wired. Only one-time credit packs are sold today.
+- **Promos and expiry.** `promo_grant` and `expiration` are valid ledger
+  entry types with no code path that writes them.
+- **`pieces.stage = 'printed'`.** The stage exists in the DB constraint but
+  nothing ever sets it — printing does not advance a piece's stage.
+- **Credit pack price ids.** The Starter/Writer/Studio seeds ship
+  `active = false` with placeholder `price_REPLACE_*` ids until the owner
+  runs the Stripe checklist in [docs/BILLING.md](docs/BILLING.md); prices are
+  provisional pending real cost telemetry.
+- **"Studio" pack name.** Coincides with the retired in-app "Studio" kicker
+  the brand pass removed; keep as a commerce SKU or rename before launch.
+- **Suggested PDF filename.** The print flow uses the browser's native
+  Save-as-PDF dialog and sets no filename; the brand docs' earlier
+  `hardcopy-draft-<id>.pdf` idea was never implemented.
+
 ## Repository layout
 
 ```
