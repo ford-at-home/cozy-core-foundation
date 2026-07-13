@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { ACTIVE_RUN_STATUSES, type AgentRun, type RunStatus } from "@/lib/workflows.functions";
 import { runPieceAction, type PieceAction } from "@/lib/pieces.functions";
-import { isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
+import { CREDIT_COST, isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
 import type { Json } from "@/integrations/supabase/types";
 import MarkdownView from "@/components/MarkdownView";
 import { RunCostCard } from "@/components/RunCostCard";
@@ -276,10 +276,16 @@ function ActionsPanel({ run }: { run: AgentRun }) {
   const [pending, setPending] = useState<PieceAction | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { balance } = useCreditBalance();
-  const outOfCredits = balance !== null && balance < 1;
+  // Prices come from the CREDIT_COST mirror (kept in sync with the server's
+  // supabase/functions/_shared/credits.ts) so this paywall can't drift if an
+  // action's cost changes.
+  const cannotAfford = (action: PieceAction) => balance !== null && balance < CREDIT_COST[action];
 
   const isProposal = run.kind === "proposal" || run.kind === "resynth";
   const isDraft = run.kind === "draft";
+  const outOfCredits = isDraft
+    ? cannotAfford("revise")
+    : cannotAfford("ready") && cannotAfford("resynth");
 
   async function dispatch(action: PieceAction) {
     if (!run.piece_id || pending) return;
@@ -340,7 +346,7 @@ function ActionsPanel({ run }: { run: AgentRun }) {
             <button
               type="button"
               onClick={() => dispatch("ready")}
-              disabled={pending !== null || outOfCredits}
+              disabled={pending !== null || cannotAfford("ready")}
               className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
             >
               {pending === "ready" ? "Starting…" : "Ready → final draft PR"}
@@ -348,7 +354,7 @@ function ActionsPanel({ run }: { run: AgentRun }) {
             <button
               type="button"
               onClick={() => dispatch("resynth")}
-              disabled={pending !== null || outOfCredits}
+              disabled={pending !== null || cannotAfford("resynth")}
               className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-5 text-sm font-medium text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
             >
               {pending === "resynth" ? "Starting…" : "Resynth"}
@@ -386,7 +392,7 @@ function ActionsPanel({ run }: { run: AgentRun }) {
           <button
             type="button"
             onClick={() => dispatch("revise")}
-            disabled={pending !== null || transcript.trim() === "" || outOfCredits}
+            disabled={pending !== null || transcript.trim() === "" || cannotAfford("revise")}
             className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:w-auto"
           >
             {pending === "revise" ? "Starting…" : "Revise → final PR"}
