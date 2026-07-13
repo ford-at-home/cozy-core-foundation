@@ -42,3 +42,19 @@ export const approveRevisionPr = createServerFn({ method: "POST" })
     if (error) throw new Error(await extractEdgeError(error, "approve-revision"));
     return result as ApproveRevisionResult;
   });
+
+/**
+ * Read-only status check: asks GitHub whether the revision PR has been
+ * merged (e.g. by the user approving directly on github.com) and stamps
+ * `pieces.final_pr_merged_at` if so. Never issues a merge. Idempotent.
+ */
+export const checkRevisionPrStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { runId: string }) => data)
+  .handler(async ({ data, context }): Promise<ApproveRevisionResult> => {
+    const { data: result, error } = await context.supabase.functions.invoke("approve-revision", {
+      body: { ...data, mode: "status" },
+    });
+    if (error) throw new Error(await extractEdgeError(error, "approve-revision"));
+    return result as ApproveRevisionResult;
+  });
