@@ -1,0 +1,266 @@
+{
+  "inquiry": {
+    "question": "Where in the residential home-insurance underwriting lifecycle (excluding pricing and actuarial work) does manual operational friction concentrate, and how much of it could large language models and agentic automation realistically absorb?",
+    "scope": "Operational 'middle' of home-insurance underwriting: submission intake and clearance, unstructured-document ingestion (ACORD forms, loss runs, statements of values), external risk-context assembly, pre-bind subjectivities, endorsements, and post-bind audit documentation. Pricing engines and actuarial models are explicitly out of scope.",
+    "definitions": [
+      { "term": "The 'messy middle'", "definition": "The report's term for the manual orchestration work surrounding the pricing core: moving data out of PDFs and emails into policy administration systems, chasing brokers for missing information, and tracking conditions by hand.", "disputed": true },
+      { "term": "Agentic automation", "definition": "Systems that use LLMs to interpret context (a broker email, a loss run) and take multi-step actions with a human retaining final bind authority, contrasted with 'brittle' rule-based OCR/RPA.", "disputed": false },
+      { "term": "Premium leakage", "definition": "Failure to collect the premium appropriate to the risk because of data-entry error, missed subjectivities, or inaccurate exposure assessment.", "disputed": false },
+      { "term": "Clearance", "definition": "The intake check against the policy administration system to determine whether a risk has already been submitted by another broker.", "disputed": false },
+      { "term": "Diligent search", "definition": "A surplus-lines regulatory requirement that a broker document declinations from admitted carriers before placing a risk in the non-admitted market.", "disputed": false }
+    ],
+    "geography": "United States, with emphasis on high-volatility states (Florida, Texas, California) for capacity withdrawal and Pennsylvania and Texas for surplus-lines diligent-search rules.",
+    "period": "Contemporary hard-market conditions of the mid-2020s; all cited sources were accessed in April 2026, and the roadmap is framed as an 18-plus-month rollout.",
+    "populations": {
+      "included": ["Residential / home property underwriters and underwriting assistants", "Specialty carriers and managing general agents (MGAs)", "Excess & surplus (E&S) and non-standard lines", "Wholesale and retail brokers as intake counterparties"],
+      "excluded": ["Pricing and actuarial functions (explicitly out of scope)", "Commercial lines beyond residential/home property", "Claims adjustment and handling", "Non-U.S. insurance markets"]
+    }
+  },
+  "claims": [
+    {
+      "id": "C1",
+      "text": "Roughly 40 percent of an underwriter's time is consumed by non-decisional administrative tasks such as manual data gathering, validation, and document formatting.",
+      "strength": "weak",
+      "type": "descriptive",
+      "evidence": ["E1"],
+      "qualifications": ["Attributed to unnamed 'industry data' surfaced through a technology-vendor article", "No underlying time-and-motion study, sample size, or definition of 'administrative' is disclosed"],
+      "affected": ["Underwriters", "Underwriting assistants"],
+      "uncertainty": "The single percentage stands in for the whole efficiency argument but has no traceable primary measurement."
+    },
+    {
+      "id": "C2",
+      "text": "The operational 'messy middle' of underwriting, not the pricing engine, is the single largest return-on-investment opportunity for LLM and agentic automation in insurance technology today.",
+      "strength": "weak",
+      "type": "normative",
+      "evidence": ["E6", "E7"],
+      "qualifications": ["This is the report's central thesis, assembled by synthesis rather than measured against alternative investment areas", "No comparison is made to the ROI of pricing, distribution, or claims automation"],
+      "affected": ["Specialty carriers and MGAs", "Underwriters", "Automation vendors"],
+      "uncertainty": "'Largest ROI opportunity' is asserted, not benchmarked against the other places a carrier could spend the same money."
+    },
+    {
+      "id": "C3",
+      "text": "As admitted carriers withdraw from high-volatility states, submission volume surges into E&S and specialty carriers and MGAs that are often ill-equipped to process the resulting documentation.",
+      "strength": "moderate",
+      "type": "descriptive",
+      "evidence": ["E3"],
+      "qualifications": ["Capacity withdrawal is well documented in market-outlook reports; the 'ill-equipped' judgment is the report's characterization"],
+      "affected": ["Specialty carriers and MGAs", "Brokers", "Policyholders in high-volatility states"],
+      "uncertainty": "The link between volume surge and operational unpreparedness is plausible but not quantified."
+    },
+    {
+      "id": "C4",
+      "text": "Loss runs arrive in inconsistent, non-standardized formats, forcing underwriters to spend hours manually 'financial spreading' claims across carrier templates, which is a primary source of under-pricing and error.",
+      "strength": "moderate",
+      "type": "descriptive",
+      "evidence": ["E2"],
+      "qualifications": ["Grounded mainly in practitioner testimony on public forums rather than a representative survey", "The 'hours' figure is anecdotal"],
+      "affected": ["Underwriters", "Underwriting assistants"],
+      "uncertainty": "The pain is credibly attested but its frequency and cost across the industry are not measured."
+    },
+    {
+      "id": "C5",
+      "text": "If agentic automation reduces manual effort by about 60 percent, a carrier processing 10,000 submissions a year saves roughly $1.5 million in annual labor cost.",
+      "strength": "weak",
+      "type": "predictive",
+      "evidence": ["E6", "E7"],
+      "qualifications": ["A constructed arithmetic example resting on assumed inputs: 5 manual hours per submission, $50/hour loaded rate, a 60 percent reduction 'based on reported gains in similar domains'", "The 60 percent figure is borrowed from a loan-processing ROI blog, not from insurance underwriting"],
+      "affected": ["Specialty carriers and MGAs", "Underwriting assistants"],
+      "uncertainty": "Every input is an assumption; a carrier whose real numbers differ would get a very different result."
+    },
+    {
+      "id": "C6",
+      "text": "Automated risk selection and auditability can improve the loss ratio by 2-5 percent annually, which for a carrier with $200 million in gross written premium translates to about $6 million in underwriting profit.",
+      "strength": "weak",
+      "type": "causal",
+      "evidence": ["E6", "E7"],
+      "qualifications": ["The loss-ratio range comes from a vendor blog", "The dollar figure is a downstream arithmetic illustration, not an observed result"],
+      "affected": ["Carriers", "Policyholders"],
+      "uncertainty": "Attributing loss-ratio movement to automation ignores confounders such as risk-mix shifts and the underwriting cycle."
+    },
+    {
+      "id": "C7",
+      "text": "The primary barrier to adoption is the fragility and integration cost of legacy policy administration systems such as Guidewire and Duck Creek, where a single API change is said to cost hundreds of thousands of dollars and take six months.",
+      "strength": "moderate",
+      "type": "descriptive",
+      "evidence": ["E5"],
+      "qualifications": ["Integration difficulty is widely reported; the specific cost-and-time figure is asserted through a vendor comparison blog", "Cultural resistance among underwriters is offered as a co-equal barrier"],
+      "affected": ["Carriers", "Legacy PAS vendors", "Underwriters"],
+      "uncertainty": "The concrete cost/time figure has no primary source behind it."
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "kind": "unsupported_assertion",
+      "description": "A technology-consultancy article stating that ~40 percent of underwriter time goes to non-decisional administrative tasks, attributed to unnamed 'industry data'.",
+      "source": "UST, 'Underwriting Automation – Redefining Life & P&C Insurance with AI and Data'",
+      "url": "https://www.ust.com/en/insights/underwriting-automation-redefining-life-and-pandc-insurance-with-ai-and-data"
+    },
+    {
+      "id": "E2",
+      "kind": "primary",
+      "description": "Firsthand practitioner testimony on public underwriting/insurance forums describing loss-run format chaos and manual spreading; unstructured and self-selected.",
+      "source": "Reddit r/Underwriting and r/Insurance threads",
+      "url": "https://www.reddit.com/r/Underwriting/comments/1irs3yp/inconsistent_formats_missing_data_manual/"
+    },
+    {
+      "id": "E3",
+      "kind": "institutional_report",
+      "description": "Market-outlook and broker/carrier reports documenting the hard market, admitted-carrier withdrawal, and E&S growth.",
+      "source": "Amwins 'State of the Market - 2026 Outlook'; bolttech; WaterStreet Company",
+      "url": "https://www.amwins.com/resources-and-insights/market-insights/article/state-of-the-market-2026-outlook"
+    },
+    {
+      "id": "E4",
+      "kind": "legal",
+      "description": "State regulation defining the diligent-search requirement for placing risks in the surplus-lines market.",
+      "source": "31 Pa. Code § 124.5, Diligent search of admitted insurers (Cornell Legal Information Institute)",
+      "url": "https://www.law.cornell.edu/regulations/pennsylvania/31-Pa-Code-SS-124-5"
+    },
+    {
+      "id": "E5",
+      "kind": "secondary",
+      "description": "Vendor-comparison and user-review write-ups characterizing legacy PAS (Guidewire, Duck Creek) as difficult and expensive to integrate; the specific 'hundreds of thousands of dollars / six months' figure is asserted here without a primary source.",
+      "source": "peopleblue 'Guidewire vs Duck Creek'; G2 user reviews",
+      "url": "https://www.peopleblue.us/blogs/which-is-better-duck-creek-or-guidewire-insurance-agencies"
+    },
+    {
+      "id": "E6",
+      "kind": "unsupported_assertion",
+      "description": "Automation-vendor and consultancy blogs supplying the ROI percentages used throughout (e.g. 200% volume capacity, 90% time-to-clear reduction, 2-5% loss-ratio improvement, ~12% rework), each stated without disclosed methodology or sample.",
+      "source": "Inaza; roots.ai; indicodata; jinba.io (loan-processing ROI); Arcade.dev; Appinventiv",
+      "url": "https://www.inaza.com/blog/manual-vs-automated-underwriting-what-insurers-need-to-know"
+    },
+    {
+      "id": "E7",
+      "kind": "model_synthesis",
+      "description": "The report's own arithmetic constructions: the $1.5M labor-savings example (5 hrs × $50 × 10,000 submissions × 60%) and the $6M loss-ratio-to-profit example (3% of $200M GWP), built by combining assumed inputs.",
+      "source": "This research report's economic-analysis section",
+      "url": null
+    },
+    {
+      "id": "E8",
+      "kind": "institutional_report",
+      "description": "Vendor product and tooling material describing external risk-context data sources (aerial imagery, permits, property records) used in context assembly.",
+      "source": "Cotality UnderwritingCenter; Heron Data 'Underwriting Tools'",
+      "url": "https://www.cotality.com/products/underwriting-center"
+    }
+  ],
+  "methods": [
+    {
+      "id": "M1",
+      "aspect": "source_selection",
+      "description": "The report draws most of its quantitative claims from automation vendors, consultancies, and product-comparison blogs, supplemented by anecdotal forum posts.",
+      "limitation": "The parties supplying the ROI figures profit from the conclusion that automation pays off; independent, disinterested sources are largely absent."
+    },
+    {
+      "id": "M2",
+      "aspect": "statistical",
+      "description": "ROI figures are presented as single point estimates (60% reduction, 90% faster, 2-5% loss-ratio gain) without ranges, sample sizes, or confidence.",
+      "limitation": "No way to judge dispersion, applicability, or whether the figures describe pilots, best cases, or averages."
+    },
+    {
+      "id": "M3",
+      "aspect": "comparison",
+      "description": "The manual-versus-automated comparison (e.g. TAT of 3-5 days versus under 4 hours; bind ratio 12% versus 18%) is a two-column table with no matched cohort or baseline dataset.",
+      "limitation": "The 'before' and 'after' columns are illustrative, not drawn from a controlled or even documented comparison."
+    },
+    {
+      "id": "M4",
+      "aspect": "causal_assumption",
+      "description": "The economics assume automation causes labor savings, faster quotes, higher win rates, and loss-ratio improvement.",
+      "limitation": "Speed, win rate, and loss ratio are plausibly confounded by risk-selection changes and the market cycle rather than automation alone."
+    },
+    {
+      "id": "M5",
+      "aspect": "geography",
+      "description": "Market and regulatory examples are U.S.-specific: capacity withdrawal in Florida/Texas/California and diligent-search law in Pennsylvania and Texas.",
+      "limitation": "Findings may not transfer to other regulatory regimes or property markets."
+    },
+    {
+      "id": "M6",
+      "aspect": "measurement",
+      "description": "The headline '40% of time on administration' has no stated measurement instrument (time study, survey, or self-report).",
+      "limitation": "Without a defined denominator and method, the figure cannot be verified or reproduced."
+    }
+  ],
+  "stakeholders": [
+    { "id": "K1", "who": "Underwriters and underwriting assistants", "role": "profession", "note": "Their day-to-day tasks are the target of automation; also the group whose 'judgment and intuition' the report says resists it." },
+    { "id": "K2", "who": "Specialty carriers and MGAs", "role": "decision_maker", "note": "The adopters who would fund and deploy the automation." },
+    { "id": "K3", "who": "Wholesale and retail brokers", "role": "beneficiary", "note": "Faster quote turnaround is framed as improving their satisfaction and loyalty." },
+    { "id": "K4", "who": "Policyholders / homeowners", "role": "affected", "note": "Barely mentioned; affected through pricing accuracy, coverage availability, and any algorithmic risk selection." },
+    { "id": "K5", "who": "State insurance regulators", "role": "regulator", "note": "Enforce diligent-search and audit-trail requirements; also the emerging authority over AI in underwriting." },
+    { "id": "K6", "who": "Legacy PAS vendors (Guidewire, Duck Creek)", "role": "institution", "note": "Their systems are cast as the integration bottleneck that stalls adoption." },
+    { "id": "K7", "who": "AI and automation vendors", "role": "beneficiary", "note": "Suppliers of the tools and, notably, the source of most of the ROI evidence in the report." }
+  ],
+  "uncertainties": [
+    { "id": "U1", "kind": "missing_data", "description": "There is no primary time-and-motion study behind the 40 percent administrative-time figure; it stands on a single vendor article.", "claims": ["C1"] },
+    { "id": "U2", "kind": "selection_bias", "description": "The quantitative ROI, savings, and loss-ratio figures come almost entirely from automation vendors and consultancies with a commercial interest in the conclusion.", "claims": ["C2", "C5", "C6"] },
+    { "id": "U3", "kind": "weak_causal_inference", "description": "Loss-ratio improvement and higher win rates are attributed to automation while plausible confounders (risk-mix change, market cycle, price adequacy) are not controlled.", "claims": ["C6"] },
+    { "id": "U4", "kind": "implementation_assumption", "description": "The $1.5M and $6M figures depend on assumed inputs (hours per submission, hourly rate, reduction percentage, submission count, GWP) that any specific carrier may not match.", "claims": ["C5", "C6"] },
+    { "id": "U5", "kind": "missing_testimony", "description": "Practitioner pain is evidenced through self-selected forum posts, not a representative survey of underwriters, and no voice from policyholders is included.", "claims": ["C4"] },
+    { "id": "U6", "kind": "geographic_limit", "description": "The market and regulatory picture is U.S.-centric and concentrated in a few states, limiting generalizability.", "claims": ["C3"] }
+  ],
+  "local_validation": [
+    { "id": "L1", "activity": "interview", "description": "Interview a working underwriter or underwriting assistant at a regional carrier or agency and ask them to estimate how their week actually splits between administrative and decision work, to test the 40 percent claim against lived experience.", "claims": ["C1"] },
+    { "id": "L2", "activity": "field_visit", "description": "Obtain a redacted sample loss run from a local independent agency and attempt to standardize it by hand, timing the effort and noting where ambiguity (paid vs. reserved vs. incurred) arises.", "claims": ["C4"] },
+    { "id": "L3", "activity": "professional_association", "description": "Contact a state surplus-lines association or a local PIA/Big I chapter about the real paperwork burden of diligent-search compliance and whether automation would change it.", "claims": ["C3"] },
+    { "id": "L4", "activity": "business", "description": "Ask a local agency principal whether faster quote turnaround actually predicts a higher win rate in their book, to probe the causal chain behind the revenue-acceleration claim.", "claims": ["C6"] }
+  ],
+  "followup_opportunities": [
+    {
+      "id": "F1",
+      "question": "Is there any independent or peer-reviewed measurement of how underwriters actually allocate their time, to confirm or replace the 40 percent administrative figure?",
+      "why": "The entire efficiency argument rests on one unsourced percentage.",
+      "evidence_needed": "A time-and-motion or workforce study with a defined method and sample.",
+      "likely_sources": ["Society of Actuaries", "Casualty Actuarial Society", "Aite-Novarica / Datos Insights", "academic operations-research journals"],
+      "answerable": true,
+      "connects_to": "Directly tests C1, the premise of the whole 'messy middle' thesis."
+    },
+    {
+      "id": "F2",
+      "question": "What does independent, non-vendor evidence say about the measured effect of underwriting automation on loss ratios?",
+      "why": "The 2-5 percent loss-ratio claim and its $6M illustration come from a vendor blog.",
+      "evidence_needed": "Statutory financial data or actuarial studies comparing automated and manual books.",
+      "likely_sources": ["NAIC financial data", "AM Best", "S&P Global Market Intelligence", "actuarial white papers"],
+      "answerable": true,
+      "connects_to": "Tests the causal core of C6 with disinterested data."
+    },
+    {
+      "id": "F3",
+      "question": "What are the independent benchmarks for quote turnaround time and expense ratios in residential/E&S lines?",
+      "why": "The TAT comparison table has no documented baseline.",
+      "evidence_needed": "Segment-level operational benchmarks from an analyst firm or regulator.",
+      "likely_sources": ["Celent", "Datos Insights", "NAIC", "AM Best"],
+      "answerable": true,
+      "connects_to": "Grounds the revenue-acceleration claims behind C2 and C5/C6."
+    },
+    {
+      "id": "F4",
+      "question": "What do documented carrier case studies (not vendor marketing) show about the real cost and timeline of integrating with Guidewire or Duck Creek?",
+      "why": "The 'hundreds of thousands / six months' figure has no primary source.",
+      "evidence_needed": "Carrier post-implementation reports or analyst integration studies.",
+      "likely_sources": ["Gartner", "Celent", "carrier engineering case studies", "system-integrator reports"],
+      "answerable": true,
+      "connects_to": "Substantiates or corrects the adoption-barrier claim C7."
+    },
+    {
+      "id": "F5",
+      "question": "How accurate are multimodal LLMs at extracting loss runs and SOVs, and do they reduce leakage or introduce new errors?",
+      "why": "The savings case assumes near-perfect extraction, but document-AI error rates are the hinge of the risk.",
+      "evidence_needed": "Independent extraction-accuracy benchmarks against ground-truth documents.",
+      "likely_sources": ["academic document-AI benchmarks", "independent evaluations vs. vendor self-reports", "insurer pilot audits"],
+      "answerable": true,
+      "connects_to": "Tests whether the mechanism behind C5 and C6 actually holds."
+    },
+    {
+      "id": "F6",
+      "question": "What is the current U.S. regulatory posture on AI and algorithmic decision-making in underwriting?",
+      "why": "Automating risk selection touches fairness and audit rules the report only gestures at.",
+      "evidence_needed": "Regulatory texts and guidance on AI use and bias in underwriting.",
+      "likely_sources": ["NAIC Model Bulletin on the Use of AI Systems by Insurers", "state Departments of Insurance", "Colorado SB21-169 rules"],
+      "answerable": true,
+      "connects_to": "Bounds the feasibility of C2 and implicates stakeholder K5."
+    }
+  ]
+}

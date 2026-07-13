@@ -1,0 +1,60 @@
+{
+  "questions": [
+    {
+      "position": 1,
+      "function": "prior_belief",
+      "claim_ref": "C1",
+      "prompt": "Before you read that roughly 40 percent of an underwriter's day is spent on non-decisional paperwork rather than judgment (C1), what did you assume the work of a home-insurance underwriter mostly consisted of? Name the experience, class, job, or person that shaped that assumption, and say whether the 40 percent figure confirms or unsettles it.",
+      "guidance": null,
+      "response_space": "lines_5"
+    },
+    {
+      "position": 2,
+      "function": "evidence_integrity",
+      "claim_ref": "E6",
+      "prompt": "The claim that automation improves the loss ratio by 2 to 5 percent (C6) rests largely on articles published by companies that sell automation software (E6). Identify two specific ways that commercial interest could distort such a number, and for each, describe what an independent, disinterested version of the evidence would have to show before you would trust it.",
+      "guidance": "Think about who was measured, what counted as a success, and what a losing pilot would look like in the data.",
+      "response_space": "third_page"
+    },
+    {
+      "position": 3,
+      "function": "counterargument",
+      "claim_ref": "C6",
+      "prompt": "A skeptic argues that the $6 million in profit the report credits to a 3 percent loss-ratio improvement (C6) actually came from carriers raising prices and dropping risky homes during a hard market, not from automation. Using the details in the packet, lay out what supports that objection and what pushes back on it, then say which explanation you find more convincing and why.",
+      "guidance": null,
+      "response_space": "third_page"
+    },
+    {
+      "position": 4,
+      "function": "missing_perspective",
+      "claim_ref": "K4",
+      "prompt": "The report speaks for carriers, underwriters, brokers, and automation vendors, but the homeowner applying for coverage is barely mentioned (K4). If a policyholder in a wildfire- or hurricane-exposed county described this same automated intake and risk-selection pipeline, what might they notice that the report does not, and which of its conclusions could change as a result?",
+      "guidance": null,
+      "response_space": "third_page"
+    },
+    {
+      "position": 5,
+      "function": "ground_truth",
+      "claim_ref": "L1",
+      "prompt": "To test whether underwriters really lose about 40 percent of their time to paperwork (C1), find one person near you with direct knowledge: a local agency's underwriter or assistant, an insurance-program instructor at a community college, or an agency owner. Write the first three questions you would ask them about how their week actually breaks down, and note what would make their answers more trustworthy than the vendor figure.",
+      "guidance": "Prefer someone you could actually reach over a famous industry name you could not.",
+      "response_space": "half_page"
+    },
+    {
+      "position": 6,
+      "function": "action",
+      "claim_ref": "C7",
+      "prompt": "Imagine you advise a regional specialty carrier that is still 'binding by email and PDF' because integrating its Guidewire or Duck Creek core is said to cost too much (C7). Propose one concrete step it could take within a year that does not require rebuilding that core system. Say who benefits, who bears the cost, and what unintended consequence you would watch for.",
+      "guidance": null,
+      "response_space": "half_page"
+    },
+    {
+      "position": 7,
+      "function": "followup",
+      "claim_ref": "F5",
+      "prompt": "The packet establishes that loss runs arrive in inconsistent formats that force underwriters to spread claims by hand (C4, from practitioner forum testimony E2), but it leaves unresolved how accurately today's multimodal LLMs actually extract that data, and whether they cut errors or introduce new ones (F5). Write up to three follow-up research questions you would need answered before trusting an automated loss-run reader with a real book of business.",
+      "guidance": "For each question, name the source, dataset, expert, institution, or type of evidence that would make the answer credible.",
+      "response_space": "half_page"
+    }
+  ]
+}
