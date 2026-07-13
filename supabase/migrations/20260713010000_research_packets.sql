@@ -114,18 +114,33 @@ CREATE POLICY "Users view own packet questions"
   TO authenticated
   USING (auth.uid() = user_id);
 
+-- INSERT/UPDATE additionally verify the target packet belongs to the caller:
+-- without it, a user who learned another user's packet UUID could squat a
+-- (packet_id, position) slot and silently displace a generated question.
 DROP POLICY IF EXISTS "Users add own packet questions" ON public.packet_questions;
 CREATE POLICY "Users add own packet questions"
   ON public.packet_questions FOR INSERT
   TO authenticated
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK (
+    auth.uid() = user_id
+    AND EXISTS (
+      SELECT 1 FROM public.packets p
+      WHERE p.id = packet_id AND p.user_id = auth.uid()
+    )
+  );
 
 DROP POLICY IF EXISTS "Users edit own packet questions" ON public.packet_questions;
 CREATE POLICY "Users edit own packet questions"
   ON public.packet_questions FOR UPDATE
   TO authenticated
   USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK (
+    auth.uid() = user_id
+    AND EXISTS (
+      SELECT 1 FROM public.packets p
+      WHERE p.id = packet_id AND p.user_id = auth.uid()
+    )
+  );
 
 DROP POLICY IF EXISTS "Users delete own packet questions" ON public.packet_questions;
 CREATE POLICY "Users delete own packet questions"

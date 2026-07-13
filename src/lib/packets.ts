@@ -88,6 +88,12 @@ export async function getPacketByRunId(runId: string): Promise<Packet | null> {
   return (data as Packet) ?? null;
 }
 
+/**
+ * Questions in PRINT order: position-sorted with the followup question last,
+ * exactly as buildPacketPrintDocument orders them — so the Q numbers shown
+ * on screen always match the Q numbers on paper, even after the owner adds
+ * a question whose position lands after the followup's.
+ */
 export async function listPacketQuestions(packetId: string): Promise<PacketQuestion[]> {
   const { data, error } = await db
     .from("packet_questions")
@@ -95,7 +101,11 @@ export async function listPacketQuestions(packetId: string): Promise<PacketQuest
     .eq("packet_id", packetId)
     .order("position", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data ?? []) as PacketQuestion[];
+  const rows = (data ?? []) as PacketQuestion[];
+  return [
+    ...rows.filter((q) => q.function !== "followup"),
+    ...rows.filter((q) => q.function === "followup"),
+  ];
 }
 
 export async function updatePacketQuestion(

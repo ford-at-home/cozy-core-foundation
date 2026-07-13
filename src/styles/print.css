@@ -633,7 +633,7 @@ body.with-anchors table::before {
   font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
   font-style: italic;
   font-size: 9.5pt;
-  color: #555555;
+  color: #666666;
   margin: 2pt 0 4pt;
 }
 
@@ -644,7 +644,7 @@ body.with-anchors table::before {
 
 .response-line {
   height: 0.35in;
-  border-bottom: 0.75pt solid #b0b0b0;
+  border-bottom: 0.75pt solid #bbbbbb;
 }
 
 /* Open box for lists and diagrams. */

@@ -71,8 +71,9 @@ function squash(text: string): string {
  * (the markup legend's "WC– on S3P4" example) without being one. */
 type PdfDocument = Awaited<ReturnType<typeof getDocumentProxy>>;
 
-// The @page left margin is 1.5in = 108pt; margin anchors end right-aligned
-// just inside it, body text starts at or beyond it.
+// The text column starts 1.5in = 108pt from the paper edge (0.5in @page left
+// margin + 1in body padding — the split-margin invariant in print.css).
+// Margin anchors paint right-aligned inside that band; body text at/beyond it.
 const LEFT_MARGIN_PT = 108;
 
 async function pdfAnchors(pdf: PdfDocument): Promise<string[]> {
