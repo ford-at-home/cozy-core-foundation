@@ -6,7 +6,11 @@ import { serve, authenticate, j, e } from "../_shared/http.ts";
 import { creditsEnforced, getBalance, reserveCreditsForRun } from "../_shared/credits.ts";
 import { advanceStage, logPieceEvent } from "../_shared/workflow.ts";
 import { dispatchRun, resolveProvider } from "../_shared/dispatch.ts";
-import { buildFinalDocxPrompt, loadPriorPacketContext } from "../_shared/followup-final.ts";
+import {
+  buildFinalDocxPrompt,
+  loadPacketBodies,
+  loadPriorPacketContext,
+} from "../_shared/followup-final.ts";
 
 const FN = "create-final-document-job";
 const COST = 2;
@@ -107,16 +111,19 @@ Deno.serve(
       .select("style_text, image_style")
       .eq("user_id", userId)
       .maybeSingle();
-    const ctx = await loadPriorPacketContext(admin, pieceId);
+    const [ctx, bodies] = await Promise.all([
+      loadPriorPacketContext(admin, pieceId),
+      loadPacketBodies(admin, pieceId),
+    ]);
     const prompt = buildFinalDocxPrompt({
       pieceSlug: pieceRow?.slug ?? "piece",
       goal: pieceRow?.title ?? null,
       styleText: (profile?.style_text ?? "").trim(),
       imageStyle: (profile?.image_style ?? "").trim() || undefined,
-      packetBody: null, // agent already has repo access; body lives at pieces/<slug>/packet/packet.md
+      packetBody: bodies.packetBody,
       packetAnalysis: ctx.packet?.analysis ?? null,
       verifiedResponses: ctx.verifiedResponses,
-      followupSummary: null,
+      followupSummary: bodies.followupSummary,
       studentContributions: ctx.studentContributions,
     });
     await dispatchRun({

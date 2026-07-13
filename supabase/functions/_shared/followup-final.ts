@@ -458,6 +458,37 @@ function fileFromResult(result: any, name: string): string | null {
 }
 
 /**
+ * The packet body (v1 post.md) and the latest follow-up report, read from the
+ * persisted run results — the final DOCX/PPTX prompts carry both verbatim so
+ * the artifact is built from the actual findings, not from repo-path hints.
+ */
+export async function loadPacketBodies(
+  admin: any,
+  pieceId: string,
+): Promise<{ packetBody: string | null; followupSummary: string | null }> {
+  const { data: packets } = await admin
+    .from("packets")
+    .select("version, run_id")
+    .eq("piece_id", pieceId)
+    .order("version", { ascending: true });
+  let packetBody: string | null = null;
+  let followupSummary: string | null = null;
+  for (const p of packets ?? []) {
+    if (!p.run_id) continue;
+    const { data: run } = await admin
+      .from("agent_runs")
+      .select("result")
+      .eq("id", p.run_id)
+      .maybeSingle();
+    const body = fileFromResult(run?.result, "post.md");
+    if (!body) continue;
+    if (p.version === 1) packetBody = body;
+    else followupSummary = body; // ascending order → the latest follow-up wins
+  }
+  return { packetBody, followupSummary };
+}
+
+/**
  * Persist a completed follow-up research run.
  * Writes a NEW packets row (version = prior + 1, supersedes_packet_id = prior).
  * Idempotent: onConflict on run_id skips a redelivered fetch-back.
@@ -569,6 +600,23 @@ export async function persistFollowUpResult(
       },
     });
   }
+}
+
+/**
+ * Settle the pending final_artifacts row when its run fails or is cancelled —
+ * without this the row sits 'pending' forever and the UI can never offer a
+ * retry. Ready artifacts are never downgraded (idempotent under redelivery).
+ */
+export async function settleFinalArtifactFailure(
+  admin: any,
+  run: { id: string; kind: string },
+): Promise<void> {
+  if (run.kind !== "final_docx" && run.kind !== "final_pptx") return;
+  await admin
+    .from("final_artifacts")
+    .update({ status: "failed", updated_at: new Date().toISOString() })
+    .eq("run_id", run.id)
+    .neq("status", "ready");
 }
 
 /**

@@ -54,6 +54,16 @@ instead of `pieces.workflow_stage`):
    pure `assembleVerifiedResponses` (tested in `_tests/followup.test.ts`)
    walking packet → returns → pages → blocks plus segments, with the same
    latest-correction-wins / empty-is-rejection rules as the review UI.
+5. ~~`final_artifacts` rows stuck `pending` when the run fails~~ — fixed:
+   nothing settled the artifact row on run failure/cancellation, so the UI
+   could never distinguish "generating" from "dead" or offer a retry.
+   `settleFinalArtifactFailure` now runs on every failure/cancel path in
+   `cursor-webhook` and `reconcile-runs` (never downgrades `ready`).
+6. ~~Final DOCX/PPTX prompts shipped with `(missing)` packet body~~ — fixed:
+   `create-final-document-job` / `create-presentation-job` passed
+   `packetBody: null, followupSummary: null` although their prompt templates
+   render both verbatim. `loadPacketBodies` now reads the v1 packet body and
+   the latest follow-up report from the persisted run results.
 
 ## Capability inventory
 
