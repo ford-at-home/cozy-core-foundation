@@ -6,8 +6,6 @@
  * updates every surface that uses it.
  */
 import proofSketch from "@/assets/suite/proof.png";
-import editionSketch from "@/assets/suite/edition.png";
-import dialogueSketch from "@/assets/suite/dialogue.png";
 import interludeSketch from "@/assets/suite/interlude.png";
 import canonSketch from "@/assets/suite/canon.png";
 
@@ -19,7 +17,7 @@ export const brand = {
     line: "Instruments for thinking.",
     /** The broader product philosophy. */
     philosophy: "Different kinds of thinking happen best in different mediums.",
-    category: "A small collection of tools for reading, revising, conversing, reflecting, and remembering.",
+    category: "A small collection of tools for revising, reflecting, and remembering.",
   },
   product: {
     /** Provisional — do not treat as final. */
@@ -30,7 +28,7 @@ export const brand = {
   meta: {
     title: "Hardcopy Tools",
     description:
-      "A small collection of instruments for thinking. Proof, Edition, Dialogue, Interlude, Canon — each embraces a different medium.",
+      "A small collection of instruments for thinking. Proof, Interlude, Canon — each embraces a different medium.",
   },
 } as const;
 
@@ -42,7 +40,7 @@ export function pageTitle(page: string): string {
 export type SuiteStatus = "available" | "beta" | "coming-soon";
 
 export type SuiteProduct = {
-  slug: "proof" | "edition" | "dialogue" | "interlude" | "canon";
+  slug: "proof" | "interlude" | "canon";
   name: string;
   status: SuiteStatus;
   statusLabel: string;
@@ -70,36 +68,6 @@ export const suite: readonly SuiteProduct[] = [
     sketch: proofSketch,
     sketchAlt: "A graphite sketch of a printed manuscript with handwritten margin notes.",
     href: "/proof",
-  },
-  {
-    slug: "edition",
-    name: "Edition",
-    status: "beta",
-    statusLabel: "Beta",
-    oneLine:
-      "Transform reports, articles, research, and long-form writing into beautiful offline reading editions designed for focused attention.",
-    medium: "Books.",
-    why: "Because attention deepens when a text is bound and finite.",
-    description:
-      "Give a long piece the treatment a book gives it — careful typesetting, generous margins, a real cover. Edition prepares work for the way people actually read when the interface goes away.",
-    sketch: editionSketch,
-    sketchAlt: "A graphite sketch of a compact e-reader showing the opening page of a chapter.",
-    href: "/edition",
-  },
-  {
-    slug: "dialogue",
-    name: "Dialogue",
-    status: "coming-soon",
-    statusLabel: "Coming soon",
-    oneLine:
-      "A conversational companion that calls you on the phone at scheduled times and helps you think through your intentions, priorities, and commitments.",
-    medium: "Conversation.",
-    why: "Because some thoughts only arrive when you have to say them out loud.",
-    description:
-      "Dialogue calls at a time you choose and asks the questions you would ask yourself if you remembered to. No screen, no chat window — just a voice, a few minutes, and a clearer sense of what matters this week.",
-    sketch: dialogueSketch,
-    sketchAlt: "A graphite sketch of a small desk telephone with a lifted handset.",
-    href: "/dialogue",
   },
   {
     slug: "interlude",

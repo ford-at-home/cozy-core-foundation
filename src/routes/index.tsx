@@ -38,15 +38,13 @@ function SuiteCatalog() {
           </h1>
           <p className="mt-8 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
             Different kinds of thinking happen best in different mediums —
-            paper, books, conversation, shared reflection, physical
-            artifacts. The suite is small on purpose.
+            paper, shared reflection, physical artifacts. The suite is small on
+            purpose.
           </p>
           <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/70">
             <span>01 Available</span>
             <span aria-hidden className="text-border">/</span>
-            <span>01 Beta</span>
-            <span aria-hidden className="text-border">/</span>
-            <span>03 In development</span>
+            <span>02 In development</span>
           </div>
         </div>
       </section>
@@ -57,7 +55,7 @@ function SuiteCatalog() {
             The suite
           </span>
           <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/60">
-            001 — 005
+            001 — 003
           </span>
         </div>
         <ol className="mx-auto max-w-5xl border-t border-border/40">
