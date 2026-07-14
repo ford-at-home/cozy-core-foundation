@@ -2,7 +2,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { brand, suite } from "@/config/brand";
 import { StatusLabel } from "@/components/suite/StatusLabel";
 import { FollowInvite } from "@/components/suite/FollowInvite";
-import { SiteFooter } from "@/components/suite/SiteChrome";
+import { SiteFooter, SiteWordmark } from "@/components/suite/SiteChrome";
 import { ThemeToggle } from "@/components/suite/ThemeToggle";
 
 export const Route = createFileRoute("/")({
@@ -19,9 +19,7 @@ function SuiteCatalog() {
         className="flex items-start justify-between gap-4 px-6 pt-10 sm:px-10 sm:pt-14"
         style={{ paddingTop: "max(2.5rem, env(safe-area-inset-top))" }}
       >
-        <div className="font-serif text-base tracking-tight text-foreground/90">
-          {brand.company.name}
-        </div>
+        <SiteWordmark />
         <ThemeToggle />
       </header>
 

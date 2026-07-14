@@ -1,5 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { brand } from "@/config/brand";
+import logoLight from "@/assets/logo-light.png.asset.json";
+import logoDark from "@/assets/logo-dark.png.asset.json";
 
 /**
  * Restrained wordmark used on every outer page. No nav — the homepage
@@ -10,11 +12,26 @@ export function SiteWordmark({ align = "left" }: { align?: "left" | "center" }) 
     <Link
       to="/"
       className={
-        "inline-flex items-baseline gap-2 font-serif text-base tracking-tight text-foreground/90 transition-opacity hover:opacity-80 " +
+        "inline-flex items-center transition-opacity hover:opacity-80 " +
         (align === "center" ? "mx-auto" : "")
       }
     >
-      <span>{brand.company.name}</span>
+      <img
+        src={logoLight.url}
+        alt={brand.company.name}
+        loading="eager"
+        width={128}
+        height={77}
+        className="block h-9 w-auto dark:hidden sm:h-10"
+      />
+      <img
+        src={logoDark.url}
+        alt={brand.company.name}
+        loading="eager"
+        width={128}
+        height={77}
+        className="hidden h-9 w-auto dark:block sm:h-10"
+      />
     </Link>
   );
 }
