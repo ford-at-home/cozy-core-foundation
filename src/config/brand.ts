@@ -70,21 +70,6 @@ export const suite: readonly SuiteProduct[] = [
     href: "/proof",
   },
   {
-    slug: "dialogue",
-    name: "Dialogue",
-    status: "coming-soon",
-    statusLabel: "Coming soon",
-    oneLine:
-      "A conversational companion that calls you on the phone at scheduled times and helps you think through your intentions, priorities, and commitments.",
-    medium: "Conversation.",
-    why: "Because some thoughts only arrive when you have to say them out loud.",
-    description:
-      "Dialogue calls at a time you choose and asks the questions you would ask yourself if you remembered to. No screen, no chat window — just a voice, a few minutes, and a clearer sense of what matters this week.",
-    sketch: dialogueSketch,
-    sketchAlt: "A graphite sketch of a small desk telephone with a lifted handset.",
-    href: "/dialogue",
-  },
-  {
     slug: "interlude",
     name: "Interlude",
     status: "coming-soon",
