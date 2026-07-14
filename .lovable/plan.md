@@ -1,115 +1,127 @@
 
-# Clarity Pass: Unified Vocabulary, One Story, Two Depths
+# Hardcopy Tools — Suite Redesign
 
-Turn the "best of both worlds" framing into shipped copy and light UI reorganization. **No new features, no schema changes, no professor scope, no new stages.** Both workflows keep operating exactly as they do — this pass only makes the user perceive one product. Word-doc and PowerPoint generation stay fully intact as the packet workflow's Finish stage; merged-PR draft stays as the longform workflow's Finish.
+Reframe the site so the homepage is a small catalog of five instruments rather than a landing page for one app. The current app becomes **Proof**, reachable from its catalog entry. Everything outside the app is rebuilt around calm typography, generous whitespace, and the hand-drawn product sketches.
 
-## Shared stage vocabulary (single source of truth)
+## Scope
 
-Both workflows get named against the same six/seven verbs. The seventh (`Review` + `Follow up`) applies only to the packet path.
+- **Only the outer experience changes.** No changes to the authenticated app, run orchestration, billing, print pipeline, or database. Auth still lives at `/auth`; the app still lives under `/_authenticated/*`.
+- **Proof = the existing product.** Its product page's primary action links to `/auth` (existing sign-in / dashboard flow).
+- Four new products (Edition, Dialogue, Interlude, Canon) are presentational only — no backend, no forms beyond the shared follow input.
+
+## Information architecture
 
 ```text
-Explore  →  Print  →  Think  →  Return  →  [Review  →  Follow up  →]  Finish
+/                    Suite catalog (new homepage)
+/proof               Proof product page  → "Enter Proof" links to /auth
+/edition             Edition product page (Beta)
+/dialogue            Dialogue product page (Coming Soon)
+/interlude           Interlude product page (Coming Soon)
+/canon               Canon product page (Coming Soon)
+/auth                Unchanged
+/_authenticated/*    Unchanged
 ```
 
-- **Explore** — AI gathers research (packet) or drafts in your voice (longform).
-- **Print** — Generate the hardcopy with `S{n}P{m}` anchors.
-- **Think** — Off-screen, on paper. App shows "waiting for you".
-- **Return** — Photograph pages + dictate (packet) or paste/dictate an annotation transcript (longform).
-- **Review** — Correct what handwriting recognition read. *Packet only.*
-- **Follow up** — Approve up to three questions for another research pass. *Packet only, skippable.*
-- **Finish** — Download **Word doc and/or PowerPoint** (packet, via existing `create-final-document-job` + `create-presentation-job`) or approve & merge the revised draft (longform). Both endings preserved.
+Each product route is its own file under `src/routes/` with its own `head()` metadata (unique title, description, og:title, og:description). No og:image on `__root.tsx`.
 
-Codify in `src/lib/packet-stage.ts` as the shared `STAGE_LABELS` (already exists) and add a parallel `DRAFT_STAGE_LABELS` re-using the same six verbs. The draft-run page reads the current substate off `agent_runs.kind` and maps to one of those verbs.
+## Homepage (`/`)
 
-## File-by-file changes
+The cover of a book, not a landing page.
 
-### Landing (`src/routes/index.tsx`)
-- Rewrite `HOW_IT_WORKS` to the six shared verbs. Drop workflow-specific nouns from top-level headings.
-- Rewrite hero + one-sentence promise to match the shared arc; retain "Leave the screen. Keep the thread."
-- Add "What AI will / won't do" (three bullets each) from Phase 5 of the brief.
-- The `Finish` copy explicitly names "a Word document, a class presentation, or a revised draft merged to your repo" so a landing visitor sees all three real outputs.
-- CTA: "Start a project" → `/new`.
+- Small wordmark + one-line philosophy at top ("AI that knows when to disappear" or a quieter successor — see Copy below).
+- The five products as a vertical, unhurried list (single column on mobile, two columns from `md:` up). Each entry: product name in serif display, one-line descriptor, status in small caps set in muted color, the graphite sketch to the side. Entire row is a link to the product page.
+- No hero CTA, no feature grid, no testimonials, no "how it works" section.
+- A single closing line at the bottom above the follow form. No footer nav duplicating the catalog.
 
-### `/new` (`src/routes/_authenticated/new.tsx`)
-- Rewrite the two mode cards using intent framing:
-  - **"Draft a piece in my voice"** (`longform`) — ends in a merged draft.
-  - **"Study a subject and write from it"** (`research_packet`) — ends in a Word doc and/or PowerPoint.
-- Below the toggle, preview the arc: "You'll Explore → Print → Think → Return → Refine → Finish" for longform, or the same with Review + Follow up inserted for packet. Each preview names its final output.
-- Rename primary button to **"Start"**.
+Status treatment: plain small-caps text ("Available", "Beta", "Coming soon") in `text-muted-foreground` — no pills, no dots, no colored badges. Available items are subtly more present (full-opacity title); coming-soon items sit at ~70% opacity so the eye lands on Proof and Edition first without any decoration doing the work.
 
-### Dashboard (`src/routes/_authenticated/dashboard.tsx`)
-- Rename "Kind" column → "Stage"; render the shared verb via a new `deriveDashboardStage(row)` helper in `packet-stage.ts` that maps piece + latest run to one of the seven verbs.
-- Rename "New draft" → "New project".
-- Empty state uses "project".
+## Product pages
 
-### Project hub (`src/routes/_authenticated/project.$pieceId.tsx`)
-- Already uses `STAGE_LABELS`. Add one-sentence description per stage (new `STAGE_DESCRIPTIONS` map).
-- Add transition copy at the top of the active stage card ("What just happened / What's next / You can leave — everything's saved").
-- Follow-up card gets an explicit **"Skip follow-up"** secondary action that jumps to Finish.
-- **Finish card** headline: "Create your final paper and slides." Body: single primary "Choose what to create" button; clicking reveals both docx and pptx options with per-artifact cost, current status (pending/generating/ready/failed via existing `final_artifacts` rows), and download links exactly as today. No generation logic changes; only visual weight and disclosure.
+One template, five instances. Each page holds:
 
-### Draft-run page (`src/routes/_authenticated/runs.$runId.tsx`)
-- Small "Stage" pill mapping current run/piece state to one of the six shared verbs.
-- Rename revise-panel textarea heading to **"Return your marks"**.
-- Revision-approval panel keeps its "Approve & merge" / "Not quite — mark up & re-dictate" buttons (built last turn); surrounding copy uses shared vocabulary.
+- Product name (serif, large, quiet).
+- One line of status in small caps.
+- A short paragraph on **why the product exists** and **which medium it embraces**.
+- The graphite sketch, given real room — no card, no border, no drop shadow.
+- One line on why we're building it.
+- A single action:
+  - Proof → "Enter Proof" linking to `/auth`.
+  - Edition → "Request early access" opens the same follow input, prefilled with product context.
+  - Dialogue / Interlude / Canon → no button. A single italic line: *"This is coming."*
+- A small "Return to the suite" link back to `/`.
 
-### Return page (`src/routes/_authenticated/return.$packetId.tsx`)
-- Reframe upload + dictation as one decision: "How would you like to return your work?" with three cards (Upload photos, Dictate, or both). Progressive disclosure.
-- Add opening transition copy.
-- Rewrite blurred/missing-page recovery messages using Phase 11 template.
+Pages should feel deliberately unfinished — one screen of content, no filler.
 
-### Review page (`src/routes/_authenticated/review.$returnId.tsx`)
-- Opening explanation: "We read your handwriting, but it can be ambiguous. Confirm or correct before it feeds the next research pass."
-- Keep controls; rewrite section labels to plain language.
+## Follow section
 
-### Follow-up page (`src/routes/_authenticated/followup.$packetId.tsx`)
-- Opening explanation from Phase 6.
-- Explicit **"Skip follow-up and go to Finish"** button at equal visual weight to "Send for research".
+At the bottom of `/` (and reused on product pages via a shared component):
 
-### Print (`src/lib/print-document.ts`)
-- Verify printed packet ends with a **Return checklist page**: read → respond → dark ink → shorthand legend → up to 3 questions → photograph one page at a time → dictate anything ambiguous → return to the project. Add missing items only.
-- Do not touch `S{n}P{m}` anchor logic or `contract/references/MARKUP.md`.
+- One sentence: "Hear about new instruments as they arrive."
+- Single email input + quiet submit. No checkbox, no promise text, no "we respect your privacy" boilerplate.
+- Submission target: for this pass, a `mailto:` or a no-op form that shows a confirmation line. Backend wiring for a real subscription list is **out of scope** for this plan — flag as a follow-up if the user wants it stored.
 
-### Brand config (`src/config/brand.ts`)
-- Update `brand.meta.description` and `brand.product.descriptor` to the unified one-sentence promise. `brand.product.name` unchanged.
+## Visual system
 
-### New shared copy file (`src/config/workflow-copy.ts`)
-- Central export for every user-facing string in this pass: stage descriptions, transition messages, credit explanation, "what AI does / doesn't do", empty/error templates. So every surface pulls from one place.
+Reuse existing tokens in `src/styles.css` (dark editorial theme, amber accent). No new colors, no new fonts, no `tailwind.config.*`. Adjustments:
 
-### Docs
-- Update `docs/brand/UI-COPY-MAP.md` with new mappings.
-- Add `docs/research-workflow/10-clarity-pass.md` recording the six-verb model and reconciliation.
+- Lean harder on the existing serif for product names and page headings; body stays sans.
+- Increase vertical rhythm on the homepage (larger `py` between entries than the current landing uses).
+- Remove the current gradient wash behind the hero — replace with plain background.
+- Sketches render at natural aspect ratio with generous margin; no frame, no caption chrome.
 
-## What this pass does NOT change
+## Assets
 
-- No changes to `pieces.workflow` / `workflow_stage` / `agent_runs.kind` / any schema.
-- No changes to Edge Functions, RLS, credit ledger, print CSS, `S{n}P{m}` anchors.
-- **No changes to `create-final-document-job` or `create-presentation-job`** — docx and pptx generation preserved exactly.
-- No changes to run orchestration, revision PR merge, GitHub integration.
-- No professor role, no assignments, no enrollments.
-- No onboarding modal or tour. Static copy only.
+Five hand-drawn graphite sketches, one per product, provided by the user. Placement in the plan:
 
-## Order of work
+- Save under `src/assets/suite/` as `proof.jpg`, `edition.jpg`, `dialogue.jpg`, `interlude.jpg`, `canon.jpg` (jpg for graphite photography).
+- Imported via ES6 image imports in each route.
+- **Blocker until provided:** the plan ships placeholder `<div>` slots at the correct aspect ratio so layout is real; sketches drop in without further layout changes. Confirm in build mode whether to wait for sketches or proceed with placeholders.
 
-1. `src/lib/packet-stage.ts` + new `src/config/workflow-copy.ts` — shared vocabulary and copy constants first.
-2. `src/routes/index.tsx` + `src/config/brand.ts` — landing and brand meta.
-3. `src/routes/_authenticated/new.tsx` — mode framing.
-4. `src/routes/_authenticated/dashboard.tsx` — stage column.
-5. `src/routes/_authenticated/project.$pieceId.tsx` — transitions, Finish reframe, skip follow-up.
-6. `src/routes/_authenticated/return.$packetId.tsx` + `review.$returnId.tsx` + `followup.$packetId.tsx`.
-7. `src/routes/_authenticated/runs.$runId.tsx` — draft-run vocabulary alignment.
-8. `src/lib/print-document.ts` — printed return checklist audit.
-9. `docs/brand/UI-COPY-MAP.md` + `docs/research-workflow/10-clarity-pass.md`.
-10. Validation: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`; Playwright pass Landing → /new → /project hub confirming shared verbs render and Finish card exposes docx + pptx.
+## Copy
 
-## Validation checklist
+Product descriptors come verbatim from the user's brief (Proof, Edition, Dialogue, Interlude, Canon paragraphs). `src/config/brand.ts` grows a `suite` export listing the five products with `{ name, status, oneLine, why, medium, href }` so pages and homepage read from one source.
 
-- First-time landing visitor can name the six/seven verbs after one read, and knows all three real outputs exist (docx, pptx, merged draft).
-- `/new` explains the difference between the two modes in one sentence each.
-- Every project-hub stage card answers: what just happened, what's next, can I leave.
-- Finish card in the packet hub still generates and downloads both docx and pptx.
-- Every credit cost stated at its point of value.
-- Every failure state names what happened, what's saved, credits consumed, and one concrete next action.
-- Printed packet ends with a self-contained return checklist.
+`brand.product.name` ("Hardcopy Draft") is replaced by the suite model; the old "Hardcopy Draft" label is retired from public surfaces but kept in the app's internal chrome only where it currently appears in authenticated views (out of scope to sweep those in this pass — flagged).
 
-Approve and I'll execute in order.
+## Files touched
+
+New:
+- `src/routes/proof.tsx`
+- `src/routes/edition.tsx`
+- `src/routes/dialogue.tsx`
+- `src/routes/interlude.tsx`
+- `src/routes/canon.tsx`
+- `src/components/suite/ProductPage.tsx` (shared template)
+- `src/components/suite/FollowInvite.tsx`
+- `src/components/suite/StatusLabel.tsx`
+- `src/assets/suite/` (sketches, when provided)
+
+Rewritten:
+- `src/routes/index.tsx` — becomes the suite catalog. Existing `Hero / Problem / HowItWorks / AICompact / FirstProduct / WhyPaper / Authorship / DesignedForLeaving / Ecosystem / FinalAction / SiteHeader / SiteFooter` sections are removed. Nothing on this page is preserved except the `PageMark` in the wordmark.
+
+Updated:
+- `src/config/brand.ts` — add `suite` array; refine `meta` title/description for the catalog framing.
+- `src/routes/__root.tsx` — verify no og:image at root; keep `<Outlet />`; adjust default title if needed.
+
+Untouched:
+- Everything under `src/routes/_authenticated/*`
+- `src/routes/auth.tsx`
+- `src/routes/api/*`
+- All server functions, edge functions, migrations, print pipeline
+- `src/config/workflow-copy.ts` (used inside the app; no longer imported by `/`)
+
+## Out of scope (flag, don't do)
+
+- Wiring the follow form to a real subscription store.
+- Sweeping "Hardcopy Draft" references out of the authenticated app UI.
+- Any change to Proof's in-app experience, billing copy, or dashboard.
+- New illustrations or generated imagery — the graphite sketches are the only art.
+
+## Validation
+
+- `npm run lint`, `npm run typecheck`, `npm run build`.
+- Manual: visit `/`, each of the five product routes, and confirm Proof → `/auth` works and other CTAs behave as specified. Check 375px width first.
+
+## Open question before build
+
+1. Sketches: proceed with placeholder slots now and drop the images in later, or wait until you upload the five graphite sketches before I start?
