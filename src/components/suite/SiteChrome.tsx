@@ -20,16 +20,16 @@ export function SiteWordmark({ align = "left" }: { align?: "left" | "center" }) 
         src={logoLight.url}
         alt={brand.company.name}
         loading="eager"
-        width={128}
-        height={77}
+        width={400}
+        height={459}
         className="block h-16 w-auto dark:hidden sm:h-20"
       />
       <img
         src={logoDark.url}
         alt={brand.company.name}
         loading="eager"
-        width={128}
-        height={77}
+        width={400}
+        height={459}
         className="hidden h-16 w-auto dark:block sm:h-20"
       />
     </Link>
