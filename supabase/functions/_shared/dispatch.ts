@@ -25,6 +25,8 @@ export interface DispatchArgs {
   provider: AgentProvider;
   runId: string;
   prompt: string;
+  /** Character length of research input (for cost proxy calibration). */
+  researchChars?: number;
   /** Base ref the agent starts from (main, or a prior run's branch). */
   ref: string;
   autoCreatePr: boolean;
@@ -51,6 +53,9 @@ export async function dispatchRun(args: DispatchArgs): Promise<void> {
         ...((runRow?.input as Record<string, unknown> | null) ?? {}),
         prompt_chars: promptChars,
         prompt_est_tokens: promptEstTokens,
+        ...(typeof args.researchChars === "number" && args.researchChars > 0
+          ? { research_chars: args.researchChars }
+          : {}),
       },
       input_summary: promptSummary(promptChars),
     })

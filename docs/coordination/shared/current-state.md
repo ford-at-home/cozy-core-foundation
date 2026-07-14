@@ -107,3 +107,15 @@ not rewrite another agent's entry. Newest entries at the bottom.
 - Owner items outstanding: drive one piece through follow-up →
   `final_docx` → `final_pptx` (Account A has 8 credits) so the C3
   session-attach fix and OOXML validation get their first live exercise.
+
+### 2026-07-14 — WI-0010 / WI-0011 — Cursor
+
+- Buried PR #4 (cost calibration UI + proxies) was never merged; #3 gateway
+  metering is already on `main`. Revival is split:
+  - **WI-0010 (Lovable, requested):** apply
+    `20260714080000_cost_proxies_and_targets.sql`, deploy dispatch callers
+    that stamp `research_chars`, regenerate types.
+  - **WI-0011 (Cursor, draft):** SessionCostBanner / budget UI — blocked on
+    WI-0010. Plan:
+    [WI-0011 plan](../cursor/outbox/WI-0011-cost-calibration-ui-plan.md).
+- Docs: `docs/COST-CALIBRATION.md` (monthly invoice calibration SQL).

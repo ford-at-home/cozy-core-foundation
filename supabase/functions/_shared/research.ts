@@ -276,6 +276,7 @@ export async function completeResearchAndChain(admin: any, run: any): Promise<vo
       provider: resolveProvider(),
       runId: composeRunId,
       prompt,
+      researchChars: report.length,
       ref: Deno.env.get("AGENT_REPO_REF") ?? "main",
       autoCreatePr: false,
     });
