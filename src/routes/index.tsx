@@ -69,7 +69,7 @@ function SuiteCatalog() {
                     loading="lazy"
                     width={1024}
                     height={1024}
-                    className="suite-sketch mx-auto block h-auto w-full max-w-[16rem] sm:max-w-none"
+                    className="suite-sketch block h-auto w-full max-w-[12rem] sm:max-w-[14rem]"
                   />
                 </div>
               </Link>
