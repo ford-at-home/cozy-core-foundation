@@ -11,8 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProofRouteImport } from './routes/proof'
 import { Route as InterludeRouteImport } from './routes/interlude'
-import { Route as EditionRouteImport } from './routes/edition'
-import { Route as DialogueRouteImport } from './routes/dialogue'
 import { Route as CanonRouteImport } from './routes/canon'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AboutRouteImport } from './routes/about'
@@ -42,16 +40,6 @@ const ProofRoute = ProofRouteImport.update({
 const InterludeRoute = InterludeRouteImport.update({
   id: '/interlude',
   path: '/interlude',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EditionRoute = EditionRouteImport.update({
-  id: '/edition',
-  path: '/edition',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DialogueRoute = DialogueRouteImport.update({
-  id: '/dialogue',
-  path: '/dialogue',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CanonRoute = CanonRouteImport.update({
@@ -165,8 +153,6 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/canon': typeof CanonRoute
-  '/dialogue': typeof DialogueRoute
-  '/edition': typeof EditionRoute
   '/interlude': typeof InterludeRoute
   '/proof': typeof ProofRoute
   '/billing': typeof AuthenticatedBillingRoute
@@ -190,8 +176,6 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/canon': typeof CanonRoute
-  '/dialogue': typeof DialogueRoute
-  '/edition': typeof EditionRoute
   '/interlude': typeof InterludeRoute
   '/proof': typeof ProofRoute
   '/billing': typeof AuthenticatedBillingRoute
@@ -217,8 +201,6 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/canon': typeof CanonRoute
-  '/dialogue': typeof DialogueRoute
-  '/edition': typeof EditionRoute
   '/interlude': typeof InterludeRoute
   '/proof': typeof ProofRoute
   '/_authenticated/billing': typeof AuthenticatedBillingRoute
@@ -244,8 +226,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/canon'
-    | '/dialogue'
-    | '/edition'
     | '/interlude'
     | '/proof'
     | '/billing'
@@ -269,8 +249,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/canon'
-    | '/dialogue'
-    | '/edition'
     | '/interlude'
     | '/proof'
     | '/billing'
@@ -295,8 +273,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/canon'
-    | '/dialogue'
-    | '/edition'
     | '/interlude'
     | '/proof'
     | '/_authenticated/billing'
@@ -322,8 +298,6 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AuthRoute: typeof AuthRoute
   CanonRoute: typeof CanonRoute
-  DialogueRoute: typeof DialogueRoute
-  EditionRoute: typeof EditionRoute
   InterludeRoute: typeof InterludeRoute
   ProofRoute: typeof ProofRoute
   ApiTranscribeRoute: typeof ApiTranscribeRoute
@@ -344,20 +318,6 @@ declare module '@tanstack/react-router' {
       path: '/interlude'
       fullPath: '/interlude'
       preLoaderRoute: typeof InterludeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/edition': {
-      id: '/edition'
-      path: '/edition'
-      fullPath: '/edition'
-      preLoaderRoute: typeof EditionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dialogue': {
-      id: '/dialogue'
-      path: '/dialogue'
-      fullPath: '/dialogue'
-      preLoaderRoute: typeof DialogueRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/canon': {
@@ -555,8 +515,6 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AuthRoute: AuthRoute,
   CanonRoute: CanonRoute,
-  DialogueRoute: DialogueRoute,
-  EditionRoute: EditionRoute,
   InterludeRoute: InterludeRoute,
   ProofRoute: ProofRoute,
   ApiTranscribeRoute: ApiTranscribeRoute,
@@ -565,3 +523,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
