@@ -147,6 +147,20 @@ function RootComponent() {
     return () => data.subscription.unsubscribe();
   }, [router, queryClient]);
 
+  useEffect(() => {
+    const stored = window.localStorage.getItem("hardcopy-theme");
+    const root = document.documentElement;
+    if (stored === "light") {
+      root.classList.remove("dark");
+    } else if (stored === "dark") {
+      root.classList.add("dark");
+    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
@@ -155,3 +169,4 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
+
