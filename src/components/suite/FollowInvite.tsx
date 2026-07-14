@@ -20,8 +20,12 @@ export function FollowInvite({
   }
 
   return (
-    <div className="mx-auto max-w-md text-center">
-      <p className="font-serif text-lg leading-snug text-foreground/90 sm:text-xl">{prompt}</p>
+    <div className="max-w-md">
+      <p className="font-serif text-2xl leading-tight text-foreground sm:text-3xl">{prompt}</p>
+      <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">
+        Occasional notes when an instrument ships or moves out of development.
+        No newsletter, no cadence.
+      </p>
       {done ? (
         <p className="mt-6 font-serif text-base italic text-muted-foreground">
           Thank you. We'll be in touch when there's something worth telling you about.
@@ -29,7 +33,7 @@ export function FollowInvite({
       ) : (
         <form
           onSubmit={handleSubmit}
-          className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center"
+          className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center"
         >
           <label htmlFor="follow-email" className="sr-only">
             Email address
@@ -41,11 +45,11 @@ export function FollowInvite({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@somewhere.com"
-            className="min-h-11 flex-1 border-0 border-b border-border bg-transparent px-1 py-2 text-center text-base text-foreground placeholder:text-muted-foreground/60 focus:border-foreground focus:outline-none sm:text-left"
+            className="min-h-11 flex-1 border-0 border-b border-border bg-transparent px-1 py-2 text-base text-foreground placeholder:text-muted-foreground/60 focus:border-foreground focus:outline-none"
           />
           <button
             type="submit"
-            className="min-h-11 shrink-0 border-b border-border px-1 py-2 font-serif text-base italic text-foreground transition-colors hover:border-foreground focus-visible:border-foreground focus-visible:outline-none"
+            className="min-h-11 shrink-0 border-b border-border px-1 py-2 text-left font-mono text-[11px] uppercase tracking-[0.22em] text-foreground transition-colors hover:border-foreground focus-visible:border-foreground focus-visible:outline-none sm:text-center"
           >
             Follow →
           </button>
