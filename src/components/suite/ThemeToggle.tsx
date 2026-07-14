@@ -4,26 +4,55 @@ import { Moon, Sun } from "lucide-react";
 type Theme = "light" | "dark";
 const STORAGE_KEY = "hardcopy-theme";
 
+function getSystemTheme(): Theme {
+  if (typeof window === "undefined") return "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function getStoredTheme(): Theme | null {
+  if (typeof window === "undefined") return null;
+  const value = window.localStorage.getItem(STORAGE_KEY);
+  if (value === "light" || value === "dark") return value;
+  return null;
+}
+
 function getInitialTheme(): Theme {
-  if (typeof document === "undefined") return "dark";
+  if (typeof document === "undefined") return getSystemTheme();
   return document.documentElement.classList.contains("dark") ? "dark" : "light";
 }
 
+function applyTheme(theme: Theme) {
+  const root = document.documentElement;
+  if (theme === "dark") root.classList.add("dark");
+  else root.classList.remove("dark");
+}
+
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setTheme(getInitialTheme());
+    const stored = getStoredTheme();
+    const initial = stored ?? getSystemTheme();
+    setTheme(initial);
+    applyTheme(initial);
     setMounted(true);
+
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const listener = (event: MediaQueryListEvent) => {
+      if (getStoredTheme()) return;
+      const next = event.matches ? "dark" : "light";
+      setTheme(next);
+      applyTheme(next);
+    };
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
   }, []);
 
   function toggle() {
     const next: Theme = theme === "dark" ? "light" : "dark";
     setTheme(next);
-    const root = document.documentElement;
-    if (next === "dark") root.classList.add("dark");
-    else root.classList.remove("dark");
+    applyTheme(next);
     try {
       window.localStorage.setItem(STORAGE_KEY, next);
     } catch {
