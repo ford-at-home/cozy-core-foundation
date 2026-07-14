@@ -19,9 +19,7 @@ function SuiteCatalog() {
         className="flex items-start justify-between gap-4 px-6 pt-10 sm:px-10 sm:pt-14"
         style={{ paddingTop: "max(2.5rem, env(safe-area-inset-top))" }}
       >
-        <div className="font-serif text-base tracking-tight text-foreground/90">
-          {brand.company.name}
-        </div>
+        <SiteWordmark />
         <ThemeToggle />
       </header>
 
