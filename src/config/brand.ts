@@ -6,8 +6,6 @@
  * updates every surface that uses it.
  */
 import proofSketch from "@/assets/suite/proof.png";
-import editionSketch from "@/assets/suite/edition.png";
-import dialogueSketch from "@/assets/suite/dialogue.png";
 import interludeSketch from "@/assets/suite/interlude.png";
 import canonSketch from "@/assets/suite/canon.png";
 
@@ -19,7 +17,7 @@ export const brand = {
     line: "Instruments for thinking.",
     /** The broader product philosophy. */
     philosophy: "Different kinds of thinking happen best in different mediums.",
-    category: "A small collection of tools for reading, revising, conversing, reflecting, and remembering.",
+    category: "A small collection of tools for revising, reflecting, and remembering.",
   },
   product: {
     /** Provisional — do not treat as final. */
@@ -30,7 +28,7 @@ export const brand = {
   meta: {
     title: "Hardcopy Tools",
     description:
-      "A small collection of instruments for thinking. Proof, Edition, Dialogue, Interlude, Canon — each embraces a different medium.",
+      "A small collection of instruments for thinking. Proof, Interlude, Canon — each embraces a different medium.",
   },
 } as const;
 
@@ -42,7 +40,7 @@ export function pageTitle(page: string): string {
 export type SuiteStatus = "available" | "beta" | "coming-soon";
 
 export type SuiteProduct = {
-  slug: "proof" | "edition" | "dialogue" | "interlude" | "canon";
+  slug: "proof" | "interlude" | "canon";
   name: string;
   status: SuiteStatus;
   statusLabel: string;
