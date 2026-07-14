@@ -2,7 +2,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { brand, suite } from "@/config/brand";
 import { StatusLabel } from "@/components/suite/StatusLabel";
 import { FollowInvite } from "@/components/suite/FollowInvite";
-import { SiteFooter } from "@/components/suite/SiteChrome";
+import { SiteFooter, SiteWordmark } from "@/components/suite/SiteChrome";
 import { ThemeToggle } from "@/components/suite/ThemeToggle";
 
 export const Route = createFileRoute("/")({
