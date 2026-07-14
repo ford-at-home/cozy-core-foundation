@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -162,8 +162,11 @@ function BillingPage() {
           finished draft as PDF never uses credits.
         </p>
         <p className="mt-2 text-xs text-muted-foreground">
-          Credits are what you spend here. The Cost page tracks underlying model spend in dollars —
-          a separate accounting view, not your balance.
+          Credits are what you spend here. The{" "}
+          <Link to="/sessions" className="underline underline-offset-2 hover:text-foreground">
+            Cost page
+          </Link>{" "}
+          tracks underlying model spend in dollars — a separate accounting view, not your balance.
         </p>
       </div>
 

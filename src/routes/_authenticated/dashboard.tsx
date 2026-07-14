@@ -1,7 +1,13 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { isPacketWorkflowRun, listMyRuns, type AgentRun } from "@/lib/workflows.functions";
+import { useMemo } from "react";
+import {
+  ACTIVE_RUN_STATUSES,
+  isPacketWorkflowRun,
+  listMyRuns,
+  type AgentRun,
+} from "@/lib/workflows.functions";
 import { StatusPill } from "@/components/StatusPill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { brand, pageTitle } from "@/config/brand";
@@ -17,6 +23,33 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   }),
   component: DashboardPage,
 });
+
+type Project = {
+  /** piece_id, or `run:<id>` for the rare pieceless run. */
+  key: string;
+  latest: AgentRun;
+  count: number;
+};
+
+// A short, honest "the ball is in your court" line for longform projects
+// waiting on the author. Returns null while a run is in flight (the status
+// pill already says "Working") and for packets (their hub does the guiding).
+function nextStepHint(run: AgentRun): string | null {
+  if (ACTIVE_RUN_STATUSES.includes(run.status)) return null;
+  if (run.status !== "completed") return null;
+  if (isPacketWorkflowRun(run)) return null;
+  switch (run.kind) {
+    case "proposal":
+    case "resynth":
+      return "Your turn — approve the proposal or resynth it.";
+    case "draft":
+      return "Your turn — print it, mark it up, and dictate your changes.";
+    case "revision":
+      return "Your turn — approve the final version, or mark it up again.";
+    default:
+      return null;
+  }
+}
 
 function DashboardPage() {
   const fetchRuns = useServerFn(listMyRuns);
@@ -56,7 +89,31 @@ function DashboardPage() {
     return SHARED_STAGE_LABELS[draftRunToShared(run.kind, run.status, false)];
   }
 
-  const runs = data?.runs ?? [];
+  const runs = useMemo(() => data?.runs ?? [], [data]);
+
+  // Group runs into projects (one piece = one journey) so a longform piece's
+  // research → proposal → draft → revision reads as a single row instead of
+  // several. Runs without a piece (rare) stand alone. Ordered by latest
+  // activity; the latest run of each project drives the row and the tap target.
+  const projects = useMemo<Project[]>(() => {
+    const groups = new Map<string, AgentRun[]>();
+    for (const r of runs) {
+      const key = r.piece_id ?? `run:${r.id}`;
+      const existing = groups.get(key);
+      if (existing) existing.push(r);
+      else groups.set(key, [r]);
+    }
+    return Array.from(groups.entries())
+      .map(([key, group]) => {
+        const sorted = [...group].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
+        return { key, latest: sorted[0], count: group.length };
+      })
+      .sort(
+        (a, b) => new Date(b.latest.created_at).getTime() - new Date(a.latest.created_at).getTime(),
+      );
+  }, [runs]);
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -66,7 +123,7 @@ function DashboardPage() {
             {brand.product.name}
           </p>
           <h1 className="mt-1 font-serif text-3xl tracking-tight sm:text-5xl">Dashboard</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Your 20 most recent projects.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Your most recent projects.</p>
         </div>
         <button
           type="button"
@@ -155,29 +212,36 @@ function DashboardPage() {
         {!isLoading && !error && runs.length > 0 && (
           <>
             <ul className="divide-y divide-border md:hidden">
-              {runs.map((r) => (
-                <li key={r.id}>
-                  <button
-                    type="button"
-                    onClick={() => openRun(r)}
-                    className="flex w-full min-h-14 flex-col gap-2 px-4 py-3.5 text-left transition-colors active:bg-accent/50 focus-visible:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm font-medium">
-                        <span className="capitalize">{runStage(r)}</span>
-                        <span className="ml-2 text-xs font-normal capitalize text-muted-foreground">
-                          {runLabel(r)}
+              {projects.map((p) => {
+                const r = p.latest;
+                const hint = nextStepHint(r);
+                return (
+                  <li key={p.key}>
+                    <button
+                      type="button"
+                      onClick={() => openRun(r)}
+                      className="flex w-full min-h-14 flex-col gap-2 px-4 py-3.5 text-left transition-colors active:bg-accent/50 focus-visible:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-medium">
+                          <span className="capitalize">{runStage(r)}</span>
+                          <span className="ml-2 text-xs font-normal capitalize text-muted-foreground">
+                            {runLabel(r)}
+                          </span>
                         </span>
-                      </span>
-                      <StatusPill status={r.status} />
-                    </div>
-                    <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                      <time dateTime={r.created_at}>{new Date(r.created_at).toLocaleString()}</time>
-                      <span className="font-mono">{r.id.slice(0, 8)}</span>
-                    </div>
-                  </button>
-                </li>
-              ))}
+                        <StatusPill status={r.status} />
+                      </div>
+                      {hint && <p className="text-xs text-primary/90">{hint}</p>}
+                      <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                        <time dateTime={r.created_at}>
+                          {new Date(r.created_at).toLocaleString()}
+                        </time>
+                        {p.count > 1 && <span>{p.count} steps</span>}
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
 
             <div className="hidden overflow-x-auto md:block">
@@ -197,39 +261,46 @@ function DashboardPage() {
                       Status
                     </th>
                     <th scope="col" className="px-5 py-3 font-medium">
-                      ID
+                      Steps
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {runs.map((r) => (
-                    <tr
-                      key={r.id}
-                      tabIndex={0}
-                      role="link"
-                      aria-label={`Open ${runLabel(r)} run ${r.id.slice(0, 8)}, ${r.status}`}
-                      onClick={() => openRun(r)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          openRun(r);
-                        }
-                      }}
-                      className="cursor-pointer border-b border-border/60 transition-colors last:border-0 hover:bg-accent/40 focus-visible:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50"
-                    >
-                      <td className="px-5 py-3.5 whitespace-nowrap">
-                        {new Date(r.created_at).toLocaleString()}
-                      </td>
-                      <td className="px-5 py-3.5">{runStage(r)}</td>
-                      <td className="px-5 py-3.5 text-muted-foreground">{runLabel(r)}</td>
-                      <td className="px-5 py-3.5">
-                        <StatusPill status={r.status} />
-                      </td>
-                      <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">
-                        {r.id.slice(0, 8)}
-                      </td>
-                    </tr>
-                  ))}
+                  {projects.map((p) => {
+                    const r = p.latest;
+                    const hint = nextStepHint(r);
+                    return (
+                      <tr
+                        key={p.key}
+                        tabIndex={0}
+                        role="link"
+                        aria-label={`Open ${runLabel(r)} project, ${r.status}`}
+                        onClick={() => openRun(r)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            openRun(r);
+                          }
+                        }}
+                        className="cursor-pointer border-b border-border/60 transition-colors last:border-0 hover:bg-accent/40 focus-visible:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50"
+                      >
+                        <td className="px-5 py-3.5 whitespace-nowrap">
+                          {new Date(r.created_at).toLocaleString()}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <div>{runStage(r)}</div>
+                          {hint && <div className="mt-0.5 text-xs text-primary/80">{hint}</div>}
+                        </td>
+                        <td className="px-5 py-3.5 text-muted-foreground">{runLabel(r)}</td>
+                        <td className="px-5 py-3.5">
+                          <StatusPill status={r.status} />
+                        </td>
+                        <td className="px-5 py-3.5 tabular-nums text-muted-foreground">
+                          {p.count}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -12,7 +12,8 @@ renaming them would misdescribe what the system does.
 | Header wordmark (`_authenticated/route.tsx`) | "C" monogram + "Compose" | Folded-page glyph + "Hardcopy Tools"                                         | Company brand                         |
 | Nav "Dashboard"                              | Dashboard                | **retained**                                                                 | Accurate                              |
 | Nav "New piece"                              | New piece                | New draft                                                                    | "Draft" is the product's unit of work |
-| Nav "Cost"                                   | Cost                     | **retained**                                                                 | Accurate, honest                      |
+| Nav "Cost"                                   | Cost                     | **moved off the tab bar** → link on the Billing page (`/sessions` unchanged) | Credits, not USD accounting, are the customer-facing currency; Cost is an observability view |
+| Nav "Billing"                                | —                        | **added** (mobile short label "Credits")                                     | Credits are what users spend; they deserve a primary destination, not only the header chip |
 | Nav "Profile"                                | Profile                  | **retained**                                                                 | Accurate                              |
 | Root `<title>`/OG (`__root.tsx`)             | "Compose" / sign-in copy | "Hardcopy Tools \| AI That Knows When to Disappear" + brand meta description | Brand metadata                        |
 | 404 / error pages                            | generic                  | **retained** (already calm and clear)                                        | No brand value in touching them       |
