@@ -9,6 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ProofRouteImport } from './routes/proof'
+import { Route as InterludeRouteImport } from './routes/interlude'
+import { Route as EditionRouteImport } from './routes/edition'
+import { Route as DialogueRouteImport } from './routes/dialogue'
+import { Route as CanonRouteImport } from './routes/canon'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -28,6 +33,31 @@ import { Route as AuthenticatedPrintRunIdRouteImport } from './routes/_authentic
 import { Route as AuthenticatedPacketRunIdRouteImport } from './routes/_authenticated/packet.$runId'
 import { Route as AuthenticatedFollowupPacketIdRouteImport } from './routes/_authenticated/followup.$packetId'
 
+const ProofRoute = ProofRouteImport.update({
+  id: '/proof',
+  path: '/proof',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InterludeRoute = InterludeRouteImport.update({
+  id: '/interlude',
+  path: '/interlude',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EditionRoute = EditionRouteImport.update({
+  id: '/edition',
+  path: '/edition',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DialogueRoute = DialogueRouteImport.update({
+  id: '/dialogue',
+  path: '/dialogue',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CanonRoute = CanonRouteImport.update({
+  id: '/canon',
+  path: '/canon',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -127,6 +157,11 @@ const AuthenticatedFollowupPacketIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/canon': typeof CanonRoute
+  '/dialogue': typeof DialogueRoute
+  '/edition': typeof EditionRoute
+  '/interlude': typeof InterludeRoute
+  '/proof': typeof ProofRoute
   '/billing': typeof AuthenticatedBillingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/new': typeof AuthenticatedNewRoute
@@ -146,6 +181,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/canon': typeof CanonRoute
+  '/dialogue': typeof DialogueRoute
+  '/edition': typeof EditionRoute
+  '/interlude': typeof InterludeRoute
+  '/proof': typeof ProofRoute
   '/billing': typeof AuthenticatedBillingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/new': typeof AuthenticatedNewRoute
@@ -167,6 +207,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/canon': typeof CanonRoute
+  '/dialogue': typeof DialogueRoute
+  '/edition': typeof EditionRoute
+  '/interlude': typeof InterludeRoute
+  '/proof': typeof ProofRoute
   '/_authenticated/billing': typeof AuthenticatedBillingRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/new': typeof AuthenticatedNewRoute
@@ -188,6 +233,11 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/canon'
+    | '/dialogue'
+    | '/edition'
+    | '/interlude'
+    | '/proof'
     | '/billing'
     | '/dashboard'
     | '/new'
@@ -207,6 +257,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/canon'
+    | '/dialogue'
+    | '/edition'
+    | '/interlude'
+    | '/proof'
     | '/billing'
     | '/dashboard'
     | '/new'
@@ -227,6 +282,11 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/canon'
+    | '/dialogue'
+    | '/edition'
+    | '/interlude'
+    | '/proof'
     | '/_authenticated/billing'
     | '/_authenticated/dashboard'
     | '/_authenticated/new'
@@ -248,12 +308,52 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  CanonRoute: typeof CanonRoute
+  DialogueRoute: typeof DialogueRoute
+  EditionRoute: typeof EditionRoute
+  InterludeRoute: typeof InterludeRoute
+  ProofRoute: typeof ProofRoute
   ApiTranscribeRoute: typeof ApiTranscribeRoute
   ApiPublicGenerateImageRoute: typeof ApiPublicGenerateImageRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/proof': {
+      id: '/proof'
+      path: '/proof'
+      fullPath: '/proof'
+      preLoaderRoute: typeof ProofRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/interlude': {
+      id: '/interlude'
+      path: '/interlude'
+      fullPath: '/interlude'
+      preLoaderRoute: typeof InterludeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/edition': {
+      id: '/edition'
+      path: '/edition'
+      fullPath: '/edition'
+      preLoaderRoute: typeof EditionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dialogue': {
+      id: '/dialogue'
+      path: '/dialogue'
+      fullPath: '/dialogue'
+      preLoaderRoute: typeof DialogueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/canon': {
+      id: '/canon'
+      path: '/canon'
+      fullPath: '/canon'
+      preLoaderRoute: typeof CanonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -433,6 +533,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  CanonRoute: CanonRoute,
+  DialogueRoute: DialogueRoute,
+  EditionRoute: EditionRoute,
+  InterludeRoute: InterludeRoute,
+  ProofRoute: ProofRoute,
   ApiTranscribeRoute: ApiTranscribeRoute,
   ApiPublicGenerateImageRoute: ApiPublicGenerateImageRoute,
 }
