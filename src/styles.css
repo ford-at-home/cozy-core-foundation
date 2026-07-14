@@ -69,7 +69,7 @@
 :root {
   /* Editorial light theme — eggshell paper with warm ink and muted amber accent. */
   --radius: 0.5rem;
-  --background: oklch(0.97 0.008 85);
+  --background: oklch(0.972 0.004 82);
   --foreground: oklch(0.22 0.012 60);
   --card: oklch(0.985 0.006 85);
   --card-foreground: oklch(0.22 0.012 60);
@@ -110,7 +110,7 @@
 
 .dark {
   /* Editorial dark theme — warm charcoal paper with muted amber accent. */
-  --background: oklch(0.16 0.008 60);
+  --background: oklch(0.09 0.004 82);
   --foreground: oklch(0.94 0.012 80);
   --card: oklch(0.195 0.009 60);
   --card-foreground: oklch(0.94 0.012 80);
