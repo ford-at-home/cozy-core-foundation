@@ -34,7 +34,7 @@ export function ProductPage({
             loading="lazy"
             width={1024}
             height={1024}
-            className="mx-auto block h-auto w-full mix-blend-screen opacity-90"
+            className="mx-auto block h-auto w-full"
           />
         </figure>
 
