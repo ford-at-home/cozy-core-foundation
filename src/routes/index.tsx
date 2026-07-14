@@ -23,6 +23,12 @@ function SuiteCatalog() {
         <ThemeToggle />
       </header>
 
+      <section className="border-t border-border/40 px-6 pt-16 sm:px-10 sm:pt-24">
+        <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+          A small collection of instruments for thinking
+        </p>
+      </section>
+
       <section className="border-t border-border/40">
         <ol className="mx-auto max-w-5xl">
           {suite.map((product, i) => (
