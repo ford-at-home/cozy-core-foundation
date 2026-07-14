@@ -145,11 +145,26 @@
 /* Sketches are dark ink on paper. In dark mode, flip to light ink on charcoal
    so they read as reverse-contrast plates rather than glowing white blocks. */
 .suite-sketch {
-  transition: filter 200ms ease;
+  transition: filter 400ms ease;
 }
 .dark .suite-sketch {
   filter: invert(1) hue-rotate(180deg);
 }
+
+/* Theme transitions: quiet, color-only fades that respect reduced motion. */
+html,
+body {
+  transition: background-color 400ms ease, color 400ms ease, border-color 400ms ease, fill 400ms ease, stroke 400ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html,
+  body,
+  .suite-sketch {
+    transition: none !important;
+  }
+}
+
 
 @layer base {
   * {
