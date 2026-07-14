@@ -22,7 +22,7 @@ export function SiteWordmark({ align = "left" }: { align?: "left" | "center" }) 
         loading="eager"
         width={128}
         height={77}
-        className="block h-9 w-auto dark:hidden sm:h-10"
+        className="block h-12 w-auto dark:hidden sm:h-16"
       />
       <img
         src={logoDark.url}
@@ -30,7 +30,7 @@ export function SiteWordmark({ align = "left" }: { align?: "left" | "center" }) 
         loading="eager"
         width={128}
         height={77}
-        className="hidden h-9 w-auto dark:block sm:h-10"
+        className="hidden h-12 w-auto dark:block sm:h-16"
       />
     </Link>
   );
