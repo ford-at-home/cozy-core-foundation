@@ -3,6 +3,7 @@ import { brand, suite } from "@/config/brand";
 import { StatusLabel } from "@/components/suite/StatusLabel";
 import { FollowInvite } from "@/components/suite/FollowInvite";
 import { SiteFooter } from "@/components/suite/SiteChrome";
+import { ThemeToggle } from "@/components/suite/ThemeToggle";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -15,12 +16,13 @@ function SuiteCatalog() {
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <header
-        className="px-6 pt-10 sm:px-10 sm:pt-14"
+        className="flex items-start justify-between gap-4 px-6 pt-10 sm:px-10 sm:pt-14"
         style={{ paddingTop: "max(2.5rem, env(safe-area-inset-top))" }}
       >
         <div className="font-serif text-base tracking-tight text-foreground/90">
           {brand.company.name}
         </div>
+        <ThemeToggle />
       </header>
 
       <section className="px-6 pb-16 pt-16 sm:px-10 sm:pb-24 sm:pt-28">
@@ -79,7 +81,7 @@ function SuiteCatalog() {
                     loading="lazy"
                     width={1024}
                     height={1024}
-                    className="mx-auto block h-auto w-full max-w-[16rem] sm:max-w-none"
+                    className="suite-sketch mx-auto block h-auto w-full max-w-[16rem] sm:max-w-none"
                   />
                 </div>
               </Link>

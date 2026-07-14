@@ -116,9 +116,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  const themeInit = `(function(){try{var t=localStorage.getItem('hardcopy-theme');if(t!=='light'){document.documentElement.classList.add('dark')}}catch(e){document.documentElement.classList.add('dark')}})();`;
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
         <HeadContent />
       </head>
       <body>
