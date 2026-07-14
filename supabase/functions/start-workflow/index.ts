@@ -311,6 +311,7 @@ async function handle(req: Request, rid: string): Promise<Response> {
     provider: resolveProvider(),
     runId,
     prompt,
+    researchChars: research.length,
     ref: Deno.env.get("AGENT_REPO_REF") ?? "main",
     autoCreatePr: false, // proposal/packet runs push a branch only; no PR moment here
   });

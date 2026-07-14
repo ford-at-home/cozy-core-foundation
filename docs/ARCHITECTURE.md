@@ -231,6 +231,12 @@ USD **cost accounting** for provider spend (separate from user credits below):
 - Pricing precedence: `provider_reported → fixed_task_price → calculated →
 estimated → manual` (`_shared/usage.ts` `computeCost`).
 - Rollups happen in DB triggers only.
+- **Cost proxies / planning targets (repo-side, apply via WI-0010):**
+  `agent_runs.cost_proxies` (JSON rollup from input + inferences) and
+  `workflow_cost_targets` (editable planning budgets). Dispatch stores
+  `research_chars` on run `input` for calibration. Monthly invoice
+  procedure: `docs/COST-CALIBRATION.md`. UI that surfaces budgets/proxies
+  is a follow-up Cursor PR after types are regenerated.
 - Lovable workspace AI credits are **external**; the app only surfaces the
   gateway's 402 ("Out of AI credits") in `/api/transcribe` and `profile.tsx`.
 

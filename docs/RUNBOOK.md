@@ -105,3 +105,9 @@ Credits, Stripe setup, the test-mode plan, admin adjustments, and money
 failure scenarios live in [docs/BILLING.md](BILLING.md). Required secrets:
 `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `APP_PUBLIC_URL`; optional
 `CREDITS_MODE=log` as the incident lever that meters without blocking.
+
+USD cost accounting (provider spend, separate from user credits) and the
+monthly invoice calibration procedure live in
+[docs/COST-CALIBRATION.md](COST-CALIBRATION.md). Schema:
+`workflow_cost_targets` + `agent_runs.cost_proxies`
+(`20260714080000_cost_proxies_and_targets.sql`, apply via WI-0010).

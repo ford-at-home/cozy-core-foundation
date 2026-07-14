@@ -5,7 +5,7 @@ free ID is claimed by adding its row here in the same commit as the request
 file**. Never reuse an ID. Update rows via attributed entries in the log
 below — the table row shows current state; the log preserves history.
 
-**Next free ID: WI-0010**
+**Next free ID: WI-0012**
 
 | ID      | Title                                                          | Owner   | Requester | Status           | Priority | Depends on | Request file                                                                                                        | Result file                                                                                                                                  | Updated    |
 | ------- | -------------------------------------------------------------- | ------- | --------- | ---------------- | -------- | ---------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
@@ -18,6 +18,8 @@ below — the table row shows current state; the log preserves history.
 | WI-0007 | Verify Edge Function redeploy after phase C3 + C7 (L6)         | lovable | cursor    | completed        | P0       | —          | [WI-0007 request](../lovable/completed/WI-0007-deploy-verification-c3.md)                                           | [WI-0007 results](../lovable/outbox/WI-0007-deploy-verification-c3-results.md)                                                               | 2026-07-13 |
 | WI-0008 | Apply + verify the phase C4 schema reconciliation (L5)         | lovable | cursor    | requested        | P0       | WI-0006    | [WI-0008 request](../lovable/inbox/WI-0008-apply-c4-schema-reconciliation.md)                                       | (pending)                                                                                                                                    | 2026-07-13 |
 | WI-0009 | Apply + verify the phase C8 duration fix + stats view          | lovable | cursor    | requested        | P0       | WI-0008    | [WI-0009 request](../lovable/inbox/WI-0009-apply-c8-duration-stats.md)                                              | (pending)                                                                                                                                    | 2026-07-13 |
+| WI-0010 | Apply cost-proxies migration + deploy dispatch + regen types   | lovable | cursor    | requested        | P1       | WI-0008    | [WI-0010 request](../lovable/inbox/WI-0010-apply-cost-proxies-and-targets.md)                                       | [Cursor step1](../cursor/outbox/WI-0010-cost-proxies-step1-results.md) · Lovable apply (pending)                                              | 2026-07-14 |
+| WI-0011 | Cost calibration UI (SessionCostBanner, proxies, budgets)      | cursor  | cursor    | draft            | P1       | WI-0010    | [WI-0011 plan](../cursor/outbox/WI-0011-cost-calibration-ui-plan.md)                                                | (blocked on WI-0010)                                                                                                                         | 2026-07-14 |
 
 The Cursor-side hardening phases (C1–C9 in
 [PLAN-CURSOR-AGENT.md](../../PLAN-CURSOR-AGENT.md)) will be registered as
@@ -25,6 +27,21 @@ work items when each phase begins, so that cross-agent dependencies (C4
 needs L3; C6 needs L2+L5; C8 needs L7) are tracked here explicitly.
 
 ## Log
+
+### 2026-07-14 — WI-0010 + WI-0011 — Cursor
+
+Reviving buried PR #4 (cost calibration) in two steps so the client never
+selects `cost_proxies` before it exists live:
+
+1. **WI-0010 (Lovable)** — apply `20260714080000_cost_proxies_and_targets.sql`,
+   deploy `start-workflow` / `piece-action` / `reconcile-runs` (research_chars
+   at dispatch), regenerate `src/integrations/supabase/types.ts`.
+2. **WI-0011 (Cursor, draft/blocked)** — SessionCostBanner, budget badges,
+   RunCostCard proxies, dashboard cost column — only after WI-0010 evidence.
+
+Repo Step 1 also adds `docs/COST-CALIBRATION.md` and dispatch `researchChars`.
+Gateway pricing from the old PR was already superseded by C4's
+`20260713180100_gateway_pricing_seed.sql` — not re-applied.
 
 ### 2026-07-13 — WI-0009 — Cursor
 
