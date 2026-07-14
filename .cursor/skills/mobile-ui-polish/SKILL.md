@@ -47,8 +47,11 @@ feature.
   `src/routes/_authenticated/billing.tsx` (packs, purchase history, ledger,
   and the `?status=success|canceled` checkout-return banners), and the
   inline out-of-credits banners in `new.tsx` / `runs.$runId.tsx` driven by
-  `src/lib/use-credits.ts`. Billing is **not** in the bottom tab bar; the
-  chip is the mobile entry point — do not remove or shrink it below `min-h-11`.
+  `src/lib/use-credits.ts`. **Billing is a primary nav tab** (mobile short
+  label "Credits", `CreditCard` icon) in `route.tsx`; the header balance chip
+  stays as the at-a-glance balance indicator alongside it — do not remove or
+  shrink it below `min-h-11`. USD cost accounting (`/sessions`) is **not** in
+  the tab bar; it is reached from a link on the billing page.
 
 ## Repository conventions (verified — follow these exactly)
 

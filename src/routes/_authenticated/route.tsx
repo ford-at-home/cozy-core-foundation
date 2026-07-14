@@ -1,5 +1,5 @@
 import { Link, Outlet, createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, PenLine, CircleDollarSign, User } from "lucide-react";
+import { LayoutDashboard, PenLine, CreditCard, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { brand } from "@/config/brand";
@@ -16,10 +16,13 @@ export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
 });
 
+// Credits — the currency users actually spend — sits in the primary nav.
+// USD cost accounting (/sessions) is an observability view, reachable from
+// the Billing page rather than the tab bar.
 const NAV_LINKS = [
   { to: "/dashboard" as const, label: "Dashboard", short: "Home", icon: LayoutDashboard },
   { to: "/new" as const, label: "New draft", short: "New", icon: PenLine },
-  { to: "/sessions" as const, label: "Cost", short: "Cost", icon: CircleDollarSign },
+  { to: "/billing" as const, label: "Billing", short: "Credits", icon: CreditCard },
   { to: "/profile" as const, label: "Profile", short: "Profile", icon: User },
 ];
 
