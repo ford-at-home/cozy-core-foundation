@@ -5,11 +5,11 @@
  * When the final product name is approved, changing `product.name` here
  * updates every surface that uses it.
  */
-import proofSketch from "@/assets/suite/proof.jpg";
-import editionSketch from "@/assets/suite/edition.jpg";
-import dialogueSketch from "@/assets/suite/dialogue.jpg";
-import interludeSketch from "@/assets/suite/interlude.jpg";
-import canonSketch from "@/assets/suite/canon.jpg";
+import proofSketch from "@/assets/suite/proof.png";
+import editionSketch from "@/assets/suite/edition.png";
+import dialogueSketch from "@/assets/suite/dialogue.png";
+import interludeSketch from "@/assets/suite/interlude.png";
+import canonSketch from "@/assets/suite/canon.png";
 
 export const brand = {
   company: {
@@ -83,7 +83,7 @@ export const suite: readonly SuiteProduct[] = [
     description:
       "Give a long piece the treatment a book gives it — careful typesetting, generous margins, a real cover. Edition prepares work for the way people actually read when the interface goes away.",
     sketch: editionSketch,
-    sketchAlt: "A graphite sketch of a small bound book, open to a page of typeset text.",
+    sketchAlt: "A graphite sketch of a compact e-reader showing the opening page of a chapter.",
     href: "/edition",
   },
   {
@@ -98,7 +98,7 @@ export const suite: readonly SuiteProduct[] = [
     description:
       "Dialogue calls at a time you choose and asks the questions you would ask yourself if you remembered to. No screen, no chat window — just a voice, a few minutes, and a clearer sense of what matters this week.",
     sketch: dialogueSketch,
-    sketchAlt: "A graphite sketch of a rotary telephone handset resting on a small notebook.",
+    sketchAlt: "A graphite sketch of a small desk telephone with a lifted handset.",
     href: "/dialogue",
   },
   {
@@ -114,7 +114,7 @@ export const suite: readonly SuiteProduct[] = [
       "Interlude sits at the edge of the room. It listens on the device, holds its tongue, and — perhaps once in a long meeting — offers a single question. Its intelligence is restraint.",
     sketch: interludeSketch,
     sketchAlt:
-      "A graphite sketch of two simple wooden chairs facing each other across a small round table.",
+      "A graphite sketch of a small triangular listening device sitting quietly on a table.",
     href: "/interlude",
   },
   {
@@ -130,7 +130,7 @@ export const suite: readonly SuiteProduct[] = [
       "Canon distills what a group agreed on into a small, beautifully crafted physical object — a bound booklet, an engraved plaque, a printed card set — so the shared principles stay in the room long after everyone leaves it.",
     sketch: canonSketch,
     sketchAlt:
-      "A graphite sketch of a small cloth-bound book beside an engraved brass plaque bearing a short inscription.",
+      "A graphite sketch of a wooden tablet inscribed with a short list of tenets.",
     href: "/canon",
   },
 ] as const;
