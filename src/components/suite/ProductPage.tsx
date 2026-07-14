@@ -4,6 +4,7 @@ import { brand, type SuiteProduct } from "@/config/brand";
 import { StatusLabel } from "./StatusLabel";
 import { SiteWordmark, SiteFooter } from "./SiteChrome";
 import { FollowInvite } from "./FollowInvite";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function ProductPage({
   product,
@@ -14,8 +15,9 @@ export function ProductPage({
 }) {
   return (
     <div className="min-h-dvh bg-background text-foreground">
-      <header className="px-6 pt-8 sm:px-10 sm:pt-10">
+      <header className="flex items-center justify-between gap-4 px-6 pt-8 sm:px-10 sm:pt-10">
         <SiteWordmark />
+        <ThemeToggle />
       </header>
 
       <main className="mx-auto max-w-3xl px-6 pb-16 pt-16 sm:px-10 sm:pb-24 sm:pt-24">
@@ -34,7 +36,7 @@ export function ProductPage({
             loading="lazy"
             width={1024}
             height={1024}
-            className="mx-auto block h-auto w-full"
+            className="suite-sketch mx-auto block h-auto w-full"
           />
         </figure>
 
