@@ -70,21 +70,6 @@ export const suite: readonly SuiteProduct[] = [
     href: "/proof",
   },
   {
-    slug: "edition",
-    name: "Edition",
-    status: "beta",
-    statusLabel: "Beta",
-    oneLine:
-      "Transform reports, articles, research, and long-form writing into beautiful offline reading editions designed for focused attention.",
-    medium: "Books.",
-    why: "Because attention deepens when a text is bound and finite.",
-    description:
-      "Give a long piece the treatment a book gives it — careful typesetting, generous margins, a real cover. Edition prepares work for the way people actually read when the interface goes away.",
-    sketch: editionSketch,
-    sketchAlt: "A graphite sketch of a compact e-reader showing the opening page of a chapter.",
-    href: "/edition",
-  },
-  {
     slug: "dialogue",
     name: "Dialogue",
     status: "coming-soon",
