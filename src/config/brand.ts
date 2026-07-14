@@ -5,6 +5,12 @@
  * When the final product name is approved, changing `product.name` here
  * updates every surface that uses it.
  */
+import proofSketch from "@/assets/suite/proof.jpg";
+import editionSketch from "@/assets/suite/edition.jpg";
+import dialogueSketch from "@/assets/suite/dialogue.jpg";
+import interludeSketch from "@/assets/suite/interlude.jpg";
+import canonSketch from "@/assets/suite/canon.jpg";
+
 export const brand = {
   company: {
     name: "Hardcopy Tools",
@@ -32,12 +38,6 @@ export const brand = {
 export function pageTitle(page: string): string {
   return `${page} — ${brand.product.name}`;
 }
-
-import proofSketch from "@/assets/suite/proof.jpg";
-import editionSketch from "@/assets/suite/edition.jpg";
-import dialogueSketch from "@/assets/suite/dialogue.jpg";
-import interludeSketch from "@/assets/suite/interlude.jpg";
-import canonSketch from "@/assets/suite/canon.jpg";
 
 export type SuiteStatus = "available" | "beta" | "coming-soon";
 
