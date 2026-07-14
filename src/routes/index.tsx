@@ -16,21 +16,53 @@ function SuiteCatalog() {
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <header
-        className="flex items-start justify-between gap-4 px-6 pt-10 sm:px-10 sm:pt-14"
+        className="flex items-start justify-between gap-4 border-b border-border/40 px-6 pb-6 pt-10 sm:px-10 sm:pb-8 sm:pt-14"
         style={{ paddingTop: "max(2.5rem, env(safe-area-inset-top))" }}
       >
-        <SiteWordmark />
+        <div className="flex flex-col gap-3">
+          <SiteWordmark />
+          <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/70">
+            Index · v01 · {new Date().getFullYear()}
+          </span>
+        </div>
         <ThemeToggle />
       </header>
 
-      <section className="border-t border-border/40 px-6 pt-16 sm:px-10 sm:pt-24">
-        <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-          A small collection of instruments for thinking
+      <section className="mx-auto grid max-w-5xl gap-10 px-6 pb-20 pt-16 sm:px-10 sm:pb-28 sm:pt-24 md:grid-cols-[10rem_minmax(0,1fr)] md:gap-16">
+        <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/80">
+          000 · Overview
         </p>
+        <div className="max-w-2xl">
+          <h1 className="font-serif text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl md:text-6xl">
+            Five instruments,
+            <br />
+            each shaped around one place a mind works well.
+          </h1>
+          <p className="mt-8 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
+            Different kinds of thinking happen best in different mediums —
+            paper, books, conversation, shared reflection, physical
+            artifacts. The suite is small on purpose.
+          </p>
+          <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/70">
+            <span>01 Available</span>
+            <span aria-hidden className="text-border">/</span>
+            <span>01 Beta</span>
+            <span aria-hidden className="text-border">/</span>
+            <span>03 In development</span>
+          </div>
+        </div>
       </section>
 
       <section className="border-t border-border/40">
-        <ol className="mx-auto max-w-5xl">
+        <div className="mx-auto flex max-w-5xl items-baseline justify-between gap-6 px-6 pb-6 pt-10 sm:px-10">
+          <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/80">
+            The suite
+          </span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/60">
+            001 — 005
+          </span>
+        </div>
+        <ol className="mx-auto max-w-5xl border-t border-border/40">
           {suite.map((product, i) => (
             <li
               key={product.slug}
@@ -44,16 +76,19 @@ function SuiteCatalog() {
                 className="group grid grid-cols-1 gap-8 px-6 py-12 transition-colors hover:bg-accent/20 focus-visible:bg-accent/20 sm:grid-cols-[minmax(0,1fr)_18rem] sm:items-center sm:gap-14 sm:px-10 sm:py-16"
               >
                 <div>
-                  <div className="flex items-baseline gap-4">
-                    <span className="font-mono text-[11px] text-muted-foreground/60">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <h2 className="font-serif text-4xl leading-none tracking-tight text-foreground sm:text-5xl">
-                      {product.name}
-                    </h2>
+                  <div className="flex items-center gap-4 font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/70">
+                    <span>{String(i + 1).padStart(3, "0")}</span>
+                    <span aria-hidden className="h-px w-6 bg-border" />
+                    <span>Medium · {product.medium.replace(/\.$/, "")}</span>
                   </div>
+                  <h2 className="mt-4 font-serif text-4xl leading-none tracking-tight text-foreground sm:text-5xl">
+                    {product.name}
+                  </h2>
                   <p className="mt-5 max-w-md text-[15px] leading-relaxed text-muted-foreground">
                     {product.oneLine}
+                  </p>
+                  <p className="mt-4 max-w-md border-l border-border pl-4 font-serif text-[15px] italic leading-snug text-foreground/70">
+                    {product.why}
                   </p>
                   <div className="mt-6 flex items-center gap-4">
                     <StatusLabel status={product.status} label={product.statusLabel} />
@@ -78,8 +113,13 @@ function SuiteCatalog() {
         </ol>
       </section>
 
-      <section className="px-6 py-24 sm:py-32">
-        <FollowInvite />
+      <section className="mx-auto grid max-w-5xl gap-10 px-6 py-24 sm:px-10 sm:py-32 md:grid-cols-[10rem_minmax(0,1fr)] md:gap-16">
+        <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/80">
+          006 · Follow
+        </p>
+        <div className="max-w-xl">
+          <FollowInvite />
+        </div>
       </section>
 
       <SiteFooter />

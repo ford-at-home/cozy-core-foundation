@@ -39,10 +39,22 @@ export function SiteWordmark({ align = "left" }: { align?: "left" | "center" }) 
 export function SiteFooter() {
   return (
     <footer
-      className="px-6 pb-12 pt-8 text-center text-[11px] uppercase tracking-[0.22em] text-muted-foreground/70"
+      className="border-t border-border/40 px-6 pb-12 pt-10 sm:px-10"
       style={{ paddingBottom: "max(3rem, env(safe-area-inset-bottom))" }}
     >
-      {brand.company.name} · {brand.company.domain}
+      <div className="mx-auto grid max-w-5xl gap-10 md:grid-cols-[10rem_minmax(0,1fr)_auto] md:gap-16">
+        <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/70">
+          Colophon
+        </span>
+        <p className="max-w-md text-[13px] leading-relaxed text-muted-foreground">
+          {brand.company.name} is a small studio building instruments for
+          thinking. Each tool is designed, made, and quietly maintained here.
+        </p>
+        <div className="flex flex-col gap-2 font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/70 md:text-right">
+          <span>{brand.company.domain}</span>
+          <span>© {new Date().getFullYear()} {brand.company.name}</span>
+        </div>
+      </div>
     </footer>
   );
 }
