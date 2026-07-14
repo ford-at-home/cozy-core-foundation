@@ -169,3 +169,35 @@ the only one declaring its own billing-adjacent or layout-critical work sound):
 | `mobile-ux-reviewer`         | touch targets, overflow, safe areas, keyboard/zoom behavior            |
 | `print-layout-reviewer`      | page geometry, anchor sync, pagination, PDF config                     |
 | `backend-integrity-reviewer` | RLS, idempotency, secret boundaries, state-machine and cost invariants |
+
+## Cursor Cloud specific instructions
+
+Durable, non-obvious notes for agents in the Cursor Cloud VM. Standard commands
+are in `README.md`, `package.json` scripts, and `docs/ARCHITECTURE.md`
+("Validation commands"); don't duplicate them here.
+
+- **Dev server / port.** `npm run dev` serves on **`http://localhost:8080`**
+  (not Vite's default 5173) — this is the URL to point the browser at.
+- **Backend is live and remote.** There is no local database or Supabase to
+  start. `.env` ships publishable Supabase values pointing at the hosted Lovable
+  Cloud project, so `npm run dev` talks to the real backend out of the box.
+  Server-side secrets (service role, Stripe, provider keys) are **not** in the
+  repo and can't be set from here (`docs/CONFIGURATION.md`), so Edge-Function-
+  backed flows (generation, billing, packet returns) can't be exercised locally.
+- **Auth requires email confirmation.** New signups via `/auth` succeed against
+  the live backend but return "Check your email to confirm your account" and
+  create **no session** — so the `_authenticated/*` routes (dashboard, /new,
+  billing, print, etc.) are unreachable without a **pre-confirmed** account.
+  Full signed-in end-to-end testing needs test-login credentials for a confirmed
+  user (there is no way to confirm the email or reach the Supabase dashboard
+  from this VM).
+- **Deno is required for `npm run test:functions`.** It is preinstalled at
+  `~/.deno/bin` and added to `PATH` via `~/.bashrc`; if `deno` is not found in a
+  fresh shell, run `export PATH="$HOME/.deno/bin:$PATH"`. This is intentionally
+  kept out of the update script (system tool, not a project dep).
+- **Playwright Chromium** is needed only by the print-fidelity vitest suite and
+  is refreshed by the update script; if a run reports a missing browser, run
+  `npx playwright install chromium`.
+- **Generated files change during dev/build** — `npm run dev`/`npm run build`
+  can rewrite `src/routeTree.gen.ts`. Never commit that churn (rule 10);
+  `git checkout -- src/routeTree.gen.ts` before staging.
