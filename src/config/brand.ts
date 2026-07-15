@@ -75,7 +75,7 @@ export const suite: readonly SuiteProduct[] = [
     status: "coming-soon",
     statusLabel: "Coming soon",
     oneLine:
-      "Deploy air-gapped frontier intelligence into high-stakes negotiations to act as a Socratic coach.",
+      "Deploy fully offline frontier intelligence in high-stakes negotiation rooms to serve as a on-demand Socratic coach.",
     medium: "Shared reflection.",
     why: "\n",
     description:
