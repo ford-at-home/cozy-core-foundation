@@ -2,14 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ProductPage, productHead } from "@/components/suite/ProductPage";
 import { suiteBySlug } from "@/config/brand";
 
-const product = suiteBySlug.canon;
+const product = suiteBySlug.relic;
 
 export const Route = createFileRoute("/relic")({
   head: () => productHead(product),
-  component: CanonPage,
+  component: RelicPage,
 });
 
-function CanonPage() {
+function RelicPage() {
   return (
     <ProductPage
       product={product}
