@@ -4,7 +4,7 @@ import { suiteBySlug } from "@/config/brand";
 
 const product = suiteBySlug.proof;
 
-export const Route = createFileRoute("/proof")({
+export const Route = createFileRoute("/draft")({
   head: () => productHead(product),
   component: ProofPage,
 });

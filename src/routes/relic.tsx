@@ -4,7 +4,7 @@ import { suiteBySlug } from "@/config/brand";
 
 const product = suiteBySlug.canon;
 
-export const Route = createFileRoute("/canon")({
+export const Route = createFileRoute("/relic")({
   head: () => productHead(product),
   component: CanonPage,
 });
