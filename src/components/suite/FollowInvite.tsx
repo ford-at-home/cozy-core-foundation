@@ -6,7 +6,7 @@ import { useState, type FormEvent } from "react";
  * Swap `onSubmit` when a subscription store exists.
  */
 export function FollowInvite({
-  prompt = "Hear about new instruments as they arrive.",
+  prompt = "Follow our research & development",
 }: {
   prompt?: string;
 }) {
@@ -23,8 +23,7 @@ export function FollowInvite({
     <div className="max-w-md">
       <p className="font-serif text-2xl leading-tight text-foreground sm:text-3xl">{prompt}</p>
       <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">
-        Occasional notes when an instrument ships or moves out of development.
-        No newsletter, no cadence.
+        Subscribe to our research and product announcements.
       </p>
       {done ? (
         <p className="mt-6 font-serif text-base italic text-muted-foreground">
