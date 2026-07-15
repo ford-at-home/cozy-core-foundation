@@ -33,7 +33,7 @@ function SuiteCatalog() {
           000 · Overview
         </p>
         <div className="max-w-2xl">
-          <h1 className="font-serif text-4xl uppercase leading-none tracking-[0.3em] text-foreground sm:text-5xl">
+          <h1 className="font-serif text-4xl leading-[1.05] tracking-tight text-foreground sm:text-5xl md:text-6xl">
             Instruments for Human Thinking
           </h1>
           <p className="mt-8 max-w-xl text-[15px] leading-relaxed text-muted-foreground">

@@ -58,7 +58,7 @@ function AuthenticatedLayout() {
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-primary text-primary-foreground">
               <PageMark className="h-5 w-5" />
             </span>
-            <span className="truncate font-serif text-[10px] uppercase tracking-[0.24em]">{brand.company.name}</span>
+            <span className="truncate font-serif text-lg tracking-tight">{brand.company.name}</span>
           </Link>
 
           <nav className="hidden items-center gap-1 text-sm sm:flex" aria-label="Primary">
