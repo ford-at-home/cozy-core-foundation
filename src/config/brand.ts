@@ -21,7 +21,7 @@ export const brand = {
   },
   product: {
     /** Provisional — do not treat as final. */
-    name: "Proof",
+    name: "Draft",
     descriptor:
       "Create deep research in your own style, print and edit it, then dictate it back into the system to produce iterative drafts.",
   },
@@ -40,7 +40,7 @@ export function pageTitle(page: string): string {
 export type SuiteStatus = "available" | "beta" | "coming-soon";
 
 export type SuiteProduct = {
-  slug: "proof" | "interlude" | "canon";
+  slug: "draft" | "interlude" | "relic";
   name: string;
   status: SuiteStatus;
   statusLabel: string;
@@ -55,8 +55,8 @@ export type SuiteProduct = {
 
 export const suite: readonly SuiteProduct[] = [
   {
-    slug: "proof",
-    name: "Proof",
+    slug: "draft",
+    name: "Draft",
     status: "available",
     statusLabel: "Available",
     oneLine:
@@ -67,7 +67,7 @@ export const suite: readonly SuiteProduct[] = [
       "Print a working draft, mark it up by hand, and return your notes. Proof reads your handwriting and finishes the piece in your voice — as a merged draft, a Word document, or a class presentation.",
     sketch: proofSketch,
     sketchAlt: "A graphite sketch of a printed manuscript with handwritten margin notes.",
-    href: "/proof",
+    href: "/draft",
   },
   {
     slug: "interlude",
@@ -86,8 +86,8 @@ export const suite: readonly SuiteProduct[] = [
     href: "/interlude",
   },
   {
-    slug: "canon",
-    name: "Canon",
+    slug: "relic",
+    name: "Relic",
     status: "coming-soon",
     statusLabel: "Coming soon",
     oneLine:
@@ -99,7 +99,7 @@ export const suite: readonly SuiteProduct[] = [
     sketch: canonSketch,
     sketchAlt:
       "A graphite sketch of a wooden tablet inscribed with a short list of tenets.",
-    href: "/canon",
+    href: "/relic",
   },
 ] as const;
 
