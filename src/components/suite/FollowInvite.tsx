@@ -6,7 +6,7 @@ import { useState, type FormEvent } from "react";
  * Swap `onSubmit` when a subscription store exists.
  */
 export function FollowInvite({
-  prompt = "Follow our research & development",
+  prompt = "Follow our research & development.",
 }: {
   prompt?: string;
 }) {
@@ -22,9 +22,6 @@ export function FollowInvite({
   return (
     <div className="max-w-md">
       <p className="font-serif text-2xl leading-tight text-foreground sm:text-3xl">{prompt}</p>
-      <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">
-        Subscribe to our research and product announcements.
-      </p>
       {done ? (
         <p className="mt-6 font-serif text-base italic text-muted-foreground">
           Thank you. We'll be in touch when there's something worth telling you about.
