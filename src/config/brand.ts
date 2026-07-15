@@ -91,7 +91,7 @@ export const suite: readonly SuiteProduct[] = [
     status: "coming-soon",
     statusLabel: "Coming soon",
     oneLine:
-      "Transform important conversations into enduring physical artifacts, created onsite in real time.",
+      "Transform important conversations into enduring physical artifacts, 3D printed or CNC-carved onsite in real time.",
     medium: "Physical artifacts.",
     why: "\n",
     description:
