@@ -17,7 +17,7 @@ export const brand = {
     line: "Instruments for thinking.",
     /** The broader product philosophy. */
     philosophy: "Frontier intelligence calibrated for human cognition & creativity.",
-    category: "A small collection of tools for revising, reflecting, and remembering.",
+    category: "A boutique lab in Richmond, VA, USA dedicated to celebrating humanity through thoughtful machine collaboration.",
   },
   product: {
     /** Provisional — do not treat as final. */
