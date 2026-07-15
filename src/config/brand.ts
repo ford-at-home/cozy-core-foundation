@@ -23,7 +23,7 @@ export const brand = {
     /** Provisional — do not treat as final. */
     name: "Proof",
     descriptor:
-      "Turn handwritten reviews, printed documents, and annotated pages into polished digital artifacts.",
+      "Create deep research in your own style, print and edit it, then dictate it back into the system to produce iterative drafts.",
   },
   meta: {
     title: "Hardcopy Tools",
@@ -60,9 +60,9 @@ export const suite: readonly SuiteProduct[] = [
     status: "available",
     statusLabel: "Available",
     oneLine:
-      "Turn handwritten reviews, printed documents, and annotated pages into polished digital artifacts.",
+      "Create deep research in your own style, print and edit it, then dictate it back into the system to produce iterative drafts.",
     medium: "Paper.",
-    why: "Because the sharpest edits still happen in the margin.",
+    why: "\n",
     description:
       "Print a working draft, mark it up by hand, and return your notes. Proof reads your handwriting and finishes the piece in your voice — as a merged draft, a Word document, or a class presentation.",
     sketch: proofSketch,
@@ -75,9 +75,9 @@ export const suite: readonly SuiteProduct[] = [
     status: "coming-soon",
     statusLabel: "Coming soon",
     oneLine:
-      "A quiet facilitator for important conversations. It listens locally, remains silent almost all the time, and only speaks when one carefully chosen question has a meaningful chance of improving the discussion.",
+      "Deploy air-gapped frontier intelligence into high-stakes negotiations to act as a Socratic coach.",
     medium: "Shared reflection.",
-    why: "Because the best facilitator is measured by how rarely they interrupt.",
+    why: "\n",
     description:
       "Interlude sits at the edge of the room. It listens on the device, holds its tongue, and — perhaps once in a long meeting — offers a single question. Its intelligence is restraint.",
     sketch: interludeSketch,
@@ -91,9 +91,9 @@ export const suite: readonly SuiteProduct[] = [
     status: "coming-soon",
     statusLabel: "Coming soon",
     oneLine:
-      "Transform important conversations into enduring physical artifacts that preserve shared principles beyond the meeting itself.",
+      "Transform important conversations into enduring physical artifacts, created onsite in real time.",
     medium: "Physical artifacts.",
-    why: "Because commitments that outlive the meeting need somewhere to live.",
+    why: "\n",
     description:
       "Canon distills what a group agreed on into a small, beautifully crafted physical object — a bound booklet, an engraved plaque, a printed card set — so the shared principles stay in the room long after everyone leaves it.",
     sketch: canonSketch,

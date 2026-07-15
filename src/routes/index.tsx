@@ -83,9 +83,11 @@ function SuiteCatalog() {
                   <p className="mt-5 max-w-md text-[15px] leading-relaxed text-muted-foreground">
                     {product.oneLine}
                   </p>
-                  <p className="mt-4 max-w-md border-l border-border pl-4 font-serif text-[15px] italic leading-snug text-foreground/70">
-                    {product.why}
-                  </p>
+                  {product.why !== "\n" && (
+                    <p className="mt-4 max-w-md border-l border-border pl-4 font-serif text-[15px] italic leading-snug text-foreground/70">
+                      {product.why}
+                    </p>
+                  )}
                   <div className="mt-6 flex items-center gap-4">
                     <StatusLabel status={product.status} label={product.statusLabel} />
                     <span className="text-[11px] uppercase tracking-[0.22em] text-foreground/60 opacity-0 transition-opacity group-hover:opacity-100">
