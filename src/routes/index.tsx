@@ -22,7 +22,7 @@ function SuiteCatalog() {
         <div className="flex flex-col gap-3">
           <SiteWordmark />
           <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/70">
-            Index · v01 · {new Date().getFullYear()}
+            HARDCOPY.TOOLS · V01 · {new Date().getFullYear()}
           </span>
         </div>
         <ThemeToggle />
