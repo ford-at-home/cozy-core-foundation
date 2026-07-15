@@ -37,9 +37,7 @@ function SuiteCatalog() {
             Instruments for Human Thinking
           </h1>
           <p className="mt-8 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
-            Different kinds of thinking happen best in different mediums —
-            paper, shared reflection, physical artifacts. The suite is small on
-            purpose.
+            {brand.company.philosophy}
           </p>
           <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/70">
             <span>01 Available</span>
