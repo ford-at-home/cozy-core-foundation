@@ -44,11 +44,9 @@ export function SiteFooter() {
     >
       <div className="mx-auto grid max-w-5xl gap-10 md:grid-cols-[10rem_minmax(0,1fr)_auto] md:gap-16">
         <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/70">
-          Colophon
         </span>
         <p className="max-w-md text-[13px] leading-relaxed text-muted-foreground">
-          {brand.company.name} is a small studio building instruments for
-          thinking. Each tool is designed, made, and quietly maintained here.
+          {brand.company.name} is {brand.company.category.charAt(0).toLowerCase() + brand.company.category.slice(1)}
         </p>
         <div className="flex flex-col gap-2 font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/70 md:text-right">
           <span>{brand.company.domain}</span>
