@@ -16,7 +16,7 @@ export const brand = {
     /** The defining brand principle. */
     line: "Instruments for thinking.",
     /** The broader product philosophy. */
-    philosophy: "Our deepest, truest thinking happens in quiet, screen-free spaces. Frontier intelligence at the pace of human thought.",
+    philosophy: "Frontier intelligence geared to the speed of human thought.",
     category: "A small collection of tools for revising, reflecting, and remembering.",
   },
   product: {
