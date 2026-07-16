@@ -21,12 +21,12 @@ const diagrams: Record<DiagramId, { caption: string; steps: { label: string; det
       ],
     },
     cost: {
-      caption: "Cursor cost visibility today — aggregates, not sessions",
+      caption: "Cursor cost visibility — dollars stop above the session",
       steps: [
-        { label: "Limits", detail: "Team + Cloud Agent spend caps" },
-        { label: "Pools", detail: "Composer/Auto vs API frontier" },
-        { label: "Dashboard", detail: "Usage filtered by user / surface" },
-        { label: "Gap", detail: "No per-session agent rollup yet" },
+        { label: "Limits", detail: "Team + member + Cloud Agent caps" },
+        { label: "Dashboards", detail: "Pools, models, daily aggregates" },
+        { label: "Events", detail: "Admin API totalCents by user/time" },
+        { label: "Gap", detail: "No session or agent $ join key" },
       ],
     },
   };

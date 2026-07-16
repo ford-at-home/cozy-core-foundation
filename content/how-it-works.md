@@ -1,6 +1,6 @@
 ---
 title: How Lovable Cloud and Cursor Agents Work Together
-description: An engineering walkthrough of the development workflow and product runtime behind Hardcopy Tools — ownership, information flow, tradeoffs, and what Cursor’s cost dashboards can (and cannot) tell you today.
+description: An engineering walkthrough of the development workflow and product runtime behind Hardcopy Tools — ownership, information flow, tradeoffs, and why Cursor cost attribution still stops at aggregates (no native per-session or per-agent dollars).
 kicker: Engineering notes
 ---
 
@@ -86,53 +86,70 @@ This is not the flashiest architecture diagram. It is the one that survives a mi
 2. **A final report contract.** Every substantial Cursor task must list skills used, validation actually run, manual actions still required, and known limitations. “I deployed it” without evidence is a protocol violation, not a vibes issue.
 3. **Evidence or it did not happen.** Outbox results beat chat claims.
 4. **Asymmetric adoption is real.** A protocol only works when both sides use it. Until the connected-environment agent formally adopts the same rules, handoffs can be one-directional. Plan for that; do not assume telepathy.
-5. **Measure what the vendor exposes.** For Cursor spend, that currently means aggregates — which brings us to cost.
+5. **Measure what the vendor exposes.** For Cursor spend, that currently means aggregates and (on Enterprise) per-event `totalCents` without a session key — which brings us to cost.
 
 ## Cost management in Cursor
 
-Building this way means real money on the Cursor API pool, especially for Cloud Agents. Here is what we can control and see today, and what we still cannot.
+Building this way means real money on Cursor’s token-billed credit pool, especially for Cloud Agents. As of mid-2026, Cursor exposes solid **aggregate** controls and dashboards — and almost nothing that attributes dollars to a single agent session out of the box. The rest of this section is what we verified against Cursor’s own docs and APIs; billing surfaces move, so treat dated details as a snapshot.
 
 ### Spend limits
 
-- **Team spend limits** cap monthly on-demand usage; soft-limit alerts at 50%, 80%, and 100% help you intervene before the hard stop.
-- **Cloud Agent spend limit** is prompted on first use. Set it before unattended runs become a habit.
-- **Per-user hard spend caps** are an Enterprise feature. On Teams, you lean on soft alerts, seat discipline, and process — not a per-person kill switch.
+- **Team and member spend limits** cap on-demand usage. Admins can set hard caps; the Enterprise Admin API also exposes `POST /teams/user-spend-limit` for member-level writes. Smart spend alerts (rebuilt in 2026) can fire before a billing surprise and route to Slack or email.
+- **Cloud Agent spend limit** is prompted on first use. Set it before unattended runs become a habit — Cloud Agents always run Max Mode and bill at API pricing for the selected model, with no Auto option.
+- Soft alerts and process still matter: limits stop the bleeding; they do not explain *which* agent caused it.
 
 ### Usage limits and billing pools
 
-Cursor effectively has **two pools**: a cheap included pool for Auto and Composer-class work, and an **API pool** for explicitly selected frontier models at provider list prices. Cloud Agents are structurally premium: curated models, **Max Mode always on**, no Auto. Treat them as a scarce surface, not a default.
+Cursor bills on tokens, denominated in dollars. In practice you see **two pools** in the product: a cheap included path for Auto and first-party models such as Composer 2.5, and an API-priced path for named third-party frontier models. Auto has fixed flat rates regardless of which underlying model it selects; on Teams/Enterprise, non-Auto third-party requests also carry Cursor’s per-million Token Rate.
 
 Repository files cannot enforce any of this. Defaults, blocklists, CLI/SDK `model` fields, and dashboard spend controls can.
 
 ### Aggregate usage dashboards
 
-The usage dashboard (`cursor.com/dashboard/usage`) shows spend and usage across pools. You can filter by user and by product surface (IDE clients, Cloud Agents, automations, and related tools). Teams/Enterprise add admin views and APIs for pulling spending data. This is genuine visibility — at an **aggregate** and per-request row level you can browse — but it is not a finished FinOps product for multi-agent shops.
+The usage dashboard (`cursor.com/dashboard/usage`) is the day-to-day visibility surface: both pools, per-model breakdowns, and a Daily Usage chart. Users see their own spend. The UI does **not** decompose that spend into sessions or agents.
+
+Team analytics add volume signals — messages by mode and model, active users, lines suggested, “Agents Created” (each Cloud Agent startup) — and Enterprise adds Conversation Insights and CSV exports from analytics charts. Useful for trends. Still aggregate.
+
+On Enterprise, the Admin API goes further: `/teams/spend` for per-member cycle spend, and `/teams/filtered-usage-events` for **per-event** token counts plus `totalCents`. That event feed is the closest official dollar detail Cursor publishes — and it is keyed to **user + timestamp + model**, not to a session or agent ID. Retention on granular events is short (on the order of days to a few weeks), so anything you care about must be archived continuously.
 
 ### Cloud Agents dashboard
 
-Cloud Agents settings cover default model, Max Mode (forced on), long-running toggles, and the spend-limit surface. The agents UI is where you inspect unattended runs. It answers “what ran?” better than “what exactly did that one session cost relative to the others?”
+The Cloud Agents UI and settings cover default model, Max Mode (forced on), long-running toggles, spend limit, and run status — “what ran?” and “is it done?” Team analytics can count agent startups. What they do **not** show is a dollar ledger per agent.
+
+That matches the API: `GET /v0/agents/{id}`, the `statusChange` webhook, and the conversation endpoint expose status, git/PR targets, and summary text. There is **no `usage`, `cost`, `tokenUsage`, or `spendCents` field** on the documented Cloud Agents REST surface. Anyone claiming “per-agent cost via the Cloud Agents API” is describing a feature that does not exist today.
 
 <!-- diagram:cost -->
 
 ### The limitation that still hurts
 
-There is **no detailed per-session or per-agent cost breakdown** available today that makes it easy to attribute spend to an individual development session or a single agent identity the way a well-instrumented internal job system would.
+**Per-session and per-agent dollar cost attribution is not natively exposed.** Billing events carry no session or agent ID. The Cloud Agents API and webhook carry no cost or token data. The CLI’s JSON/`stream-json` result emits duration and `session_id` but no tokens. The TypeScript SDK’s `Run.usage` returns per-run **token** counts (not dollars) — and only for runs you launched through the SDK.
 
-What you get is **aggregate usage and spend**, plus request-level rows you can filter in the dashboard. Finer-grained reporting appears to be on the roadmap from the vendor’s direction of travel (admin exports, richer filtering, more automation surfaces), but it is **not** something we can rely on in day-to-day attribution right now.
+So you get:
 
-That gap matters when two Cloud Agents, three IDE chats, and a retry storm share a billing cycle. You can see the total. You cannot cleanly answer “which agent burned Tuesday?” without manual correlation.
+| What you can see | What you cannot see |
+| --- | --- |
+| Team/member spend limits and alerts | Dollar cost of one IDE chat session |
+| Aggregate usage dashboards and pools | Dollar cost of one Cloud Agent |
+| Per-event `totalCents` (Enterprise Admin API) keyed by user/model/time | A join key from that event to `conversation_id` / agent id |
+| SDK token usage for SDK-launched runs | Tokens or dollars on Cloud Agents REST/webhook |
+
+Finer-grained native reporting looks directionally likely — admin exports, richer analytics, more automation surfaces — but it is **not available today**. Until billing events carry a session or agent ID (or the Cloud Agents API grows a cost field), precise attribution is something you *build*, not something you *read*.
+
+That gap matters when two Cloud Agents, three IDE chats, and a retry storm share a billing cycle. You can reconcile the invoice. You cannot cleanly answer “which agent burned Tuesday?” without a heuristic join.
 
 ### How we compensate (imperfectly)
 
-In-repo we attach optional `model_class` and `estimated_cost_usd` fields to work items, and we join dashboard aggregates to PRs and `WI-nnnn` rows in an agent-metrics practice. Inside the product, Hardcopy Draft tracks *application* inference cost separately from Cursor’s platform bill. None of that replaces a first-class per-agent cost ledger in Cursor. It is a stopgap until the platform exposes one.
+The raw materials for a DIY ledger exist: Admin API `filtered-usage-events` as the billing source of truth, Hooks (`conversation_id`, `generation_id`, model, timestamps) and SDK `TokenUsage` as the identity layer, joined on something like `userEmail + model + timestamp window`. Accuracy can be excellent at user/model/day and only roughly right (~80–90%) at session or PR grain — because the join is inferred, not keyed. Local tokenizers fill real-time gaps and drift on hidden system prompts, cache tiers, and Auto’s flat rates.
+
+We have not shipped that daemon. In-repo we attach optional `model_class` and `estimated_cost_usd` to work items and join dashboard aggregates to PRs and `WI-nnnn` rows in an agent-metrics practice. Inside the product, Hardcopy Draft tracks *application* inference cost separately from Cursor’s platform bill. Cursor spend and Lovable/Supabase spend remain separate silos. None of that replaces a first-class per-agent cost field in Cursor. It is a stopgap until the platform exposes one — or until we invest in the hybrid collector.
 
 ## What we would tell another team
 
 Start with **ownership and evidence rules** before you tune prompts. Decide who may claim a migration is live, and what proof looks like.
 
-Budget **Cloud Agents separately** from interactive Composer work. They are different products that share a credit card.
+Budget **Cloud Agents separately** from interactive Composer work. They are different products that share a credit card, and the Cloud Agents API will not itemize the bill for you.
 
-Accept **aggregate cost visibility** for now. Build lightweight attribution in your own tracker if you need chargeback narratives. Do not wait for perfect session-level reporting before setting spend limits.
+Set **spend limits early**, and if you are on Enterprise, **archive `filtered-usage-events` continuously** before retention erases them. Accept that attribution below user/model/day is heuristic until Cursor ships a session/agent join key in billing data. Do not wait for perfect session-level reporting before capping spend.
 
 Keep the control plane boring and the execution plane replaceable. The integration gets interesting when you respect that split — in development *and* in production.
 

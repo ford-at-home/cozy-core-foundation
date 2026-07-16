@@ -115,3 +115,12 @@ None
 ## Recommended Next Action
 
 Merge; confirm `/how-it-works` after Lovable syncs `main`.
+
+### 2026-07-16 — cost section revision
+
+Rewrote the Cost management section against the July 16 2026 automated
+cost-attribution investigation: spend limits, aggregate dashboards, Cloud
+Agents dashboard, Enterprise `filtered-usage-events` without session keys,
+Cloud Agents API/webhook negative finding (no cost/tokens), SDK tokens-only,
+and DIY hybrid daemon as imperfect compensation.
+
