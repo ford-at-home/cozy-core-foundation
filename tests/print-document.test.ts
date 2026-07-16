@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Json } from "@/integrations/supabase/types";
 import { buildPrintDocument, extractPost } from "@/lib/print-document";
+import { brand } from "@/config/brand";
 
 describe("extractPost", () => {
   const result: Json = {
@@ -112,7 +113,7 @@ describe("buildPrintDocument", () => {
 
   it("uses an empty running header when the document has no heading", () => {
     const untitled = buildPrintDocument("Just a paragraph.");
-    expect(untitled).toContain("<title>Hardcopy Draft</title>");
+    expect(untitled).toContain(`<title>${brand.product.name}</title>`);
     expect(untitled).toContain('content: "";');
   });
 
