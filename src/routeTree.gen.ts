@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RelicRouteImport } from './routes/relic'
 import { Route as InterludeRouteImport } from './routes/interlude'
+import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as DraftRouteImport } from './routes/draft'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AboutRouteImport } from './routes/about'
@@ -40,6 +41,11 @@ const RelicRoute = RelicRouteImport.update({
 const InterludeRoute = InterludeRouteImport.update({
   id: '/interlude',
   path: '/interlude',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HowItWorksRoute = HowItWorksRouteImport.update({
+  id: '/how-it-works',
+  path: '/how-it-works',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DraftRoute = DraftRouteImport.update({
@@ -153,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/draft': typeof DraftRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/interlude': typeof InterludeRoute
   '/relic': typeof RelicRoute
   '/billing': typeof AuthenticatedBillingRoute
@@ -176,6 +183,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/draft': typeof DraftRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/interlude': typeof InterludeRoute
   '/relic': typeof RelicRoute
   '/billing': typeof AuthenticatedBillingRoute
@@ -201,6 +209,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/draft': typeof DraftRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/interlude': typeof InterludeRoute
   '/relic': typeof RelicRoute
   '/_authenticated/billing': typeof AuthenticatedBillingRoute
@@ -226,6 +235,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/draft'
+    | '/how-it-works'
     | '/interlude'
     | '/relic'
     | '/billing'
@@ -249,6 +259,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/draft'
+    | '/how-it-works'
     | '/interlude'
     | '/relic'
     | '/billing'
@@ -273,6 +284,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/draft'
+    | '/how-it-works'
     | '/interlude'
     | '/relic'
     | '/_authenticated/billing'
@@ -298,6 +310,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AuthRoute: typeof AuthRoute
   DraftRoute: typeof DraftRoute
+  HowItWorksRoute: typeof HowItWorksRoute
   InterludeRoute: typeof InterludeRoute
   RelicRoute: typeof RelicRoute
   ApiTranscribeRoute: typeof ApiTranscribeRoute
@@ -318,6 +331,13 @@ declare module '@tanstack/react-router' {
       path: '/interlude'
       fullPath: '/interlude'
       preLoaderRoute: typeof InterludeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/how-it-works': {
+      id: '/how-it-works'
+      path: '/how-it-works'
+      fullPath: '/how-it-works'
+      preLoaderRoute: typeof HowItWorksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/draft': {
@@ -515,6 +535,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AuthRoute: AuthRoute,
   DraftRoute: DraftRoute,
+  HowItWorksRoute: HowItWorksRoute,
   InterludeRoute: InterludeRoute,
   RelicRoute: RelicRoute,
   ApiTranscribeRoute: ApiTranscribeRoute,

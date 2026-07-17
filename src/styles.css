@@ -244,6 +244,46 @@ body {
   font-size: 0.95rem;
   line-height: 1.65;
 }
+
+/* Long-form public articles (e.g. /how-it-works). Scoped so product
+   markdown views keep the denser studio defaults above. */
+.markdown-output.article {
+  font-size: 1rem;
+  line-height: 1.75;
+}
+.markdown-output.article h2 {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin-top: 2.25em;
+}
+.markdown-output.article h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-top: 1.75em;
+}
+.markdown-output.article table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin: 1.25em 0;
+}
+.markdown-output.article th,
+.markdown-output.article td {
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.65em 0.5em;
+  text-align: left;
+  vertical-align: top;
+}
+.markdown-output.article th {
+  color: var(--color-muted-foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
 .markdown-output > :first-child {
   margin-top: 0;
 }

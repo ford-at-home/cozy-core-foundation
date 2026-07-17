@@ -20,9 +20,30 @@ renaming them would misdescribe what the system does.
 
 ## Landing (`index.tsx`)
 
-Fully rewritten — see the page itself. Hero: "AI that knows when to
-disappear." CTAs: "Start a working draft" / "See how it works". Closing:
-"Leave the screen. Keep the thread."
+Suite catalog — see the page itself. Hero: "Instruments for Human Thinking"
+plus company philosophy; suite rows link to product pages. No top nav
+(the homepage is the navigation).
+
+## About (`about.tsx`)
+
+Short company page. Linked from the suite footer. Title:
+`About — ${brand.company.name}`.
+
+## How it works (`how-it-works.tsx`)
+
+Public engineering article (canonical source: `content/how-it-works.md`).
+Documents the Lovable Cloud + Cursor Agents development workflow, nested
+product runtime, and Cursor cost-management capabilities/limits. Title:
+`How it works — ${brand.company.name}`. Linked from the suite footer as
+"How it works". Not the product Prepare → Print → Mark → Return tutorial.
+
+## Suite footer (`SiteChrome.tsx`)
+
+| Link | Destination | Why |
+| --- | --- | --- |
+| About | `/about` | Company context |
+| How it works | `/how-it-works` | Engineering note / blog source |
+| Domain + © | plain text | Identity only |
 
 ## Auth (`auth.tsx`)
 

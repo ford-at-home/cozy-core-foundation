@@ -43,14 +43,28 @@ export function SiteFooter() {
       style={{ paddingBottom: "max(3rem, env(safe-area-inset-bottom))" }}
     >
       <div className="mx-auto grid max-w-5xl gap-10 md:grid-cols-[10rem_minmax(0,1fr)_auto] md:gap-16">
-        <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/70">
-        </span>
+        <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/70"></span>
         <p className="max-w-md text-[13px] leading-relaxed text-muted-foreground">
-          {brand.company.name} is {brand.company.category.charAt(0).toLowerCase() + brand.company.category.slice(1)}
+          {brand.company.name} is{" "}
+          {brand.company.category.charAt(0).toLowerCase() + brand.company.category.slice(1)}
         </p>
-        <div className="flex flex-col gap-2 font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/70 md:text-right">
-          <span>{brand.company.domain}</span>
-          <span>© {new Date().getFullYear()} {brand.company.name}</span>
+        <div className="flex flex-col gap-1 font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground/70 md:items-end md:text-right">
+          <Link
+            to="/about"
+            className="inline-flex min-h-11 items-center transition-colors hover:text-foreground"
+          >
+            About
+          </Link>
+          <Link
+            to="/how-it-works"
+            className="inline-flex min-h-11 items-center transition-colors hover:text-foreground"
+          >
+            How it works
+          </Link>
+          <span className="inline-flex min-h-11 items-center">{brand.company.domain}</span>
+          <span className="inline-flex min-h-11 items-center">
+            © {new Date().getFullYear()} {brand.company.name}
+          </span>
         </div>
       </div>
     </footer>

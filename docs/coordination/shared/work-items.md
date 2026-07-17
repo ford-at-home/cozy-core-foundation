@@ -5,7 +5,7 @@ free ID is claimed by adding its row here in the same commit as the request
 file**. Never reuse an ID. Update rows via attributed entries in the log
 below — the table row shows current state; the log preserves history.
 
-**Next free ID: WI-0012**
+**Next free ID: WI-0013**
 
 | ID      | Title                                                          | Owner   | Requester | Status           | Priority | Depends on | Request file                                                                                                        | Result file                                                                                                                                  | Updated    |
 | ------- | -------------------------------------------------------------- | ------- | --------- | ---------------- | -------- | ---------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
@@ -20,6 +20,7 @@ below — the table row shows current state; the log preserves history.
 | WI-0009 | Apply + verify the phase C8 duration fix + stats view          | lovable | cursor    | requested        | P0       | WI-0008    | [WI-0009 request](../lovable/inbox/WI-0009-apply-c8-duration-stats.md)                                              | (pending)                                                                                                                                    | 2026-07-13 |
 | WI-0010 | Apply cost-proxies migration + deploy dispatch + regen types   | lovable | cursor    | requested        | P1       | WI-0008    | [WI-0010 request](../lovable/inbox/WI-0010-apply-cost-proxies-and-targets.md)                                       | [Cursor step1](../cursor/outbox/WI-0010-cost-proxies-step1-results.md) · Lovable apply (pending)                                              | 2026-07-14 |
 | WI-0011 | Cost calibration UI (SessionCostBanner, proxies, budgets)      | cursor  | cursor    | draft            | P1       | WI-0010    | [WI-0011 plan](../cursor/outbox/WI-0011-cost-calibration-ui-plan.md)                                                | (blocked on WI-0010)                                                                                                                         | 2026-07-14 |
+| WI-0012 | How It Works page (Lovable Cloud + Cursor Agents)              | cursor  | human     | completed        | P2       | —          | (human-directed; tracker in outbox)                                                                                 | [WI-0012 results](../cursor/outbox/WI-0012-how-it-works-page.md)                                                                             | 2026-07-16 |
 
 The Cursor-side hardening phases (C1–C9 in
 [PLAN-CURSOR-AGENT.md](../../PLAN-CURSOR-AGENT.md)) will be registered as
@@ -27,6 +28,14 @@ work items when each phase begins, so that cross-agent dependencies (C4
 needs L3; C6 needs L2+L5; C8 needs L7) are tracked here explicitly.
 
 ## Log
+
+### 2026-07-16 — WI-0012 — Cursor
+
+Human-directed public engineering page: canonical markdown at
+`content/how-it-works.md`, route `/how-it-works`, suite footer link. Documents
+the Cursor ↔ Lovable development workflow, nested product runtime
+(control/execution planes), and Cursor cost-management capabilities/limits.
+No Lovable backend action required beyond normal `main` app sync.
 
 ### 2026-07-14 — WI-0010 + WI-0011 — Cursor
 
