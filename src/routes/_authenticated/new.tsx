@@ -1,4 +1,4 @@
-import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
@@ -9,6 +9,7 @@ import { brand, pageTitle } from "@/config/brand";
 import { CREDIT_COST, isInsufficientCreditsError, useCreditBalance } from "@/lib/use-credits";
 import { MODE_COPY } from "@/config/workflow-copy";
 import { DurationEstimate } from "@/components/DurationEstimate";
+import { Button } from "@/components/ui/button";
 
 // New draft: paste research, optionally steer with a goal, and prepare a
 // draft. Voice is NOT an input here — it comes from the signed-in user's
@@ -31,7 +32,6 @@ export const Route = createFileRoute("/_authenticated/new")({
 });
 
 function NewDraftPage() {
-  const router = useRouter();
   const start = useServerFn(startWorkflow);
   const fetchProfile = useServerFn(getMyProfile);
   const [workflow, setWorkflow] = useState<"longform" | "research_packet">("longform");
@@ -41,6 +41,7 @@ function NewDraftPage() {
   const [goal, setGoal] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [created, setCreated] = useState<{ runId: string; pieceId: string | null } | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -56,6 +57,21 @@ function NewDraftPage() {
   const hasStyle = (profileData?.profile?.style_text ?? "").trim() !== "";
 
   const { balance } = useCreditBalance();
+  const { data: createdRun, error: statusError } = useQuery({
+    queryKey: ["agent_runs", "created", created?.runId],
+    enabled: created !== null,
+    queryFn: async () => {
+      if (!created) return null;
+      const { data, error } = await supabase
+        .from("agent_runs")
+        .select("status")
+        .eq("id", created.runId)
+        .single();
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    refetchInterval: 5000,
+  });
   const creditCost = mode === "topic" ? CREDIT_COST.research : CREDIT_COST.compose;
   const outOfCredits = balance !== null && balance < creditCost;
 
@@ -65,6 +81,7 @@ function NewDraftPage() {
   const needsStyle = !isPacket;
 
   const canSubmit =
+    !created &&
     !submitting &&
     !profileLoading &&
     (hasStyle || !needsStyle) &&
@@ -124,12 +141,7 @@ function NewDraftPage() {
         const { runId, pieceId } = await start({
           data: { topic: topic.trim(), goal: goal.trim(), workflow, requestId },
         });
-        // Research packets get the guided project hub; drafts keep the run page.
-        if (isPacket && pieceId) {
-          router.navigate({ to: "/project/$pieceId", params: { pieceId } });
-        } else {
-          router.navigate({ to: "/runs/$runId", params: { runId } });
-        }
+        setCreated({ runId, pieceId });
         return;
       }
 
@@ -166,11 +178,7 @@ function NewDraftPage() {
       const { runId, pieceId } = await start({
         data: { research, goal: goal.trim(), workflow, requestId, attachments },
       });
-      if (isPacket && pieceId) {
-        router.navigate({ to: "/project/$pieceId", params: { pieceId } });
-      } else {
-        router.navigate({ to: "/runs/$runId", params: { runId } });
-      }
+      setCreated({ runId, pieceId });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to start";
       setError(
@@ -395,15 +403,45 @@ function NewDraftPage() {
             Uses {creditCost} credit{creditCost === 1 ? "" : "s"}
             {balance !== null ? ` (you have ${balance})` : ""}
           </p>
-          <button
+          <Button
             type="submit"
             disabled={!canSubmit}
             aria-busy={submitting}
             className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 sm:w-auto"
           >
-            {submitting ? (uploadProgress ? "Uploading…" : "Creating…") : "Start →"}
-          </button>
+            {submitting ? (uploadProgress ? "Uploading…" : "Starting…") : "Start workflow"}
+          </Button>
         </div>
+        {created && (
+          <div className="space-y-2 border-t border-border pt-4">
+            <p role="status" className="text-sm">
+              Workflow created{createdRun ? ` · ${createdRun.status.replaceAll("_", " ")}` : ""}
+            </p>
+            <p className="break-all font-mono text-xs text-muted-foreground">{created.runId}</p>
+            {statusError && (
+              <p role="alert" className="text-sm text-destructive">
+                The workflow was created, but its latest status could not be loaded.
+              </p>
+            )}
+            {isPacket && created.pieceId ? (
+              <Link
+                to="/project/$pieceId"
+                params={{ pieceId: created.pieceId }}
+                className="inline-flex min-h-11 items-center text-sm text-primary"
+              >
+                Open project →
+              </Link>
+            ) : (
+              <Link
+                to="/runs/$runId"
+                params={{ runId: created.runId }}
+                className="inline-flex min-h-11 items-center text-sm text-primary"
+              >
+                View run →
+              </Link>
+            )}
+          </div>
+        )}
       </form>
     </div>
   );
