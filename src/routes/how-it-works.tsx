@@ -85,8 +85,13 @@ export const Route = createFileRoute("/how-it-works")({
     meta: [
       { title: `How it works — ${brand.company.name}` },
       { name: "description", content: article.description },
-      { property: "og:title", content: `How it works — ${brand.company.name}` },
-      { property: "og:description", content: article.description },
+      { property: "og:title", content: `How it works — ${brand.social.title}` },
+      { property: "og:description", content: `${article.description} ${brand.social.attribution}` },
+      { name: "twitter:title", content: `How it works — ${brand.social.title}` },
+      {
+        name: "twitter:description",
+        content: `${article.description} ${brand.social.attribution}`,
+      },
       { property: "og:type", content: "article" },
       { name: "twitter:card", content: "summary" },
       { property: "og:url", content: "https://hardcopy.tools/how-it-works" },

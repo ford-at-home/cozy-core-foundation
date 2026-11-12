@@ -85,13 +85,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: brand.meta.title },
       { name: "description", content: brand.meta.description },
       { property: "og:site_name", content: brand.company.name },
-      { property: "og:title", content: brand.meta.title },
-      { property: "og:description", content: brand.meta.description },
+      { property: "og:title", content: brand.social.title },
+      { property: "og:description", content: brand.social.description },
       { property: "og:type", content: "website" },
       { property: "og:url", content: `https://${brand.company.domain}/` },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: brand.meta.title },
-      { name: "twitter:description", content: brand.meta.description },
+      { name: "twitter:title", content: brand.social.title },
+      { name: "twitter:description", content: brand.social.description },
     ],
     links: [
       {

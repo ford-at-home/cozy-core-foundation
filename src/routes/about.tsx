@@ -9,8 +9,10 @@ export const Route = createFileRoute("/about")({
     meta: [
       { title: `About — ${brand.company.name}` },
       { name: "description", content: brand.meta.description },
-      { property: "og:title", content: `About — ${brand.company.name}` },
-      { property: "og:description", content: brand.meta.description },
+      { property: "og:title", content: `About — ${brand.social.title}` },
+      { property: "og:description", content: brand.social.description },
+      { name: "twitter:title", content: `About — ${brand.social.title}` },
+      { name: "twitter:description", content: brand.social.description },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { property: "og:url", content: "https://hardcopy.tools/about" },

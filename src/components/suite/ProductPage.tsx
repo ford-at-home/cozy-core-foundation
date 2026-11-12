@@ -62,17 +62,19 @@ export function ProductPage({ product, action }: { product: SuiteProduct; action
 
 export function productHead(product: SuiteProduct) {
   const title = `${product.name} — ${brand.company.name}`;
+  const socialTitle = `${product.name} — ${brand.social.title}`;
+  const socialDescription = `${product.oneLine} ${brand.social.attribution}`;
   return {
     meta: [
       { title },
       { name: "description", content: product.oneLine },
-      { property: "og:title", content: title },
-      { property: "og:description", content: product.oneLine },
+      { property: "og:title", content: socialTitle },
+      { property: "og:description", content: socialDescription },
       { property: "og:type", content: "website" },
       { property: "og:url", content: `https://${brand.company.domain}${product.href}` },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:title", content: title },
-      { name: "twitter:description", content: product.oneLine },
+      { name: "twitter:title", content: socialTitle },
+      { name: "twitter:description", content: socialDescription },
     ],
     links: [{ rel: "canonical", href: `https://${brand.company.domain}${product.href}` }],
   };

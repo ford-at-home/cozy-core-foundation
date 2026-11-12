@@ -31,6 +31,12 @@ export const brand = {
     description:
       "Hardcopy Tools is a boutique lab in Richmond, VA, USA dedicated to celebrating humanity through thoughtful machine collaboration.",
   },
+  social: {
+    title: "Hardcopy Tools — Boutique Lab",
+    description:
+      "Hardcopy Tools is a boutique lab in Richmond, VA, USA dedicated to celebrating humanity through thoughtful machine collaboration.",
+    attribution: "A boutique lab in Richmond, VA, USA for thoughtful human–machine collaboration.",
+  },
 } as const;
 
 /** Per-page document titles: `pageTitle("Dashboard")` → "Dashboard — Hardcopy Draft". */
