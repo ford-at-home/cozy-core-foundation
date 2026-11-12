@@ -14,11 +14,16 @@ import { brand, pageTitle } from "@/config/brand";
 import { draftRunToShared, packetStageToShared, SHARED_STAGE_LABELS } from "@/lib/packet-stage";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: pageTitle("Dashboard") },
       { name: "description", content: "Your recent runs." },
       { name: "robots", content: "noindex" },
+      { property: "og:title", content: pageTitle("Dashboard") },
+      { property: "og:description", content: "Your recent runs." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: DashboardPage,
@@ -52,11 +57,12 @@ function nextStepHint(run: AgentRun): string | null {
 }
 
 function DashboardPage() {
+  const { user } = Route.useRouteContext();
   const fetchRuns = useServerFn(listMyRuns);
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
-    queryKey: ["agent_runs", "recent"],
+    queryKey: ["agent_runs", "recent", user.id],
     queryFn: () => fetchRuns(),
   });
 
@@ -307,6 +313,43 @@ function DashboardPage() {
           </>
         )}
       </div>
+
+      <section aria-labelledby="workflow-runs-heading" className="space-y-3">
+        <h2 id="workflow-runs-heading" className="font-serif text-xl">
+          Workflow runs
+        </h2>
+        {isLoading && (
+          <p role="status" className="text-sm text-muted-foreground">
+            Loading runs…
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            Could not load workflow runs.
+          </p>
+        )}
+        {!isLoading &&
+          !error &&
+          (runs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No workflow runs yet.</p>
+          ) : (
+            <ul className="divide-y divide-border border-y border-border">
+              {runs.map((run) => (
+                <li key={run.id} className="flex items-center justify-between gap-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm capitalize">{run.kind.replaceAll("_", " ")}</p>
+                    <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
+                      {run.id}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {run.status.replaceAll("_", " ")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ))}
+      </section>
     </div>
   );
 }

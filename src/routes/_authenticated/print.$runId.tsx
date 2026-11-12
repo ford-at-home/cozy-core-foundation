@@ -13,8 +13,17 @@ import { getPacketByRunId, listPacketQuestions } from "@/lib/packets";
 import { brand, pageTitle } from "@/config/brand";
 
 export const Route = createFileRoute("/_authenticated/print/$runId")({
+  staticData: { sitemap: false },
   head: () => ({
-    meta: [{ title: pageTitle("Print") }, { name: "robots", content: "noindex" }],
+    meta: [
+      { title: pageTitle("Print") },
+      { name: "robots", content: "noindex" },
+      { name: "description", content: `Your ${brand.product.name} print workspace.` },
+      { property: "og:title", content: pageTitle("Print") },
+      { property: "og:description", content: `Your ${brand.product.name} print workspace.` },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
   }),
   component: PrintPage,
 });

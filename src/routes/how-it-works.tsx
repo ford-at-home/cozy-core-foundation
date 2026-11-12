@@ -80,13 +80,18 @@ const article = parseArticle(articleSource);
 const segments = splitWithDiagrams(article.body);
 
 export const Route = createFileRoute("/how-it-works")({
+  staticData: { sitemap: true },
   head: () => ({
     meta: [
       { title: `How it works — ${brand.company.name}` },
       { name: "description", content: article.description },
       { property: "og:title", content: `How it works — ${brand.company.name}` },
       { property: "og:description", content: article.description },
+      { property: "og:type", content: "article" },
+      { name: "twitter:card", content: "summary" },
+      { property: "og:url", content: "https://hardcopy.tools/how-it-works" },
     ],
+    links: [{ rel: "canonical", href: "https://hardcopy.tools/how-it-works" }],
   }),
   component: HowItWorksPage,
 });

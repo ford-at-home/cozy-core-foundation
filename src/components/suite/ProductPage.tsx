@@ -6,13 +6,7 @@ import { SiteWordmark, SiteFooter } from "./SiteChrome";
 import { FollowInvite } from "./FollowInvite";
 import { ThemeToggle } from "./ThemeToggle";
 
-export function ProductPage({
-  product,
-  action,
-}: {
-  product: SuiteProduct;
-  action: ReactNode;
-}) {
+export function ProductPage({ product, action }: { product: SuiteProduct; action: ReactNode }) {
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <header className="flex items-center justify-between gap-4 px-6 pt-8 sm:px-10 sm:pt-10">
@@ -43,9 +37,7 @@ export function ProductPage({
         <div className="mx-auto max-w-xl space-y-6">
           <p className="font-serif text-2xl leading-tight text-foreground/90">{product.medium}</p>
           <p className="text-base leading-relaxed text-muted-foreground">{product.description}</p>
-          <p className="font-serif text-lg italic leading-snug text-foreground/75">
-            {product.why}
-          </p>
+          <p className="font-serif text-lg italic leading-snug text-foreground/75">{product.why}</p>
         </div>
 
         <div className="mt-16 flex flex-col items-center gap-8 sm:mt-20">
@@ -77,8 +69,11 @@ export function productHead(product: SuiteProduct) {
       { property: "og:title", content: title },
       { property: "og:description", content: product.oneLine },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: `https://${brand.company.domain}${product.href}` },
+      { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: title },
       { name: "twitter:description", content: product.oneLine },
     ],
+    links: [{ rel: "canonical", href: `https://${brand.company.domain}${product.href}` }],
   };
 }

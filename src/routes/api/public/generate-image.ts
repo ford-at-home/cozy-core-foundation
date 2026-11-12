@@ -10,6 +10,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { estimateTokens, promptHash, recordInferenceServer } from "@/lib/record-inference.server";
 
 export const Route = createFileRoute("/api/public/generate-image")({
+  staticData: { sitemap: false },
   server: {
     handlers: {
       POST: async ({ request }) => {

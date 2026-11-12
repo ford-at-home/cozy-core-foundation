@@ -64,11 +64,16 @@ const IMAGE_STYLE_PRESETS: { label: string; value: string }[] = [
 ];
 
 export const Route = createFileRoute("/_authenticated/profile")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: pageTitle("Profile") },
       { name: "description", content: "Your voice and style profile." },
       { name: "robots", content: "noindex" },
+      { property: "og:title", content: pageTitle("Profile") },
+      { property: "og:description", content: "Your voice and style profile." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: ProfilePage,

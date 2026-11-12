@@ -44,8 +44,17 @@ import { DurationEstimate } from "@/components/DurationEstimate";
 // primary action per stage, plain-language statuses. Students can leave and
 // return at any point — everything here is persisted server-side.
 export const Route = createFileRoute("/_authenticated/project/$pieceId")({
+  staticData: { sitemap: false },
   head: () => ({
-    meta: [{ title: pageTitle("Research project") }, { name: "robots", content: "noindex" }],
+    meta: [
+      { title: pageTitle("Research project") },
+      { name: "robots", content: "noindex" },
+      { name: "description", content: `Your ${brand.product.name} project workspace.` },
+      { property: "og:title", content: pageTitle("Research project") },
+      { property: "og:description", content: `Your ${brand.product.name} project workspace.` },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
   }),
   component: ProjectHubPage,
 });
@@ -101,20 +110,24 @@ function ProjectHubPage() {
     ? derivePacketWorkflow({
         runs: data.runs as StageRun[],
         packets: data.packets as StagePacket[],
-        returns: data.returns.map((r): StageReturn => ({
-          id: r.id,
-          status: r.uiStatus,
-          created_at: r.created_at,
-        })),
+        returns: data.returns.map(
+          (r): StageReturn => ({
+            id: r.id,
+            status: r.uiStatus,
+            created_at: r.created_at,
+          }),
+        ),
         followups: data.followups as StageFollowup[],
         artifacts: data.artifacts
           .filter((a) => a.kind === "docx" || a.kind === "pptx")
-          .map((a): StageArtifact => ({
-            id: a.id,
-            kind: a.kind as "docx" | "pptx",
-            status: a.status,
-            created_at: a.created_at,
-          })),
+          .map(
+            (a): StageArtifact => ({
+              id: a.id,
+              kind: a.kind as "docx" | "pptx",
+              status: a.status,
+              created_at: a.created_at,
+            }),
+          ),
       })
     : null;
 

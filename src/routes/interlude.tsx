@@ -5,6 +5,7 @@ import { suiteBySlug } from "@/config/brand";
 const product = suiteBySlug.interlude;
 
 export const Route = createFileRoute("/interlude")({
+  staticData: { sitemap: true },
   head: () => productHead(product),
   component: InterludePage,
 });

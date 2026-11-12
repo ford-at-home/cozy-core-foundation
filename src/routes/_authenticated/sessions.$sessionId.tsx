@@ -8,8 +8,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { brand, pageTitle } from "@/config/brand";
 
 export const Route = createFileRoute("/_authenticated/sessions/$sessionId")({
+  staticData: { sitemap: false },
   head: () => ({
-    meta: [{ title: pageTitle("Session detail") }, { name: "robots", content: "noindex" }],
+    meta: [
+      { title: pageTitle("Session detail") },
+      { name: "robots", content: "noindex" },
+      { name: "description", content: `Your ${brand.product.name} sessions workspace.` },
+      { property: "og:title", content: pageTitle("Session detail") },
+      { property: "og:description", content: `Your ${brand.product.name} sessions workspace.` },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
   }),
   component: SessionDetailPage,
 });

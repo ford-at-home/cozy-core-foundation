@@ -5,6 +5,7 @@ import { suiteBySlug } from "@/config/brand";
 const product = suiteBySlug.draft;
 
 export const Route = createFileRoute("/draft")({
+  staticData: { sitemap: true },
   head: () => productHead(product),
   component: DraftPage,
 });

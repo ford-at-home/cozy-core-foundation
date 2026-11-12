@@ -31,8 +31,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 // signed URLs. Keyed by packet id: the return row itself is created
 // server-side on the first upload or dictation.
 export const Route = createFileRoute("/_authenticated/return/$packetId")({
+  staticData: { sitemap: false },
   head: () => ({
-    meta: [{ title: pageTitle("Return your work") }, { name: "robots", content: "noindex" }],
+    meta: [
+      { title: pageTitle("Return your work") },
+      { name: "robots", content: "noindex" },
+      { name: "description", content: `Your ${brand.product.name} return workspace.` },
+      { property: "og:title", content: pageTitle("Return your work") },
+      { property: "og:description", content: `Your ${brand.product.name} return workspace.` },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
   }),
   component: ReturnPage,
 });

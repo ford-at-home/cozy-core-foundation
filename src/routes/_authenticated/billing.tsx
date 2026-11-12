@@ -12,6 +12,7 @@ import { brand, pageTitle } from "@/config/brand";
 // and the credit ledger. The success/canceled banners are UX only — credits
 // appear when the verified Stripe webhook lands, never from the redirect.
 export const Route = createFileRoute("/_authenticated/billing")({
+  staticData: { sitemap: false },
   validateSearch: (search: Record<string, unknown>): { status?: "success" | "canceled" } =>
     search.status === "success" || search.status === "canceled" ? { status: search.status } : {},
   head: () => ({
@@ -19,6 +20,10 @@ export const Route = createFileRoute("/_authenticated/billing")({
       { title: pageTitle("Billing") },
       { name: "description", content: "Credits and billing." },
       { name: "robots", content: "noindex" },
+      { property: "og:title", content: pageTitle("Billing") },
+      { property: "og:description", content: "Credits and billing." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: BillingPage,

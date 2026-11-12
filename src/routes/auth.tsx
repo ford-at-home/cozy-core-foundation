@@ -6,11 +6,16 @@ import { brand } from "@/config/brand";
 import { PageMark } from "@/components/PageMark";
 
 export const Route = createFileRoute("/auth")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: `Sign in — ${brand.company.name}` },
       { name: "description", content: `Sign in or create a ${brand.company.name} account.` },
       { name: "robots", content: "noindex" },
+      { property: "og:title", content: `Sign in — ${brand.company.name}` },
+      { property: "og:description", content: `Sign in or create a ${brand.company.name} account.` },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: AuthPage,

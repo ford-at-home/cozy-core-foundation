@@ -15,11 +15,16 @@ import { DurationEstimate } from "@/components/DurationEstimate";
 // profile (style_text) and is resolved server-side at dispatch. The browser
 // sends only safe inputs: research, goal, requestId.
 export const Route = createFileRoute("/_authenticated/new")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: pageTitle("New draft") },
       { name: "description", content: "Start a new working draft." },
       { name: "robots", content: "noindex" },
+      { property: "og:title", content: pageTitle("New draft") },
+      { property: "og:description", content: "Start a new working draft." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: NewDraftPage,

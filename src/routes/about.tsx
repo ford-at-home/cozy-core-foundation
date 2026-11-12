@@ -4,11 +4,18 @@ import { SiteFooter, SiteWordmark } from "@/components/suite/SiteChrome";
 import { ThemeToggle } from "@/components/suite/ThemeToggle";
 
 export const Route = createFileRoute("/about")({
+  staticData: { sitemap: true },
   head: () => ({
     meta: [
       { title: `About — ${brand.company.name}` },
       { name: "description", content: brand.company.philosophy },
+      { property: "og:title", content: `About — ${brand.company.name}` },
+      { property: "og:description", content: brand.company.philosophy },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { property: "og:url", content: "https://hardcopy.tools/about" },
     ],
+    links: [{ rel: "canonical", href: "https://hardcopy.tools/about" }],
   }),
   component: AboutPage,
 });
@@ -34,8 +41,8 @@ function AboutPage() {
             <br className="hidden sm:block" /> happen best in different mediums.
           </h1>
           <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Five tools, each shaped around one place a mind works well —
-            paper, books, conversation, shared reflection, physical artifacts.
+            Five tools, each shaped around one place a mind works well — paper, books, conversation,
+            shared reflection, physical artifacts.
           </p>
           <Link
             to="/"

@@ -22,8 +22,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 // writes); packet rows are created by the backend at fetch-back and the
 // owner can only flip status generated → reviewed here.
 export const Route = createFileRoute("/_authenticated/packet/$runId")({
+  staticData: { sitemap: false },
   head: () => ({
-    meta: [{ title: pageTitle("Review packet") }, { name: "robots", content: "noindex" }],
+    meta: [
+      { title: pageTitle("Review packet") },
+      { name: "robots", content: "noindex" },
+      { name: "description", content: `Your ${brand.product.name} packet workspace.` },
+      { property: "og:title", content: pageTitle("Review packet") },
+      { property: "og:description", content: `Your ${brand.product.name} packet workspace.` },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
   }),
   component: PacketReviewPage,
 });

@@ -6,8 +6,18 @@ import { SiteFooter, SiteWordmark } from "@/components/suite/SiteChrome";
 import { ThemeToggle } from "@/components/suite/ThemeToggle";
 
 export const Route = createFileRoute("/")({
+  staticData: { sitemap: true },
   head: () => ({
-    meta: [{ title: brand.meta.title }, { name: "description", content: brand.meta.description }],
+    meta: [
+      { title: brand.meta.title },
+      { name: "description", content: brand.meta.description },
+      { property: "og:title", content: brand.meta.title },
+      { property: "og:description", content: brand.meta.description },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { property: "og:url", content: "https://hardcopy.tools/" },
+    ],
+    links: [{ rel: "canonical", href: "https://hardcopy.tools/" }],
   }),
   component: SuiteCatalog,
 });

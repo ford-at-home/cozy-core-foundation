@@ -5,6 +5,7 @@ import { suiteBySlug } from "@/config/brand";
 const product = suiteBySlug.relic;
 
 export const Route = createFileRoute("/relic")({
+  staticData: { sitemap: true },
   head: () => productHead(product),
   component: RelicPage,
 });

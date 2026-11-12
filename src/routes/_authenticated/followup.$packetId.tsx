@@ -34,8 +34,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 // 2-credit research pass answers the approved questions and produces a NEW
 // packet version. This screen is free until the explicit run step.
 export const Route = createFileRoute("/_authenticated/followup/$packetId")({
+  staticData: { sitemap: false },
   head: () => ({
-    meta: [{ title: pageTitle("Follow-up research") }, { name: "robots", content: "noindex" }],
+    meta: [
+      { title: pageTitle("Follow-up research") },
+      { name: "robots", content: "noindex" },
+      { name: "description", content: `Your ${brand.product.name} followup workspace.` },
+      { property: "og:title", content: pageTitle("Follow-up research") },
+      { property: "og:description", content: `Your ${brand.product.name} followup workspace.` },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
   }),
   component: FollowupPage,
 });

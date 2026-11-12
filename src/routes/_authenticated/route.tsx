@@ -7,6 +7,7 @@ import { PageMark } from "@/components/PageMark";
 import { CreditBalance } from "@/components/CreditBalance";
 
 export const Route = createFileRoute("/_authenticated")({
+  staticData: { sitemap: "exclude-subtree" },
   ssr: false,
   beforeLoad: async () => {
     const { data, error } = await supabase.auth.getUser();

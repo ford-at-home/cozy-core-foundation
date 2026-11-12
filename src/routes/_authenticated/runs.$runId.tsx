@@ -25,10 +25,19 @@ import { brand, pageTitle } from "@/config/brand";
 import { useDictation } from "@/hooks/use-dictation";
 
 export const Route = createFileRoute("/_authenticated/runs/$runId")({
+  staticData: { sitemap: false },
   head: () => ({
-    meta: [{ title: pageTitle("Run") }, { name: "robots", content: "noindex" }],
+    meta: [
+      { title: pageTitle("Run") },
+      { name: "robots", content: "noindex" },
+      { name: "description", content: `Your ${brand.product.name} runs workspace.` },
+      { property: "og:title", content: pageTitle("Run") },
+      { property: "og:description", content: `Your ${brand.product.name} runs workspace.` },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
   }),
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): { fromRevision?: string } => ({
     // Set by the revision panel's "not quite" CTA so the draft page can
     // scroll to the dictation panel and prompt the user to mark up the
     // revision they just came from.

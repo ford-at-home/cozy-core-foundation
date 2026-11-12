@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RelicRouteImport } from './routes/relic'
 import { Route as InterludeRouteImport } from './routes/interlude'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
@@ -33,6 +34,11 @@ import { Route as AuthenticatedPrintRunIdRouteImport } from './routes/_authentic
 import { Route as AuthenticatedPacketRunIdRouteImport } from './routes/_authenticated/packet.$runId'
 import { Route as AuthenticatedFollowupPacketIdRouteImport } from './routes/_authenticated/followup.$packetId'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RelicRoute = RelicRouteImport.update({
   id: '/relic',
   path: '/relic',
@@ -162,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/how-it-works': typeof HowItWorksRoute
   '/interlude': typeof InterludeRoute
   '/relic': typeof RelicRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/billing': typeof AuthenticatedBillingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/new': typeof AuthenticatedNewRoute
@@ -186,6 +193,7 @@ export interface FileRoutesByTo {
   '/how-it-works': typeof HowItWorksRoute
   '/interlude': typeof InterludeRoute
   '/relic': typeof RelicRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/billing': typeof AuthenticatedBillingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/new': typeof AuthenticatedNewRoute
@@ -212,6 +220,7 @@ export interface FileRoutesById {
   '/how-it-works': typeof HowItWorksRoute
   '/interlude': typeof InterludeRoute
   '/relic': typeof RelicRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/billing': typeof AuthenticatedBillingRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/new': typeof AuthenticatedNewRoute
@@ -238,6 +247,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/interlude'
     | '/relic'
+    | '/sitemap.xml'
     | '/billing'
     | '/dashboard'
     | '/new'
@@ -262,6 +272,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/interlude'
     | '/relic'
+    | '/sitemap.xml'
     | '/billing'
     | '/dashboard'
     | '/new'
@@ -287,6 +298,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/interlude'
     | '/relic'
+    | '/sitemap.xml'
     | '/_authenticated/billing'
     | '/_authenticated/dashboard'
     | '/_authenticated/new'
@@ -313,12 +325,20 @@ export interface RootRouteChildren {
   HowItWorksRoute: typeof HowItWorksRoute
   InterludeRoute: typeof InterludeRoute
   RelicRoute: typeof RelicRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiTranscribeRoute: typeof ApiTranscribeRoute
   ApiPublicGenerateImageRoute: typeof ApiPublicGenerateImageRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/relic': {
       id: '/relic'
       path: '/relic'
@@ -538,6 +558,7 @@ const rootRouteChildren: RootRouteChildren = {
   HowItWorksRoute: HowItWorksRoute,
   InterludeRoute: InterludeRoute,
   RelicRoute: RelicRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiTranscribeRoute: ApiTranscribeRoute,
   ApiPublicGenerateImageRoute: ApiPublicGenerateImageRoute,
 }

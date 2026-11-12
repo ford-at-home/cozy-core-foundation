@@ -28,8 +28,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 // a row per reviewed item; text equal to the recognition is a confirmation,
 // different text is a fix, empty text is a rejection.
 export const Route = createFileRoute("/_authenticated/review/$returnId")({
+  staticData: { sitemap: false },
   head: () => ({
-    meta: [{ title: pageTitle("Review what was read") }, { name: "robots", content: "noindex" }],
+    meta: [
+      { title: pageTitle("Review what was read") },
+      { name: "robots", content: "noindex" },
+      { name: "description", content: `Your ${brand.product.name} review workspace.` },
+      { property: "og:title", content: pageTitle("Review what was read") },
+      { property: "og:description", content: `Your ${brand.product.name} review workspace.` },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
   }),
   component: ReviewPage,
 });

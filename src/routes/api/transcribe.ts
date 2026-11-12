@@ -26,6 +26,7 @@ function json(body: unknown, status = 200) {
 }
 
 export const Route = createFileRoute("/api/transcribe")({
+  staticData: { sitemap: false },
   server: {
     handlers: {
       POST: async ({ request }) => {
