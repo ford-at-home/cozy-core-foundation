@@ -17,7 +17,8 @@ export const brand = {
     line: "Instruments for thinking.",
     /** The broader product philosophy. */
     philosophy: "Frontier intelligence calibrated for human cognition & creativity.",
-    category: "A boutique lab in Richmond, VA, USA dedicated to celebrating humanity through thoughtful machine collaboration.",
+    category:
+      "A boutique lab in Richmond, VA, USA dedicated to celebrating humanity through thoughtful machine collaboration.",
   },
   product: {
     /** Provisional — do not treat as final. */
@@ -28,7 +29,7 @@ export const brand = {
   meta: {
     title: "Hardcopy Tools",
     description:
-      "A small collection of instruments for thinking. Proof, Interlude, Canon — each embraces a different medium.",
+      "Hardcopy Tools is a boutique lab in Richmond, VA, USA dedicated to celebrating humanity through thoughtful machine collaboration.",
   },
 } as const;
 
@@ -64,7 +65,7 @@ export const suite: readonly SuiteProduct[] = [
     medium: "Paper.",
     why: "\n",
     description:
-      "Print a working draft, mark it up by hand, and return your notes. Proof reads your handwriting and finishes the piece in your voice — as a merged draft, a Word document, or a class presentation.",
+      "Create deep research in your own style, print and edit it, then dictate your notes back into Draft. Shape iterative drafts into a finished piece, a Word document, or a presentation.",
     sketch: proofSketch,
     sketchAlt: "A graphite sketch of a printed manuscript with handwritten margin notes.",
     href: "/draft",
@@ -75,7 +76,7 @@ export const suite: readonly SuiteProduct[] = [
     status: "coming-soon",
     statusLabel: "Coming soon",
     oneLine:
-      "Deploy fully offline frontier intelligence in high-stakes negotiation rooms to serve as a on-demand Socratic coach.",
+      "Deploy fully offline frontier intelligence in high-stakes negotiation rooms to serve as an on-demand Socratic coach.",
     medium: "Shared reflection.",
     why: "\n",
     description:
@@ -95,10 +96,9 @@ export const suite: readonly SuiteProduct[] = [
     medium: "Physical artifacts.",
     why: "\n",
     description:
-      "Canon distills what a group agreed on into a small, beautifully crafted physical object — a bound booklet, an engraved plaque, a printed card set — so the shared principles stay in the room long after everyone leaves it.",
+      "Relic transforms important conversations into enduring physical artifacts, 3D printed or CNC-carved onsite in real time.",
     sketch: canonSketch,
-    sketchAlt:
-      "A graphite sketch of a wooden tablet inscribed with a short list of tenets.",
+    sketchAlt: "A graphite sketch of a wooden tablet inscribed with a short list of tenets.",
     href: "/relic",
   },
 ] as const;

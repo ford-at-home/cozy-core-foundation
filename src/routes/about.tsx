@@ -8,9 +8,9 @@ export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
       { title: `About — ${brand.company.name}` },
-      { name: "description", content: brand.company.philosophy },
+      { name: "description", content: brand.meta.description },
       { property: "og:title", content: `About — ${brand.company.name}` },
-      { property: "og:description", content: brand.company.philosophy },
+      { property: "og:description", content: brand.meta.description },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { property: "og:url", content: "https://hardcopy.tools/about" },
@@ -34,15 +34,14 @@ function AboutPage() {
       <main className="px-6 pb-16 pt-16 sm:px-10 sm:pb-24 sm:pt-28">
         <div className="max-w-3xl">
           <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-            A small collection of instruments for thinking
+            {brand.company.name}
           </p>
           <h1 className="mt-6 font-serif text-4xl leading-[1.05] tracking-tight sm:text-6xl">
             Different kinds of thinking
             <br className="hidden sm:block" /> happen best in different mediums.
           </h1>
           <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Five tools, each shaped around one place a mind works well — paper, books, conversation,
-            shared reflection, physical artifacts.
+            {brand.meta.description}
           </p>
           <Link
             to="/"
